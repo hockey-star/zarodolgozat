@@ -1,0 +1,122 @@
+video {
+  pointer-events: none; /* ne blokkolja a kattintást */
+  transition: filter 0.3s ease;
+}
+
+.characterNameInputContainer {
+  position: absolute;
+  top: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+}
+
+.characterNameInput {
+  font-family: "Jersey 10", sans-serif;
+  font-weight: 400;
+  font-style: normal;
+  letter-spacing: 3px;
+  box-shadow: 0px 5px black, 0px -5px black, 5px 0px black, -5px 0px black,
+              0px 10px #00000038, 5px 5px #00000038, -5px 5px #00000038;
+
+  background-color: rgb(69, 10, 10); /* bg-red-950 */
+  color: #fef9c3; /* text-yellow-100 */
+  text-align: center;
+  padding: 12px; /* ugyanaz, mint p-3 */
+  margin-bottom: 20px; /* ugyanaz, mint mb-5 */
+  border: none;
+  outline: none;
+  transition: all 0.2s ease;
+
+  width: 100%; /* ha túl széles, ezt vedd ki */
+  max-width: 400px; /* opcionális: hogy ne nyúljon el */
+}
+
+.characterNameInput::placeholder {
+  color: #fef9c3; /* placeholder-yellow-100 */
+  opacity: 1;
+}
+
+.characterNameInput:focus {
+  outline: none;
+  box-shadow:
+    0 0 0 2px #7f1d1d, /* focus:ring-red-700 */
+    0px 5px black,
+    0px -5px black,
+    5px 0px black,
+    -5px 0px black,
+    0px 10px #00000038,
+    5px 5px #00000038,
+    -5px 5px #00000038;
+}
+
+
+.classStats {
+  position: absolute;
+  bottom: 120px; /* feljebb hozza */
+  left: 50%;
+  transform: translateX(-50%);
+  text-align: center;
+  color: #e4e4e4;
+  font-family: "Jersey 10", sans-serif;
+  text-shadow: 0 2px 3px rgba(0, 0, 0, 0.7);
+}
+
+
+
+.classSelectContainer div:hover video {
+  filter: brightness(1.1);
+}
+
+
+.buttonClass {
+     color: #fef9c2;
+     background-color: #460809;
+     padding: 15px 40px 15px 40px;
+     margin: 10px;
+     text-align: center;
+     font-size: 20px;
+     font-family: "Jersey 10", sans-serif;
+     border: 0;
+     box-shadow: 0px 5px black, 0px -5px black, 5px 0px black, -5px 0px black, 0px 10px #00000038, 5px 5px #00000038, -5px 5px #00000038, inset 0px 5px #ffffff36;
+     cursor: pointer;
+}
+
+.createButton {
+  position: absolute;
+  bottom: 40px;
+  left: 50%;
+  /* Ezt kivesszük, ez a hibás: transform: translateX(-50%); */
+  z-index: 10;
+  color: #fef9c2;
+  background-color: #460809;
+  padding: 15px 40px;
+  margin: 10px;
+  text-align: center;
+  font-size: 20px;
+  font-family: "Jersey 10", sans-serif;
+  border: 0;
+  box-shadow: 0px 5px black, 0px -5px black, 5px 0px black, -5px 0px black,
+    0px 10px #00000038, 5px 5px #00000038, -5px 5px #00000038,
+    inset 0px 5px #ffffff36;
+  cursor: pointer;
+  /* Új középre igazítás transform nélkül */
+  translate: -50% 0;
+}
+
+.createButton:active {
+  translate: -50% 5px; /* Lefelé mozdul, de nem ugrik oldalra */
+  box-shadow: 0px 5px black, 0px -5px black, 5px 0px black, -5px 0px black,
+    inset 0px 5px #00000038;
+}
+
+
+
+.buttonClass:active {
+     transform: translateY(5px);
+     box-shadow: 0px 5px black, 0px -5px black, 5px 0px black, -5px 0px black,inset 0px 5px #00000038;
+}
+
+.ClassHatter{
+    border: 5px white;
+}

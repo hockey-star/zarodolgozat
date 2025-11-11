@@ -1,0 +1,185 @@
+@import url('https://fonts.googleapis.com/css2?family=Jacquard+12&family=Jersey+10&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Jersey+10&family=Jersey+20&display=swap');
+
+
+.alertBanner {
+  position: fixed;
+  font-family: "Jersey 10", sans-serif;
+  top: 0;
+  left: 0;
+  width: 100%;
+  background-color: #460809;
+  color: white;
+  text-align: center;
+  padding: 12px 0;
+  z-index: 1000;
+  transform: translateY(-100%);
+}
+
+/* Legördülés */
+.slideDown {
+  animation: slideDown 0.4s forwards;
+}
+
+/* Visszacsúszás */
+.slideUp {
+  animation: slideUp 0.4s forwards;
+}
+
+@keyframes slideDown {
+  from {
+    transform: translateY(-100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(-100%);
+  }
+}
+
+
+
+
+
+.bejelentkezes{
+    font-family: "Jersey 10", sans-serif;
+    text-transform: uppercase;
+    font-size: 30px;
+    font-weight: 400;
+    font-style: normal;
+    letter-spacing: 3px;
+    text-shadow: 0 0 5px #000000cc;
+    margin: 10px;
+    animation: spacePulse 4s ease-in-out infinite;
+    background-color: #460809;
+    box-shadow: 0px 5px black, 0px -5px black, 5px 0px black, -5px 0px black, 0px 10px #00000038, 5px 5px #00000038, -5px 5px #00000038;
+
+    
+}
+
+.parancs{
+    font-family: "Jersey 10", sans-serif;
+    color: rgb(255, 255, 255);
+    font-size: 12px;
+    font-weight: 400;
+    font-style: normal;
+    letter-spacing: 2px;
+    margin: 10px;
+    margin-bottom: 10px;
+    text-shadow: 0 0 5px #000000cc;
+    
+}
+
+.felhasznalonev,.jelszo{
+    font-family: "Jersey 10", sans-serif;
+    font-weight: 400;
+    font-style: normal;
+    letter-spacing: 3px;
+    box-shadow: 0px 5px black, 0px -5px black, 5px 0px black, -5px 0px black, 0px 10px #00000038, 5px 5px #00000038, -5px 5px #00000038;
+
+    
+    
+}
+
+
+.button {
+     color: #fef9c2;
+     background-color: #460809;
+     padding: 15px 40px 15px 40px;
+     margin: 10px;
+     text-align: center;
+     font-size: 20px;
+     font-family: "Jersey 10", sans-serif;
+     border: 0;
+     box-shadow: 0px 5px black, 0px -5px black, 5px 0px black, -5px 0px black, 0px 10px #00000038, 5px 5px #00000038, -5px 5px #00000038, inset 0px 5px #ffffff36;
+     cursor: pointer;
+}
+.button:active {
+     transform: translateY(5px);
+     box-shadow: 0px 5px black, 0px -5px black, 5px 0px black, -5px 0px black,inset 0px 5px #00000038;
+}
+
+.logoDiv {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  padding: 10px 0;
+  text-align: center;
+}
+
+.logoContainer {
+  display: flex;
+  justify-content: center;
+  gap: 60px;
+}
+
+.logoItem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  color: white;
+  opacity: 0.5;
+  transition: 0.3s;
+}
+
+.logoItem:hover {
+  opacity: 1;
+   .socialMediaNames{
+    text-shadow: 0 0 10px #fff, 0 0 20px #fff, 0 0 30px #ffffff, 0 0 40px #e60073, 0 0 50px #e60073, 0 0 60px #e60073, 0 0 70px #e60073;
+   }
+}
+
+.logo {
+  height: 30px;
+  margin-bottom: 5px;
+}
+
+.socialMediaNames{
+  font-family: "Jersey 10", sans-serif;
+}
+
+
+@keyframes spacePulse {
+  0%, 100% {
+    letter-spacing: 3px;
+  }
+  50% {
+    letter-spacing: 8px;
+  }
+}
+
+/* --- Regisztráció szövegek és kattinthatóság --- */
+.regisztracioText {
+  font-family: "Jersey 10", sans-serif;
+  font-size: 13px;
+  color: white;
+  margin-top: 12px;
+  text-shadow: 0 0 5px #000000cc;
+}
+
+.regText {
+  opacity: 0.9;
+}
+
+.regisztracioLink {
+  color: #c10007;
+  text-decoration: none;
+  font-weight: 500;
+  cursor: pointer;
+  transition: 0.15s ease;
+}
+
+.regisztracioLink:hover {
+  transform: scale(1.05);
+  text-shadow: 0 0 8px #ff0000;
+}
+
+
