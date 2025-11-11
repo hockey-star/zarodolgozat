@@ -70,12 +70,16 @@ Tárolja a játékos alapadatait.
 id              INT / UUID          Egyedi azonosító
 username        VARCHAR(50)         Játékos neve
 class           VARCHAR(20)         Karakterosztály (pl. Harcos, Íjász)
+password        varchar(255)        Játékos jelszava
+email           varchar(255)        Játékos emailje
 level           INT                 Aktuális szint
 xp              INT                 Tapasztalati pont
 gold            INT                 Arany mennyisége
 hp              INT                 Aktuális HP
 max_hp          INT                 Maximális HP
 created_at      DATETIME            Létrehozás dátuma
+
+
 
 
 2. INVENTORY tábla
@@ -86,6 +90,9 @@ id              INT / UUID          Egyedi azonosító
 item_name       VARCHAR(50)         Tárgy neve
 item_type       VARCHAR(20)         Tárgy típusa (pl. weapon, potion)
 quantity        INT                 Darabszám
+
+
+
 
 
 +1. birtokol
