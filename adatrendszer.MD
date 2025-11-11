@@ -63,5 +63,79 @@ Login → ClassSelect → Hub → PathChoice → CombatView → Victory / Defeat
 
 
 ## 5. Adatb. terv
-még folyamatban van a tervezés
+1. PLAYERS tábla
 
+Tárolja a játékos alapadatait.
+
+id              INT / UUID          Egyedi azonosító
+username        VARCHAR(50)         Játékos neve
+class           VARCHAR(20)         Karakterosztály (pl. Harcos, Íjász)
+level           INT                 Aktuális szint
+xp              INT                 Tapasztalati pont
+gold            INT                 Arany mennyisége
+hp              INT                 Aktuális HP
+max_hp          INT                 Maximális HP
+created_at      DATETIME            Létrehozás dátuma
+
+
+2. INVENTORY tábla
+
+A játékos tárgyait tartalmazza.
+
+id              INT / UUID          Egyedi azonosító
+item_name       VARCHAR(50)         Tárgy neve
+item_type       VARCHAR(20)         Tárgy típusa (pl. weapon, potion)
+quantity        INT                 Darabszám
+
+
++1. birtokol
+Kinek milyen tárgya van
+
+birtokol_id             INT
+birtokol_player         INT   idegen kulcs
+birtokol_inv            INT   idegen kulcs
+
+
+
+3. LEVELS tábla
+
+A játék szintjeinek statikus adatai.
+
+id              INT                 Szint azonosító
+name            VARCHAR(30)         Szint neve
+background_path VARCHAR(100)        Háttér elérési útja
+enemy_pool      TEXT / JSON         Lehetséges ellenségek listája
+
+
+
+4. ACHIEVEMENTS tábla
+
+A játékban elérhető teljesítmények.
+
+id              INT / UUID          Egyedi azonosító
+title           VARCHAR(50)         Achievement neve
+description     TEXT                Rövid leírás
+
+
+5. STATISTICS tábla
+
+A játékos teljesítményének nyomon követése.
+
+id                  INT / UUID          Egyedi azonosító
+player_id           INT (FK)            Hivatkozás a players.id-re
+enemies_defeated    INT                 Legyőzött ellenségek száma
+bosses_defeated     INT                 Legyőzött bossok száma
+battles_played      INT                 Összes csata
+battles_won         INT                 Megnyert csaták
+total_damage        INT                 Összes okozott sebzés
+total_damage_taken  INT                 Összes kapott sebzés
+
+
+
+KAPCSOLATOK
+
+players-birtokol (1)
+ inventory-birtokol (N)
+ statistics-players (1:1)
+ achievements (N)
+ levels (1:N)
