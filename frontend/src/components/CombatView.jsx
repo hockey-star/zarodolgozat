@@ -18,11 +18,12 @@ export default function CombatView({
 
   // 🔹 Kártya sablonok és darabszám
   const cardTemplates = [
-    { card: { name: "🗡️ Kardcsapás", type: "attack", dmg: [5, 10] }, count: 6 },
-    { card: { name: "🛡️ Pajzsfal", type: "defend" }, count: 4 },
-    { card: { name: "💉 Gyógyital", type: "heal", heal: 25 }, count: 5 },
-    { card: { name: "🔥 Tűzgolyó", type: "attack", dmg: [8, 14] }, count: 5 },
+    { card: { name: "🗡️ Kardcsapás", type: "attack", dmg: [5, 10] }, count: 10 },
+    { card: { name: "🛡️ Pajzsfal", type: "defend" }, count: 5 },
+    { card: { name: "💉 Gyógyital", type: "heal", heal: 25 }, count: 3 },
+    { card: { name: "🔥 Tűzgolyó", type: "attack", dmg: [8, 14] }, count: 2 },
   ];
+  
 
   function generateDeck() {
     const deck = [];
