@@ -1,9 +1,9 @@
--- phpMyAdmin SQL Dump
+﻿-- phpMyAdmin SQL Dump
 -- version 5.2.1
 -- https://www.phpmyadmin.net/
 --
 -- Gép: 127.0.0.1
--- Létrehozás ideje: 2025. Nov 13. 09:08
+-- Létrehozás ideje: 2025. Nov 17. 11:41
 -- Kiszolgáló verziója: 10.4.28-MariaDB
 -- PHP verzió: 8.2.4
 
@@ -177,7 +177,10 @@ CREATE TABLE `players` (
 --
 
 INSERT INTO `players` (`id`, `username`, `email`, `password_hash`, `class_id`, `level`, `xp`, `gold`, `hp`, `max_hp`, `strength`, `intellect`, `defense`, `created_at`) VALUES
-(2, 'TesztJátékos', 'teszt@pelda.com', 'hashedpassword123', 6, 1, 0, 100, 50, 50, 5, 0, 3, '2025-11-11 10:47:22');
+(2, 'TesztJátékos', 'teszt@pelda.com', 'hashedpassword123', 6, 1, 0, 100, 50, 50, 5, 0, 3, '2025-11-11 10:47:22'),
+(3, 'asd', 'asd@gmail.com', 'asd', NULL, 1, 0, 0, 50, 50, 5, 5, 2, '2025-11-13 09:51:41'),
+(4, 'asd2', 'asd2@gmail.com', 'asd', NULL, 1, 0, 0, 50, 50, 5, 5, 2, '2025-11-13 12:20:40'),
+(5, 'tesztteszt', 'teszt@teszt.com', 'asd', NULL, 1, 0, 0, 50, 50, 5, 5, 2, '2025-11-17 11:35:24');
 
 -- --------------------------------------------------------
 
@@ -301,7 +304,7 @@ ALTER TABLE `paths`
 -- AUTO_INCREMENT a táblához `players`
 --
 ALTER TABLE `players`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 --
 -- AUTO_INCREMENT a táblához `statistics`
