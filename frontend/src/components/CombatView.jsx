@@ -1,9 +1,14 @@
 import React, { useEffect, useState } from "react";
+import attackImg from "../assets/class-abilities/attack.png";
+import shieldImg from "../assets/class-abilities/shield-wall.png";
+import healImg from "../assets/class-abilities/hp-pot.png";
+import fireballImg from "../assets/class-abilities/fireball.png";
+import "./CombatView.css"; // ide kerül a glow keyframe
 
 export default function CombatView({
   level = 1,
   boss = false,
-  background,
+  background = "/backgrounds/3.jpg",
   enemies = [],
   playerHP: initialPlayerHP = 120,
   onEnd,
@@ -16,21 +21,18 @@ export default function CombatView({
   const [battleOver, setBattleOver] = useState(false);
   const [defending, setDefending] = useState(false);
 
-  // 🔹 Kártya sablonok és darabszám
+  // 🔹 Kártyák rarity-vel
   const cardTemplates = [
-    { card: { name: "🗡️ Kardcsapás", type: "attack", dmg: [5, 10] }, count: 10 },
-    { card: { name: "🛡️ Pajzsfal", type: "defend" }, count: 5 },
-    { card: { name: "💉 Gyógyital", type: "heal", heal: 25 }, count: 3 },
-    { card: { name: "🔥 Tűzgolyó", type: "attack", dmg: [8, 14] }, count: 2 },
+    { card: { name: "Kardcsapás", type: "attack", dmg: [5, 10], image: attackImg, rarity: "common" }, count: 10 },
+    { card: { name: "Pajzsfal", type: "defend", image: shieldImg, rarity: "rare" }, count: 5 },
+    { card: { name: "Gyógyital", type: "heal", heal: 25, image: healImg, rarity: "epic" }, count: 3 },
+    { card: { name: "Tűzgolyó", type: "attack", dmg: [8, 14], image: fireballImg, rarity: "epic" }, count: 2 },
   ];
-  
 
   function generateDeck() {
     const deck = [];
-    cardTemplates.forEach(template => {
-      for (let i = 0; i < template.count; i++) {
-        deck.push({ ...template.card });
-      }
+    cardTemplates.forEach(t => {
+      for (let i = 0; i < t.count; i++) deck.push({ ...t.card });
     });
     return deck;
   }
@@ -42,36 +44,44 @@ export default function CombatView({
   const defaultEnemies = ["Bandita", "Farkas", "Csontváz", "Goblin", "Kígyó", "Szellem"];
   const bossEnemies = ["Vérfarkas Úr", "Ősi Lény", "A Sötétség Lovagja"];
 
+  const rarityBorders = {
+    common: "border-gray-600",
+    rare: "border-blue-500",
+    epic: "border-purple-500",
+    legendary: "border-yellow-500",
+  };
+
+  const glowColors = {
+    common: "rgba(107,114,128,0.7)", // gray
+    rare: "rgba(59,130,246,0.7)",    // blue
+    epic: "rgba(139,92,246,0.7)",    // purple
+    legendary: "rgba(234,179,8,0.7)", // yellow
+  };
+
   function pushLog(msg) {
     setLog(prev => [...prev, msg]);
   }
 
-  // 🔹 Kezdőkéz húzása (4 lap)
   function drawInitialHand(handSize = 4) {
     const newDeck = [...deck];
     const newHand = [];
-
     for (let i = 0; i < handSize; i++) {
       if (newDeck.length === 0) break;
-      const index = Math.floor(Math.random() * newDeck.length);
-      newHand.push(newDeck.splice(index, 1)[0]);
+      const idx = Math.floor(Math.random() * newDeck.length);
+      newHand.push(newDeck.splice(idx, 1)[0]);
     }
-
     setDeck(newDeck);
     setHand(newHand);
   }
 
-  // 🔹 Ellenfél kiválasztása és kezdőkéz
   useEffect(() => {
     const name = boss
       ? bossEnemies[Math.floor(Math.random() * bossEnemies.length)]
-      : (enemies.length > 0
-          ? enemies[Math.floor(Math.random() * enemies.length)]
-          : defaultEnemies[Math.floor(Math.random() * defaultEnemies.length)]);
+      : (enemies.length ? enemies[Math.floor(Math.random() * enemies.length)] : defaultEnemies[Math.floor(Math.random() * defaultEnemies.length)]);
 
     const e = boss
       ? { name, hp: 120 + level * 12, dmg: [10 + level, 18 + level] }
-      : { name, hp: 30 + level * 4, dmg: [4 + Math.floor(level / 2), 7 + Math.floor(level / 2)] };
+      : { name, hp: 30 + level * 4, dmg: [4 + Math.floor(level/2), 7 + Math.floor(level/2)] };
 
     setEnemy(e);
     setEnemyHP(e.hp);
@@ -86,147 +96,134 @@ export default function CombatView({
     drawInitialHand();
   }, [level, boss, enemies]);
 
-  // 🔹 Kártya kijátszása (fix kézméret)
   function playCard(card) {
     if (battleOver || turn !== "player") return;
+    setHand(prev => prev.filter(c => c !== card));
 
-    // Kijátszott lap eltávolítása a kézből
-    setHand(prevHand => prevHand.filter(c => c !== card));
-
-    // Kártya hatása
     if (card.type === "attack") {
-      const dmg = Math.floor(Math.random() * (card.dmg[1] - card.dmg[0] + 1)) + card.dmg[0];
-      pushLog(`${card.name} - ${enemy.name} sebződik ${dmg} pontot.`);
-      setEnemyHP(prev => Math.max(0, prev - dmg));
+      const dmg = Math.floor(Math.random() * (card.dmg[1]-card.dmg[0]+1)) + card.dmg[0];
+      pushLog(`${card.name} → ${enemy.name} kap ${dmg} sebzést.`);
+      setEnemyHP(prev => Math.max(0, prev-dmg));
       if (enemyHP - dmg <= 0) setBattleOver(true);
-    } else if (card.type === "defend") {
-      pushLog("🛡️ Védekező állást vettél fel.");
-      setDefending(true);
-    } else if (card.type === "heal") {
-      const heal = card.heal || 20;
-      setPlayerHP(prev => Math.min(prev + heal, initialPlayerHP));
-      pushLog(`💉 Gyógyítasz ${heal} HP-t.`);
     }
 
-    // Új lap húzása csak annyit, hogy a kéz újra 4 lapos legyen
+    if (card.type === "defend") {
+      setDefending(true);
+      pushLog("🛡️ Védekezés aktiválva.");
+    }
+
+    if (card.type === "heal") {
+      const heal = card.heal || 20;
+      setPlayerHP(prev => Math.min(prev + heal, initialPlayerHP));
+      pushLog(`💉 Gyógyítás: +${heal} HP`);
+    }
+
     setDeck(prevDeck => {
       let newDeck = [...prevDeck];
-      let updatedHand = [...hand.filter(c => c !== card)];
-
-      while (updatedHand.length < 4) {
-        if (newDeck.length === 0 && discardPile.length > 0) {
-          newDeck = [...discardPile];
-          setDiscardPile([]);
+      setHand(prevHand => {
+        let updatedHand = prevHand.filter(c => c !== card);
+        while(updatedHand.length < 4) {
+          if (newDeck.length === 0 && discardPile.length) {
+            newDeck = [...discardPile];
+            setDiscardPile([]);
+          }
+          if (newDeck.length === 0) break;
+          const idx = Math.floor(Math.random() * newDeck.length);
+          updatedHand.push(newDeck.splice(idx,1)[0]);
         }
-        if (newDeck.length === 0) break;
-        const index = Math.floor(Math.random() * newDeck.length);
-        const newCard = newDeck.splice(index, 1)[0];
-        updatedHand.push(newCard);
-      }
-
-      setHand(updatedHand);
+        return updatedHand;
+      });
       return newDeck;
     });
 
-    // Kijátszott lap a discard pile-be kerül
     setDiscardPile(prev => [...prev, card]);
-
     setTurn("enemy");
   }
 
-  // 🔹 Enemy AI
   useEffect(() => {
-    if (!enemy || battleOver || turn !== "enemy") return;
-
+    if(!enemy || battleOver || turn !== "enemy") return;
     const t = setTimeout(() => {
-      const dmg = Math.floor(Math.random() * (enemy.dmg[1] - enemy.dmg[0] + 1)) + enemy.dmg[0];
-      const final = defending ? Math.floor(dmg / 2) : dmg;
-      pushLog(`💥 A ${enemy.name} megtámadott (${final} dmg)`);
+      const dmg = Math.floor(Math.random() * (enemy.dmg[1]-enemy.dmg[0]+1)) + enemy.dmg[0];
+      const final = defending ? Math.floor(dmg/2) : dmg;
+      pushLog(`💥 ${enemy.name} megtámad (${final} dmg)`);
       setPlayerHP(prev => {
         const newHP = Math.max(0, prev - final);
-        if (newHP === 0) {
-          pushLog("☠️ Meghaltál!");
-          setTimeout(() => setBattleOver(true), 700);
-        }
+        if(newHP===0) setTimeout(()=>setBattleOver(true),700);
         return newHP;
       });
-
       setDefending(false);
       setTurn("player");
     }, boss ? 1500 : 900);
-
-    return () => clearTimeout(t);
+    return ()=>clearTimeout(t);
   }, [turn, enemy, defending, battleOver, boss]);
 
   return (
-    <div className="absolute inset-0 flex flex-col items-center justify-center bg-black text-white">
-      {background && (
-        <img
-          src={background}
-          className="absolute inset-0 w-full h-full object-cover opacity-30"
-          alt="combat bg"
-        />
-      )}
-
-      <div className="z-10 w-full max-w-3xl flex justify-between mb-6 px-4">
-        <div>
-          <div>🧍‍♂️ Játékos HP: {playerHP}</div>
-          <div className="bg-gray-700 h-2 w-40 mt-2 rounded overflow-hidden">
-            <div
-              className="bg-green-500 h-2 transition-all duration-500"
-              style={{ width: `${(playerHP / initialPlayerHP) * 100}%` }}
-            />
-          </div>
-        </div>
-        <div className="text-right">
-          <div>👹 {enemy?.name} HP: {enemyHP}</div>
-          <div className="bg-gray-700 h-2 w-40 mt-2 rounded overflow-hidden">
-            <div
-              className="bg-red-500 h-2 transition-all duration-500"
-              style={{ width: `${(enemyHP / (enemy?.hp || 1)) * 100}%` }}
-            />
-          </div>
-        </div>
+    <div className="relative w-full min-h-screen">
+      {/* Háttér */}
+      <div className="fixed inset-0 w-full h-full z-0">
+        <img src={background} alt="combat bg" className="w-full h-full object-cover"/>
       </div>
 
-      <div className="z-10 bg-black/40 p-3 rounded w-full max-w-3xl h-40 overflow-y-auto mb-4 font-mono text-sm">
-        {log.map((l, i) => (
-          <div key={i}>{l}</div>
-        ))}
-      </div>
+      {/* UI */}
+      <div className="relative z-10 flex flex-col items-center justify-center min-h-screen text-white">
+        {/* HP barok */}
+        <div className="w-full max-w-3xl flex justify-between mb-6 px-4">
+          <div>
+            <div>🧍‍♂️ Játékos HP: {playerHP}</div>
+            <div className="bg-gray-700 h-2 w-40 mt-2 rounded overflow-hidden">
+              <div className="bg-green-500 h-2 transition-all duration-500" style={{width:`${(playerHP/initialPlayerHP)*100}%`}} />
+            </div>
+          </div>
+          <div className="text-right">
+            <div>👹 {enemy?.name} HP: {enemyHP}</div>
+            <div className="bg-gray-700 h-2 w-40 mt-2 rounded overflow-hidden">
+              <div className="bg-red-500 h-2 transition-all duration-500" style={{width:`${(enemyHP/(enemy?.hp||1))*100}%`}}/>
+            </div>
+          </div>
+        </div>
 
-      {!battleOver && turn === "player" && (
-        <div className="z-10 flex gap-4 justify-center mt-4">
-          {hand.map((card, i) => (
+        {/* Log */}
+        <div className="relative w-full max-w-3xl h-40 mb-4 overflow-y-auto font-mono text-sm">
+          <div className="absolute inset-0 bg-black/40 rounded"></div>
+          <div className="relative z-10 p-3">{log.map((l,i)=><div key={i}>{l}</div>)}</div>
+        </div>
+
+        {/* Kártyák */}
+        {!battleOver && turn==="player" && (
+          <div className="fixed bottom-4 left-1/2 -translate-x-1/2 flex gap-4 z-50">
+            {hand.map((card,i)=>{
+              const glow = glowColors[card.rarity] || "rgba(107,114,128,0.7)";
+              return (
+                <button
+                  key={i}
+                  onClick={()=>playCard(card)}
+                  style={{"--glow-color": glow}}
+                  className={`relative w-36 h-52 rounded-xl overflow-hidden border ${rarityBorders[card.rarity] || "border-gray-600"} transform transition-all duration-300 card-hover-glow`}
+                >
+                  <img src={card.image} alt={card.name} className="absolute inset-0 w-full h-full object-cover"/>
+                  <div className="absolute bottom-0 w-full bg-black/60 text-white text-center p-1 text-sm">
+                    <div className="font-bold">{card.name}</div>
+                    {card.type==="attack" && <div>Sebzés: {card.dmg[0]}–{card.dmg[1]}</div>}
+                    {card.type==="defend" && <div>Védekezés</div>}
+                    {card.type==="heal" && <div>Gyógyítás: {card.heal}</div>}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Battle over */}
+        {battleOver && (
+          <div className="mt-6 text-center z-10">
+            <div className="mb-3 text-2xl">{playerHP<=0?"☠️ Elbuktál!":"🏆 Győzelem!"}</div>
             <button
-              key={i}
-              onClick={() => playCard(card)}
-              className="bg-gray-800 border border-gray-600 px-4 py-3 rounded-lg w-40 hover:scale-105 hover:bg-gray-700 transition transform"
-            >
-              <div className="font-bold">{card.name}</div>
-              <div className="text-sm opacity-80">
-                {card.type === "attack" && `Sebzés: ${card.dmg[0]}–${card.dmg[1]}`}
-                {card.type === "defend" && `Védekezés növelése`}
-                {card.type === "heal" && `Gyógyít ${card.heal} HP-t`}
-              </div>
-            </button>
-          ))}
-        </div>
-      )}
-
-      {battleOver && (
-        <div className="mt-6 text-center z-10">
-          <div className="mb-3 text-2xl">
-            {playerHP <= 0 ? "☠️ Elbuktál!" : "🏆 Győzelem!"}
+              onClick={()=>onEnd(playerHP, enemyHP===0)}
+              className="px-6 py-2 bg-gray-700 rounded-lg hover:bg-gray-600 transition"
+            >Folytatás</button>
           </div>
-          <button
-            onClick={() => onEnd(playerHP, enemyHP === 0)}
-            className="px-6 py-2 bg-gray-700 rounded-lg hover:bg-gray-600 transition"
-          >
-            Folytatás
-          </button>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }

@@ -1,0 +1,8 @@
+@keyframes glowPulse {
+  0%, 100% { box-shadow: 0 0 15px var(--glow-color), 0 0 30px var(--glow-color), 0 0 45px var(--glow-color); }
+  50% { box-shadow: 0 0 25px var(--glow-color), 0 0 50px var(--glow-color), 0 0 70px var(--glow-color); }
+}
+
+.card-hover-glow:hover {
+  animation: glowPulse 1s infinite;
+}
