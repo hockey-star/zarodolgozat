@@ -41,7 +41,7 @@ export default function CombatView({
   const [discardPile, setDiscardPile] = useState([]);
   const [hand, setHand] = useState([]);
 
-  const defaultEnemies = ["Bandita", "Farkas", "Csontváz", "Goblin", "Kígyó", "Szellem"];
+  const defaultEnemies = ["Bandita", "Lich Mágus", "Ghoul", "Halál Lovag", "Szellem"];
   const bossEnemies = ["Vérfarkas Úr", "Ősi Lény", "A Sötétség Lovagja"];
 
   const rarityBorders = {
