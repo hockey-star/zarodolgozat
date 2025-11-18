@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { defaultEnemies, bossEnemies } from "./enemyData";
 import EnemyFrame from "./EnemyFrame";
+import HPPopup from "./HPPopup";
 
-// Card images
 import attackImg from "../assets/class-abilities/attack.png";
 import shieldImg from "../assets/class-abilities/shield-wall.png";
 import healImg from "../assets/class-abilities/hp-pot.png";
@@ -26,6 +26,8 @@ export default function CombatView({
   const [deck, setDeck] = useState([]);
   const [discardPile, setDiscardPile] = useState([]);
   const [hand, setHand] = useState([]);
+
+  const [hpPopups, setHPPopups] = useState([]); // kézi pozíciók
 
   const rarityStyle = {
     common: { border: "border-gray-600", glow: "hover:shadow-[0_0_20px_6px_rgba(156,163,175,0.8)]" },
@@ -61,12 +63,10 @@ export default function CombatView({
   function drawInitialHand(deckInit) {
     const handInit = [];
     const deckCopy = [...deckInit];
-
     while (handInit.length < 4 && deckCopy.length > 0) {
       const idx = Math.floor(Math.random() * deckCopy.length);
       handInit.push(deckCopy.splice(idx, 1)[0]);
     }
-
     return { hand: handInit, deck: deckCopy };
   }
 
@@ -115,29 +115,41 @@ export default function CombatView({
     setHand(initialHand);
   }, [level, boss]);
 
+  // HPPopup hozzáadása kézzel pozícionálva
+  function addHPPopup(value, target, x, y) {
+    const id = Date.now() + Math.random();
+    setHPPopups(prev => [...prev, { id, value, target, x, y }]);
+  }
+
   function playCard(card) {
     if (battleOver || turn !== "player") return;
 
     setHand(prev => prev.filter(c => c !== card));
     setDiscardPile(p => [...p, card]);
 
-    // Card effects
     if (card.type === "attack") {
       const dmg = Math.floor(Math.random() * (card.dmg[1] - card.dmg[0] + 1)) + card.dmg[0];
-      pushLog(`${card.name} → ${enemy.name} takes ${dmg} damage.`);
       setEnemyHP(prev => {
         const newHP = Math.max(0, prev - dmg);
+        addHPPopup(-dmg, "enemy", "74%", "120px"); // x, y kézzel állítható
         if (newHP === 0) setBattleOver(true);
+        pushLog(`${card.name} → ${enemy.name} takes ${dmg} damage.`);
         return newHP;
       });
     }
+
     if (card.type === "defend") {
       setDefending(true);
       pushLog("🛡️ Defense activated!");
     }
+
     if (card.type === "heal") {
       const heal = card.heal || 20;
-      setPlayerHP(prev => Math.min(prev + heal, initialPlayerHP));
+      setPlayerHP(prev => {
+        const newHP = Math.min(prev + heal, initialPlayerHP);
+        addHPPopup(heal, "player", "24%", "120px"); // kézzel pozícionálva
+        return newHP;
+      });
       pushLog(`✨ Healing: +${heal} HP`);
     }
 
@@ -152,13 +164,12 @@ export default function CombatView({
       const dmg = Math.floor(Math.random() * (enemy.dmg[1] - enemy.dmg[0] + 1)) + enemy.dmg[0];
       const final = defending ? Math.floor(dmg / 2) : dmg;
 
-      pushLog(`💥 ${enemy.name} attacks (${final} dmg)`);
-
       setPlayerHP(prev => {
         const newHP = Math.max(0, prev - final);
-        if (newHP === 0) setTimeout(() => setBattleOver(true), 600);
+        addHPPopup(-final, "player", "24%", "120px"); // kézzel pozícionálva
         return newHP;
       });
+      pushLog(`💥 ${enemy.name} attacks (${final} dmg)`);
 
       setDefending(false);
       setTurn("player");
@@ -169,26 +180,26 @@ export default function CombatView({
 
   return (
     <div className="relative w-full min-h-screen text-white">
-
       {/* BACKGROUND */}
       <div style={{ position: 'fixed', inset: 0, zIndex: 0 }}>
         <img src={background} alt="bg" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
       </div>
 
       {/* PLAYER + ENEMY */}
-      <div className="pt-12 flex justify-around w-full max-w-6xl mx-auto z-10">
-        <EnemyFrame
-          name="Player"
-          hp={playerHP}
-          maxHP={initialPlayerHP}
-          image="/ui/player/player.png"
-        />
-        <EnemyFrame
-          name={enemy?.name}
-          hp={enemyHP}
-          maxHP={enemy?.hp}
-          image={enemyImage(enemy?.name)}
-        />
+      <div className="pt-12 flex justify-around w-full max-w-6xl mx-auto z-10 relative">
+        <EnemyFrame name="Player" hp={playerHP} maxHP={initialPlayerHP} image="/ui/player/player.png" />
+        <EnemyFrame name={enemy?.name} hp={enemyHP} maxHP={enemy?.hp} image={enemyImage(enemy?.name)} />
+
+        {/* HP popups */}
+        {hpPopups.map(p => (
+          <HPPopup
+            key={p.id}
+            value={p.value}
+            x={p.x}
+            y={p.y}
+            onDone={() => setHPPopups(prev => prev.filter(x => x.id !== p.id))}
+          />
+        ))}
       </div>
 
       {/* COMBAT LOG */}
@@ -202,21 +213,13 @@ export default function CombatView({
           {hand.map((card, i) => {
             const rs = rarityStyle[card.rarity] ?? rarityStyle.common;
             return (
-              <button
-                key={i}
-                onClick={() => playCard(card)}
-                className={`
-                  relative w-36 h-52 rounded-xl overflow-hidden
-                  border-4 ${rs.border}
-                  transform transition-all duration-200 hover:scale-110
-                  ${rs.glow}
-                `}
-              >
-                <img
-                  src={card.image}
-                  alt={card.name}
-                  className="absolute inset-0 w-full h-full object-cover"
-                />
+              <button key={i} onClick={() => playCard(card)} className={`
+                relative w-36 h-52 rounded-xl overflow-hidden
+                border-4 ${rs.border}
+                transform transition-all duration-200 hover:scale-110
+                ${rs.glow}
+              `}>
+                <img src={card.image} alt={card.name} className="absolute inset-0 w-full h-full object-cover" />
                 <div className="absolute bottom-0 w-full bg-black/70 text-center p-1 text-sm">
                   <div className="font-bold">{card.name}</div>
                   {card.type === "attack" && <div>Damage: {card.dmg[0]}–{card.dmg[1]}</div>}
@@ -232,13 +235,9 @@ export default function CombatView({
       {/* END BATTLE */}
       {battleOver && (
         <div className="text-center mt-6 z-50 relative">
-          <div className="text-4xl mb-4">
-            {playerHP <= 0 ? "☠️ Defeat..." : "🏆 Victory!"}
-          </div>
-          <button
-            onClick={() => onEnd(playerHP, enemyHP === 0)}
-            className="px-8 py-3 rounded-lg bg-gray-800 hover:bg-gray-700 transition text-lg"
-          >
+          <div className="text-4xl mb-4">{playerHP <= 0 ? "☠️ Defeat..." : "🏆 Victory!"}</div>
+          <button onClick={() => onEnd(playerHP, enemyHP === 0)}
+            className="px-8 py-3 rounded-lg bg-gray-800 hover:bg-gray-700 transition text-lg">
             Continue
           </button>
         </div>

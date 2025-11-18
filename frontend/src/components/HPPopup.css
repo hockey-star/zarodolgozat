@@ -1,0 +1,38 @@
+@import url('https://fonts.googleapis.com/css2?family=Jacquard+12&family=Jersey+10&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Jersey+10&family=Jersey+20&display=swap');
+
+.hp-popup {
+  position: absolute;
+  font-weight: bold;
+  font-size: 18px;
+  transform: translateX(-50%);
+  opacity: 1;
+  animation: floatUp 0.8s forwards;
+  pointer-events: none;
+  z-index: 50;
+}
+
+.hp-popup.damage {
+  color: red;
+  text-shadow: 1px 1px 3px black;
+  font-family: "Jersey 10", sans-serif;
+  font-size: 50px;
+}
+
+.hp-popup.heal {
+  color: lime;
+  text-shadow: 1px 1px 3px black;
+  font-family: "Jersey 10", sans-serif;
+  font-size: 50px;
+}
+
+@keyframes floatUp {
+  0% {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(-50%) translateY(-40px);
+    opacity: 0;
+  }
+}
