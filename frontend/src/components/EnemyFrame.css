@@ -27,12 +27,12 @@
 
 /* DAMAGE FLASH (PIROS) */
 .character.damage {
-  filter: brightness(1.4) drop-shadow(0 0 15px red);
+  filter: brightness(1.7) drop-shadow(0 0 25px rgb(255, 0, 0));
 }
 
 /* HEAL FLASH (ZÖLD) */
 .character.heal {
-  filter: brightness(1.4) drop-shadow(0 0 15px limegreen);
+  filter: brightness(1.7) drop-shadow(0 0 25px limegreen);
 }
 
 .name {

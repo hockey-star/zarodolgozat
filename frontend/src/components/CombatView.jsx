@@ -1,3 +1,4 @@
+// CombatView.jsx
 import React, { useEffect, useState } from "react";
 import { defaultEnemies, bossEnemies } from "./enemyData";
 import EnemyFrame from "./EnemyFrame";
@@ -11,7 +12,7 @@ import fireballImg from "../assets/class-abilities/fireball.png";
 export default function CombatView({
   level = 1,
   boss = false,
-  background = "/backgrounds/3.jpg",
+  pathType = "fight", // pathType: fight | elite | mystery
   playerHP: initialPlayerHP = 120,
   onEnd,
 }) {
@@ -95,14 +96,28 @@ export default function CombatView({
     });
   }
 
+  // BACKGROUND
+  let bg;
+  if (pathType === "mystery") bg = "/backgrounds/2.jpg";
+  else if (pathType === "elite") bg = "/backgrounds/1.jpg";
+  else bg = "/backgrounds/3.jpg";
+
   // INITIALIZE ENEMY + DECK
   useEffect(() => {
-    const name = boss
-      ? bossEnemies[Math.floor(Math.random() * bossEnemies.length)]
-      : defaultEnemies[Math.floor(Math.random() * defaultEnemies.length)];
+    let name;
+    if (boss) {
+      name = bossEnemies[Math.floor(Math.random() * bossEnemies.length)];
+    } else if (pathType === "elite") {
+      const base = defaultEnemies[Math.floor(Math.random() * defaultEnemies.length)];
+      name = `Elite ${base}`; // elit harcok nehezebbek
+    } else {
+      name = defaultEnemies[Math.floor(Math.random() * defaultEnemies.length)];
+    }
 
     const e = boss
       ? { name, hp: 120 + level * 12, dmg: [10 + level, 18 + level] }
+      : pathType === "elite"
+      ? { name, hp: 50 + level * 6, dmg: [6 + level, 12 + level] } // elit nehezebb
       : { name, hp: 30 + level * 4, dmg: [4 + Math.floor(level / 2), 7 + Math.floor(level / 2)] };
 
     setEnemy(e);
@@ -118,8 +133,7 @@ export default function CombatView({
     setDeck(remainingDeck);
     setDiscardPile([]);
     setHand(initialHand);
-  }, [level, boss]);
-
+  }, [level, boss, pathType]);
 
   // POPUP + damage/heal flash
   function addHPPopup(value, target, x, y) {
@@ -127,7 +141,6 @@ export default function CombatView({
     setHPPopups(prev => [...prev, { id, value, target, x, y }]);
 
     if (value < 0) {
-      // DAMAGE
       if (target === "player") {
         setPlayerDamaged(true);
         setTimeout(() => setPlayerDamaged(false), 300);
@@ -136,7 +149,6 @@ export default function CombatView({
         setTimeout(() => setEnemyDamaged(false), 300);
       }
     } else {
-      // HEAL
       if (target === "player") {
         setPlayerHealed(true);
         setTimeout(() => setPlayerHealed(false), 400);
@@ -180,7 +192,7 @@ export default function CombatView({
     redrawHand();
   }
 
-  // **CHECK FOR DEFEAT OR VICTORY CLEANLY**
+  // CHECK DEFEAT OR VICTORY
   useEffect(() => {
     if (!enemy) return;
     if (playerHP <= 0 || enemyHP <= 0) {
@@ -188,8 +200,7 @@ export default function CombatView({
     }
   }, [playerHP, enemyHP]);
 
-
-  // **ENEMY TURN**
+  // ENEMY TURN
   useEffect(() => {
     if (!enemy || battleOver || turn !== "enemy") return;
 
@@ -212,17 +223,15 @@ export default function CombatView({
     return () => clearTimeout(t);
   }, [turn, enemy, defending, battleOver, boss]);
 
-
   return (
     <div className="relative w-full min-h-screen text-white">
       {/* BACKGROUND */}
       <div style={{ position: 'fixed', inset: 0, zIndex: 0 }}>
-        <img src={background} alt="bg" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        <img src={bg} alt="bg" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
       </div>
 
       {/* PLAYER + ENEMY */}
       <div className="pt-12 flex justify-around w-full max-w-6xl mx-auto z-10 relative">
-        
         {/* PLAYER */}
         <EnemyFrame
           name="Player"
