@@ -1,45 +1,70 @@
-import React from "react";
+import React, { useState, useMemo } from "react";
 import "./PathChoice.css";
-import bg1 from '../assets/backgrounds/1.jpg';
+import fightIcon from "../assets/icons/fight.png";
+import eliteIcon from "../assets/icons/elite.jpg";
+import mysteryIcon from "../assets/icons/mystery.png";
+import bg1 from "../assets/backgrounds/1.jpg";
 
-export default function PathChoice({ onChoose, level = 1, background }) {
+export default function PathChoice({ onChoose, level = 1 }) {
+  const [hoverTooltip, setHoverTooltip] = useState(null);
+
+  // Randomizálás: bal oldalon fight vagy elite
+  const leftOption = useMemo(() => (Math.random() < 0.5 ? "fight" : "elite"), []);
+
+  const icons = {
+    fight: fightIcon,
+    elite: eliteIcon,
+    mystery: mysteryIcon
+  };
+
+  const tooltipText = {
+    fight: "Érzed, hogy itt egy normál ellenfél vár rád...",
+    elite: "Valami nagy és erős közeleg az ösvényen!",
+    mystery: "A rejtélyes ösvény titokkal teli: harc, gyógyulás, vagy zsákmány várhat."
+  };
+
   return (
     <div
-      className="absolute inset-0 overflow-hidden flex items-center justify-center"
+      className="path-choice-bg absolute inset-0 flex items-center justify-center"
       style={{
         backgroundImage: `url(${bg1})`,
         backgroundSize: "cover",
         backgroundPosition: "center",
       }}
     >
-      {/* Sötét overlay */}
-      <div className=""></div>
+      <div className="absolute inset-0 bg-black/20"></div>
 
-      {/* Felirat a tetején */}
       <h2 className="absolute top-5 left-1/2 -translate-x-1/2 text-4xl font-bold text-white z-10 select-none pixelosvenyvalaszt">
-        {level === 11 ? "A végső csata közeleg..." : `Válassz egy ösvényt (${level}/11)`}
+        {level === 11
+          ? "A végső csata közeleg..."
+          : `Válassz egy ösvényt (${level}/11)` }
       </h2>
 
-      {/* Két nagy “gomb” */}
       <div className="absolute inset-0 flex">
         {/* Bal oldal */}
         <div
-          onClick={() => onChoose("left")}
-          className="w-1/2 h-full cursor-pointer relative hover:bg-white/20 transition-colors duration-200"
+          className="w-1/2 h-full relative flex items-center justify-center cursor-pointer hover:bg-white/10 transition-colors duration-200"
+          onClick={() => onChoose(leftOption)}
+          onMouseEnter={() => setHoverTooltip(leftOption)}
+          onMouseLeave={() => setHoverTooltip(null)}
         >
-          <span className="absolute bottom-10 left-1/2 -translate-x-1/2 text-3xl font-bold text-white select-none pixelfont">
-            Bal
-          </span>
+          <img src={icons[leftOption]} alt={leftOption} className="w-32 h-32" />
+          {hoverTooltip === leftOption && (
+            <div className="tooltip">{tooltipText[leftOption]}</div>
+          )}
         </div>
 
         {/* Jobb oldal */}
         <div
-          onClick={() => onChoose("right")}
-          className="w-1/2 h-full cursor-pointer relative hover:bg-white/20 transition-colors duration-200"
+          className="w-1/2 h-full relative flex items-center justify-center cursor-pointer hover:bg-white/10 transition-colors duration-200"
+          onClick={() => onChoose("mystery")}
+          onMouseEnter={() => setHoverTooltip("mystery")}
+          onMouseLeave={() => setHoverTooltip(null)}
         >
-          <span className="absolute bottom-10 left-1/2 -translate-x-1/2 text-3xl font-bold text-white select-none pixelfont">
-            Jobb
-          </span>
+          <img src={mysteryIcon} alt="Mystery" className="w-32 h-32" />
+          {hoverTooltip === "mystery" && (
+            <div className="tooltip">{tooltipText.mystery}</div>
+          )}
         </div>
       </div>
     </div>

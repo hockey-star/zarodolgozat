@@ -9,7 +9,7 @@ export default function ShopModal({ onClose }) {
           onClick={onClose}
           className="absolute top-3 right-3 text-gray-400 hover:text-red-400"
         >
-          ✕
+          X
         </button>
 
         {/* Bal oldal: felső karakteradatok */}
