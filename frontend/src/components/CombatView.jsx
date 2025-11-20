@@ -1,8 +1,9 @@
+// CombatView.jsx
 import React, { useEffect, useState } from "react";
 import { defaultEnemies, bossEnemies } from "./enemyData";
 import EnemyFrame from "./EnemyFrame";
+import HPPopup from "./HPPopup";
 
-// Card images
 import attackImg from "../assets/class-abilities/attack.png";
 import shieldImg from "../assets/class-abilities/shield-wall.png";
 import healImg from "../assets/class-abilities/hp-pot.png";
@@ -11,7 +12,7 @@ import fireballImg from "../assets/class-abilities/fireball.png";
 export default function CombatView({
   level = 1,
   boss = false,
-  background = "/backgrounds/3.jpg",
+  pathType = "fight", // pathType: fight | elite | mystery
   playerHP: initialPlayerHP = 120,
   onEnd,
 }) {
@@ -26,6 +27,11 @@ export default function CombatView({
   const [deck, setDeck] = useState([]);
   const [discardPile, setDiscardPile] = useState([]);
   const [hand, setHand] = useState([]);
+
+  const [hpPopups, setHPPopups] = useState([]);
+  const [playerDamaged, setPlayerDamaged] = useState(false);
+  const [playerHealed, setPlayerHealed] = useState(false);
+  const [enemyDamaged, setEnemyDamaged] = useState(false);
 
   const rarityStyle = {
     common: { border: "border-gray-600", glow: "hover:shadow-[0_0_20px_6px_rgba(156,163,175,0.8)]" },
@@ -61,12 +67,10 @@ export default function CombatView({
   function drawInitialHand(deckInit) {
     const handInit = [];
     const deckCopy = [...deckInit];
-
     while (handInit.length < 4 && deckCopy.length > 0) {
       const idx = Math.floor(Math.random() * deckCopy.length);
       handInit.push(deckCopy.splice(idx, 1)[0]);
     }
-
     return { hand: handInit, deck: deckCopy };
   }
 
@@ -92,17 +96,33 @@ export default function CombatView({
     });
   }
 
+  // BACKGROUND
+  let bg;
+  if (pathType === "mystery") bg = "/backgrounds/2.jpg";
+  else if (pathType === "elite") bg = "/backgrounds/1.jpg";
+  else bg = "/backgrounds/3.jpg";
+
+  // INITIALIZE ENEMY + DECK
   useEffect(() => {
-    const name = boss
-      ? bossEnemies[Math.floor(Math.random() * bossEnemies.length)]
-      : defaultEnemies[Math.floor(Math.random() * defaultEnemies.length)];
+    let name;
+    if (boss) {
+      name = bossEnemies[Math.floor(Math.random() * bossEnemies.length)];
+    } else if (pathType === "elite") {
+      const base = defaultEnemies[Math.floor(Math.random() * defaultEnemies.length)];
+      name = `Elite ${base}`; // elit harcok nehezebbek
+    } else {
+      name = defaultEnemies[Math.floor(Math.random() * defaultEnemies.length)];
+    }
 
     const e = boss
       ? { name, hp: 120 + level * 12, dmg: [10 + level, 18 + level] }
+      : pathType === "elite"
+      ? { name, hp: 50 + level * 6, dmg: [6 + level, 12 + level] } // elit nehezebb
       : { name, hp: 30 + level * 4, dmg: [4 + Math.floor(level / 2), 7 + Math.floor(level / 2)] };
 
     setEnemy(e);
     setEnemyHP(e.hp);
+
     setLog([`⚔️ A ${e.name} challenged you!`]);
     setBattleOver(false);
     setTurn("player");
@@ -113,38 +133,74 @@ export default function CombatView({
     setDeck(remainingDeck);
     setDiscardPile([]);
     setHand(initialHand);
-  }, [level, boss]);
+  }, [level, boss, pathType]);
 
+  // POPUP + damage/heal flash
+  function addHPPopup(value, target, x, y) {
+    const id = Date.now() + Math.random();
+    setHPPopups(prev => [...prev, { id, value, target, x, y }]);
+
+    if (value < 0) {
+      if (target === "player") {
+        setPlayerDamaged(true);
+        setTimeout(() => setPlayerDamaged(false), 300);
+      } else {
+        setEnemyDamaged(true);
+        setTimeout(() => setEnemyDamaged(false), 300);
+      }
+    } else {
+      if (target === "player") {
+        setPlayerHealed(true);
+        setTimeout(() => setPlayerHealed(false), 400);
+      }
+    }
+  }
+
+  // PLAY CARD
   function playCard(card) {
     if (battleOver || turn !== "player") return;
 
     setHand(prev => prev.filter(c => c !== card));
     setDiscardPile(p => [...p, card]);
 
-    // Card effects
     if (card.type === "attack") {
       const dmg = Math.floor(Math.random() * (card.dmg[1] - card.dmg[0] + 1)) + card.dmg[0];
-      pushLog(`${card.name} → ${enemy.name} takes ${dmg} damage.`);
       setEnemyHP(prev => {
         const newHP = Math.max(0, prev - dmg);
-        if (newHP === 0) setBattleOver(true);
+        addHPPopup(-dmg, "enemy", "74%", "120px");
+        pushLog(`${card.name} → ${enemy.name} takes ${dmg} damage.`);
         return newHP;
       });
     }
+
     if (card.type === "defend") {
       setDefending(true);
       pushLog("🛡️ Defense activated!");
     }
+
     if (card.type === "heal") {
       const heal = card.heal || 20;
-      setPlayerHP(prev => Math.min(prev + heal, initialPlayerHP));
-      pushLog(`✨ Healing: +${heal} HP`);
+      setPlayerHP(prev => {
+        const newHP = Math.min(prev + heal, initialPlayerHP);
+        addHPPopup(+heal, "player", "24%", "120px");
+        pushLog(`✨ Healing: +${heal} HP`);
+        return newHP;
+      });
     }
 
     setTurn("enemy");
     redrawHand();
   }
 
+  // CHECK DEFEAT OR VICTORY
+  useEffect(() => {
+    if (!enemy) return;
+    if (playerHP <= 0 || enemyHP <= 0) {
+      setBattleOver(true);
+    }
+  }, [playerHP, enemyHP]);
+
+  // ENEMY TURN
   useEffect(() => {
     if (!enemy || battleOver || turn !== "enemy") return;
 
@@ -152,13 +208,13 @@ export default function CombatView({
       const dmg = Math.floor(Math.random() * (enemy.dmg[1] - enemy.dmg[0] + 1)) + enemy.dmg[0];
       const final = defending ? Math.floor(dmg / 2) : dmg;
 
-      pushLog(`💥 ${enemy.name} attacks (${final} dmg)`);
-
       setPlayerHP(prev => {
         const newHP = Math.max(0, prev - final);
-        if (newHP === 0) setTimeout(() => setBattleOver(true), 600);
+        addHPPopup(-final, "player", "24%", "120px");
         return newHP;
       });
+
+      pushLog(`💥 ${enemy.name} attacks (${final} dmg)`);
 
       setDefending(false);
       setTurn("player");
@@ -169,26 +225,38 @@ export default function CombatView({
 
   return (
     <div className="relative w-full min-h-screen text-white">
-
       {/* BACKGROUND */}
       <div style={{ position: 'fixed', inset: 0, zIndex: 0 }}>
-        <img src={background} alt="bg" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        <img src={bg} alt="bg" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
       </div>
 
       {/* PLAYER + ENEMY */}
-      <div className="pt-12 flex justify-around w-full max-w-6xl mx-auto z-10">
+      <div className="pt-12 flex justify-around w-full max-w-6xl mx-auto z-10 relative">
+        {/* PLAYER */}
         <EnemyFrame
           name="Player"
           hp={playerHP}
           maxHP={initialPlayerHP}
           image="/ui/player/player.png"
+          damaged={playerDamaged}
+          healed={playerHealed}
         />
+
+        {/* ENEMY */}
         <EnemyFrame
           name={enemy?.name}
           hp={enemyHP}
           maxHP={enemy?.hp}
           image={enemyImage(enemy?.name)}
+          damaged={enemyDamaged}
         />
+
+        {/* POPUPS */}
+        {hpPopups.map(p => (
+          <HPPopup key={p.id} value={p.value} x={p.x} y={p.y}
+            onDone={() => setHPPopups(prev => prev.filter(pp => pp.id !== p.id))}
+          />
+        ))}
       </div>
 
       {/* COMBAT LOG */}
@@ -202,21 +270,12 @@ export default function CombatView({
           {hand.map((card, i) => {
             const rs = rarityStyle[card.rarity] ?? rarityStyle.common;
             return (
-              <button
-                key={i}
-                onClick={() => playCard(card)}
-                className={`
-                  relative w-36 h-52 rounded-xl overflow-hidden
-                  border-4 ${rs.border}
-                  transform transition-all duration-200 hover:scale-110
-                  ${rs.glow}
-                `}
-              >
-                <img
-                  src={card.image}
-                  alt={card.name}
-                  className="absolute inset-0 w-full h-full object-cover"
-                />
+              <button key={i} onClick={() => playCard(card)}
+                className={`relative w-36 h-52 rounded-xl overflow-hidden
+                border-4 ${rs.border}
+                transform transition-all duration-200 hover:scale-110
+                ${rs.glow}`}>
+                <img src={card.image} alt={card.name} className="absolute inset-0 w-full h-full object-cover" />
                 <div className="absolute bottom-0 w-full bg-black/70 text-center p-1 text-sm">
                   <div className="font-bold">{card.name}</div>
                   {card.type === "attack" && <div>Damage: {card.dmg[0]}–{card.dmg[1]}</div>}
@@ -232,13 +291,9 @@ export default function CombatView({
       {/* END BATTLE */}
       {battleOver && (
         <div className="text-center mt-6 z-50 relative">
-          <div className="text-4xl mb-4">
-            {playerHP <= 0 ? "☠️ Defeat..." : "🏆 Victory!"}
-          </div>
-          <button
-            onClick={() => onEnd(playerHP, enemyHP === 0)}
-            className="px-8 py-3 rounded-lg bg-gray-800 hover:bg-gray-700 transition text-lg"
-          >
+          <div className="text-4xl mb-4">{playerHP <= 0 ? "☠️ Defeat..." : "🏆 Victory!"}</div>
+          <button onClick={() => onEnd(playerHP, enemyHP === 0)}
+            className="px-8 py-3 rounded-lg bg-gray-800 hover:bg-gray-700 transition text-lg">
             Continue
           </button>
         </div>

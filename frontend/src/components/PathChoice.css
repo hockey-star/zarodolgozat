@@ -1,40 +1,43 @@
-@import url('https://fonts.googleapis.com/css2?family=Jacquard+12&family=Jersey+10&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Jersey+10&family=Jersey+20&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Jersey+10&display=swap');
 
-.path-choice-bg{
-    image-rendering: pixelated;
-
-}
 html, body {
   overflow: hidden;
   height: 100%;
 }
-.valasztas{
-    font-family: "Jersey 10", sans-serif;
-    text-transform: uppercase;
-    font-size: 24px;
-    font-weight: 400;
-    font-style: normal;
-    letter-spacing: 3px;
-    text-shadow: 0 0 5px #000000cc;
-}
-.pixelfont{
-    font-family: "Jersey 10", sans-serif;
-    text-transform: uppercase;
-    font-size: 24px;
-    font-weight: 400;
-    font-style: normal;
-    letter-spacing: 3px;
-    text-shadow: 0 0 5px #000000cc;
+
+.path-choice-bg {
+  image-rendering: pixelated;
 }
 
 .pixelosvenyvalaszt{
-    font-family: "Jersey 10", sans-serif;
-    text-transform: uppercase;
-    font-size: 80px;
-    font-weight: 400;
-    font-style: normal;
-    letter-spacing: 3px;
-    text-shadow: 0 0 5px #000000cc;
-    margin-top: 20px;
+  font-family: "Jersey 10", sans-serif;
+  text-transform: uppercase;
+  font-size: 80px;
+  font-weight: 400;
+  letter-spacing: 3px;
+  text-shadow: 0 0 5px #000000cc;
+  margin-top: 200px;
+}
+
+.tooltip {
+  position: absolute;
+  top: 40%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(0,0,0,0.85);
+  color: red;
+  font-family: "Jersey 10", sans-serif;
+  font-size: 16px;
+  text-align: center;
+  padding: 8px 12px;
+  border-radius: 8px;
+  pointer-events: none;
+  z-index: 50;
+  white-space: nowrap;
+  animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
