@@ -4,19 +4,20 @@ import { usePlayer } from "../context/PlayerContext.jsx";
 import { getRandomEnemy } from "./enemyData";
 import EnemyFrame from "./EnemyFrame";
 import HPPopup from "./HPPopup";
+import {
+  getClassKeyFromId,
+  ABILITIES_BY_ID,
+  buildDefaultDeckForClass,
+  getAbilitiesForClass,
+} from "../data/abilities.js";
 
-import attackImg from "../assets/class-abilities/attack.png";
-import shieldImg from "../assets/class-abilities/shield-wall.png";
-import healImg from "../assets/class-abilities/hp-pot.png";
-import fireballImg from "../assets/class-abilities/fireball.png";
-
-// ----------------- XP GÖRBE -----------------
+// XP görbe
 function xpToNextLevel(level) {
   if (level <= 1) return 30;
   return 30 + (level - 1) * 20;
 }
 
-// ----------------- HÁTTÉR VÁLASZTÁS -----------------
+// háttérválasztás
 function resolveBackground(background, pathType) {
   if (background) return background;
 
@@ -25,196 +26,29 @@ function resolveBackground(background, pathType) {
   return "/backgrounds/3.jpg";
 }
 
-// ----------------- CLASS CONFIG -----------------
-// class_id-k a DB-ben: 6 = Harcos, 7 = Varázsló, 8 = Íjász
-// Sprite-ok: /public/ui/player/player.png, /varazslo.png, /ijasz.png
+// class sprite-ok: csak sprite + név, deck már abilities.js-ben
 const CLASS_CONFIG = {
   6: {
     key: "warrior",
     displayName: "Harcos",
     sprite: "/ui/player/player.png",
-    deckTemplates: [
-      {
-        card: {
-          name: "Slash",
-          type: "attack",
-          dmg: [6, 11],
-          image: attackImg,
-          rarity: "common",
-        },
-        count: 8,
-      },
-      {
-        card: {
-          name: "Mortal Strike",
-          type: "attack",
-          dmg: [9, 15],
-          image: attackImg,
-          rarity: "epic",
-        },
-        count: 3,
-      },
-      {
-        card: {
-          name: "Shield Wall",
-          type: "defend",
-          image: shieldImg,
-          rarity: "rare",
-        },
-        count: 5,
-      },
-      {
-        card: {
-          name: "Battle Cry",
-          type: "heal",
-          heal: 20,
-          image: healImg,
-          rarity: "epic",
-        },
-        count: 2,
-      },
-    ],
   },
   7: {
     key: "mage",
     displayName: "Varázsló",
     sprite: "/ui/player/varazslo.png",
-    deckTemplates: [
-      {
-        card: {
-          name: "Fireball",
-          type: "attack",
-          dmg: [8, 14],
-          image: fireballImg,
-          rarity: "epic",
-        },
-        count: 5,
-      },
-      {
-        card: {
-          name: "Arcane Missles",
-          type: "attack",
-          dmg: [5, 11],
-          image: fireballImg,
-          rarity: "common",
-        },
-        count: 6,
-      },
-      {
-        card: {
-          name: "Mana Shield",
-          type: "defend",
-          image: shieldImg,
-          rarity: "rare",
-        },
-        count: 4,
-      },
-      {
-        card: {
-          name: "Heal Spell",
-          type: "heal",
-          heal: 22,
-          image: healImg,
-          rarity: "epic",
-        },
-        count: 2,
-      },
-    ],
   },
   8: {
     key: "archer",
     displayName: "Íjász",
     sprite: "/ui/player/ijasz.png",
-    deckTemplates: [
-      {
-        card: {
-          name: "Quick Shot",
-          type: "attack",
-          dmg: [5, 10],
-          image: attackImg,
-          rarity: "common",
-        },
-        count: 8,
-      },
-      {
-        card: {
-          name: "Aimed Shot",
-          type: "attack",
-          dmg: [7, 13],
-          image: attackImg,
-          rarity: "rare",
-        },
-        count: 4,
-      },
-      {
-        card: {
-          name: "Evasion",
-          type: "defend",
-          image: shieldImg,
-          rarity: "rare",
-        },
-        count: 4,
-      },
-      {
-        card: {
-          name: "Healing Herbs",
-          type: "heal",
-          heal: 18,
-          image: healImg,
-          rarity: "epic",
-        },
-        count: 2,
-      },
-    ],
   },
 };
 
-// ha valamiért nincs class_id, vagy más érték, ide esik vissza
 const DEFAULT_CLASS_CONFIG = {
   key: "warrior",
   displayName: "Harcos",
   sprite: "/ui/player/player.png",
-  deckTemplates: [
-    {
-      card: {
-        name: "Slash",
-        type: "attack",
-        dmg: [5, 10],
-        image: attackImg,
-        rarity: "common",
-      },
-      count: 10,
-    },
-    {
-      card: {
-        name: "Shield Wall",
-        type: "defend",
-        image: shieldImg,
-        rarity: "rare",
-      },
-      count: 5,
-    },
-    {
-      card: {
-        name: "Healing Potion",
-        type: "heal",
-        heal: 25,
-        image: healImg,
-        rarity: "epic",
-      },
-      count: 3,
-    },
-    {
-      card: {
-        name: "Fireball",
-        type: "attack",
-        dmg: [8, 14],
-        image: fireballImg,
-        rarity: "epic",
-      },
-      count: 2,
-    },
-  ],
 };
 
 export default function CombatView({
@@ -238,37 +72,45 @@ export default function CombatView({
     }
   }, [player?.hp]);
 
-  // -------- CLASS CONFIG ÉS DECK A PLAYER KASZTJA ALAPJÁN --------
+  // ----- CLASS CONFIG -----
   const classConfig = useMemo(() => {
-    const id = player?.class_id;
-    if (!id) return DEFAULT_CLASS_CONFIG;
-    return CLASS_CONFIG[id] || DEFAULT_CLASS_CONFIG;
+    if (!player?.class_id) return DEFAULT_CLASS_CONFIG;
+    return CLASS_CONFIG[player.class_id] || DEFAULT_CLASS_CONFIG;
   }, [player?.class_id]);
 
-  const cardTemplates = useMemo(() => classConfig.deckTemplates, [classConfig]);
+  const classKey = useMemo(
+    () => getClassKeyFromId(player?.class_id),
+    [player?.class_id]
+  );
 
-  // ---------- ENEMY / HARCI ÁLLAPOT ----------
+  // ----- ENEMY / HARCI ÁLLAPOT -----
   const [enemy, setEnemy] = useState(null);
   const [enemyHP, setEnemyHP] = useState(0);
   const [turn, setTurn] = useState("player");
   const [battleOver, setBattleOver] = useState(false);
   const [defending, setDefending] = useState(false);
 
+  // Deck / kéz / discard
   const [deck, setDeck] = useState([]);
   const [discardPile, setDiscardPile] = useState([]);
   const [hand, setHand] = useState([]);
 
+  // animációk
   const [hpPopups, setHPPopups] = useState([]);
   const [playerDamaged, setPlayerDamaged] = useState(false);
   const [playerHealed, setPlayerHealed] = useState(false);
   const [enemyDamaged, setEnemyDamaged] = useState(false);
 
+  // log + jutalom
   const [log, setLog] = useState([]);
   const [lastRewards, setLastRewards] = useState(null);
 
-  const bg = useMemo(() => resolveBackground(background, pathType), [background, pathType]);
+  const bg = useMemo(
+    () => resolveBackground(background, pathType),
+    [background, pathType]
+  );
 
-  // ---------- RARITY STYLE ----------
+  // rarity style ugyanaz
   const rarityStyle = {
     common: {
       border: "border-gray-600",
@@ -288,16 +130,83 @@ export default function CombatView({
     },
   };
 
-  function generateDeck() {
-    const d = [];
-    cardTemplates.forEach((t) => {
-      for (let i = 0; i < t.count; i++) {
-        d.push({ ...t.card });
-      }
-    });
-    return d;
+  function pushLog(msg) {
+    setLog((prev) => [...prev, msg]);
   }
 
+  function enemyImage(name) {
+    if (!name) return "";
+    return `/ui/enemies/${name.toLowerCase().replace(/ /g, "-")}.png`;
+  }
+
+  // HP popup
+  function addHPPopup(value, target, x, y) {
+    const id = Date.now() + Math.random();
+    setHPPopups((prev) => [...prev, { id, value, target, x, y }]);
+
+    if (value < 0) {
+      if (target === "player") {
+        setPlayerDamaged(true);
+        setTimeout(() => setPlayerDamaged(false), 300);
+      } else {
+        setEnemyDamaged(true);
+        setTimeout(() => setEnemyDamaged(false), 300);
+      }
+    } else {
+      if (target === "player") {
+        setPlayerHealed(true);
+        setTimeout(() => setPlayerHealed(false), 400);
+      }
+    }
+  }
+
+  // ----- PLAYER DECK INITIALIZÁLÁSA, ha még nincs -----
+  useEffect(() => {
+    if (!player || !setPlayer) return;
+
+    // ha már létezik deck a playerben, nem csinálunk semmit
+    if (Array.isArray(player.deck) && player.deck.length > 0) return;
+
+    // különben generálunk egy alap paklit a kaszt függvényében
+    const baseDeck = buildDefaultDeckForClass(classKey);
+
+    setPlayer((prev) => ({
+      ...prev,
+      deck: baseDeck,
+    }));
+  }, [player, setPlayer, classKey]);
+
+  /**
+   * player.deck (ID lista) -> konkrét kártya példányok combatra
+   * Minden ID-ból egy kártya objektum:
+   * { name, type, dmg, heal, image, rarity }
+   */
+  function buildCombatDeckFromPlayer() {
+    const deckIds =
+      (Array.isArray(player?.deck) && player.deck.length > 0)
+        ? player.deck
+        : buildDefaultDeckForClass(classKey);
+
+    const cards = [];
+    deckIds.forEach((id) => {
+      const ab = ABILITIES_BY_ID[id];
+      if (!ab) return;
+
+      cards.push({
+        abilityId: ab.id,
+        name: ab.name,
+        type: ab.type,
+        dmg: ab.dmg ?? null,
+        heal: ab.heal ?? null,
+        image: ab.image,
+        rarity: ab.rarity || "common",
+      });
+    });
+
+    return cards;
+  }
+
+  // lap húzás
   function drawInitialHand(deckInit) {
     const handInit = [];
     const deckCopy = [...deckInit];
@@ -330,38 +239,10 @@ export default function CombatView({
     });
   }
 
-  function pushLog(msg) {
-    setLog((prev) => [...prev, msg]);
-  }
-
-  function enemyImage(name) {
-    if (!name) return "";
-    return `/ui/enemies/${name.toLowerCase().replace(/ /g, "-")}.png`;
-  }
-
-  // ---------- HP POPUP + FLASH ----------
-  function addHPPopup(value, target, x, y) {
-    const id = Date.now() + Math.random();
-    setHPPopups((prev) => [...prev, { id, value, target, x, y }]);
-
-    if (value < 0) {
-      if (target === "player") {
-        setPlayerDamaged(true);
-        setTimeout(() => setPlayerDamaged(false), 300);
-      } else {
-        setEnemyDamaged(true);
-        setTimeout(() => setEnemyDamaged(false), 300);
-      }
-    } else {
-      if (target === "player") {
-        setPlayerHealed(true);
-        setTimeout(() => setPlayerHealed(false), 400);
-      }
-    }
-  }
-
-  // ---------- ENEMY + DECK INIT ----------
+  // ENEMY + DECK INIT
   useEffect(() => {
+    if (!player) return;
+
     const isElite = !boss && pathType === "elite";
     const allowedNames = Array.isArray(enemies) ? enemies : [];
 
@@ -397,14 +278,16 @@ export default function CombatView({
     setPlayerHealed(false);
     setLastRewards(null);
 
-    const newDeck = generateDeck();
-    const { hand: initialHand, deck: remainingDeck } = drawInitialHand(newDeck);
+    // player deckből combat deck építése
+    const combatDeck = buildCombatDeckFromPlayer();
+    const { hand: initialHand, deck: remainingDeck } =
+      drawInitialHand(combatDeck);
     setDeck(remainingDeck);
     setDiscardPile([]);
     setHand(initialHand);
-  }, [level, boss, pathType, enemies, cardTemplates]);
+  }, [level, boss, pathType, enemies, player, classKey]);
 
-  // ---------- KÁRTYA KIJÁTSZÁSA ----------
+  // KÁRTYA KIJÁTSZÁSA
   function playCard(card) {
     if (battleOver || turn !== "player" || !enemy) return;
 
@@ -418,7 +301,8 @@ export default function CombatView({
     if (card.type === "attack") {
       const baseMin = (card.dmg?.[0] ?? 4) + attackBonus;
       const baseMax = (card.dmg?.[1] ?? 8) + attackBonus;
-      const dmg = Math.floor(Math.random() * (baseMax - baseMin + 1)) + baseMin;
+      const dmg =
+        Math.floor(Math.random() * (baseMax - baseMin + 1)) + baseMin;
 
       setEnemyHP((prev) => {
         const newHP = Math.max(0, prev - dmg);
@@ -438,7 +322,9 @@ export default function CombatView({
       setPlayerHP((prev) => {
         const newHP = Math.min(prev + healAmount, maxHPFromPlayer);
         addHPPopup(+healAmount, "player", "24%", "120px");
-        pushLog(`✨ ${card.name}: +${healAmount} HP (most ${newHP}/${maxHPFromPlayer})`);
+        pushLog(
+          `✨ ${card.name}: +${healAmount} HP (most ${newHP}/${maxHPFromPlayer})`
+        );
         return newHP;
       });
     }
@@ -447,7 +333,7 @@ export default function CombatView({
     redrawHand();
   }
 
-  // ---------- GYŐZELEM / VERESÉG CHECK ----------
+  // GYŐZELEM / VERESÉG CHECK
   useEffect(() => {
     if (!enemy) return;
     if (playerHP <= 0 || enemyHP <= 0) {
@@ -455,13 +341,14 @@ export default function CombatView({
     }
   }, [playerHP, enemyHP, enemy]);
 
-  // ---------- ENEMY KÖR ----------
+  // ENEMY KÖR
   useEffect(() => {
     if (!enemy || battleOver || turn !== "enemy") return;
 
     const t = setTimeout(() => {
       const [minDmg, maxDmg] = enemy.dmg;
-      let dmg = Math.floor(Math.random() * (maxDmg - minDmg + 1)) + minDmg;
+      let dmg =
+        Math.floor(Math.random() * (maxDmg - minDmg + 1)) + minDmg;
 
       if (defending) {
         dmg = Math.floor(dmg / 2);
@@ -485,15 +372,17 @@ export default function CombatView({
     return () => clearTimeout(t);
   }, [turn, enemy, defending, battleOver, boss, player]);
 
-  // ---------- JUTALOM ----------
+  // REWARD
   function rollRewards() {
     if (!enemy || !enemy.rewards) {
       return { xpGain: 0, goldGain: 0 };
     }
 
     const { goldMin, goldMax, xpMin, xpMax } = enemy.rewards;
-    const goldGain = Math.floor(Math.random() * (goldMax - goldMin + 1)) + goldMin;
-    const xpGain = Math.floor(Math.random() * (xpMax - xpMin + 1)) + xpMin;
+    const goldGain =
+      Math.floor(Math.random() * (goldMax - goldMin + 1)) + goldMin;
+    const xpGain =
+      Math.floor(Math.random() * (xpMax - xpMin + 1)) + xpMin;
 
     return { xpGain, goldGain };
   }
@@ -547,10 +436,11 @@ export default function CombatView({
       gold: (prev.gold ?? 0) + goldGain,
       hp: playerHP,
       max_hp: prev.max_hp ?? maxHPFromPlayer,
-      unspentStatPoints: (prev.unspentStatPoints ?? 0) + addedStatPoints,
+      unspentStatPoints:
+        (prev.unspentStatPoints ?? 0) + addedStatPoints,
     }));
 
-    // TODO: ide mehet majd backend update (pl. /api/update-player)
+    // TODO: ide jöhet majd backend update
 
     if (onEnd) onEnd(playerHP, true);
   }
@@ -651,7 +541,7 @@ export default function CombatView({
         </div>
       )}
 
-      {/* END BATTLE (Victory / Defeat UI) */}
+      {/* END BATTLE */}
       {battleOver && (
         <div className="text-center mt-6 z-50 relative">
           <div className="text-4xl mb-4">
@@ -660,7 +550,8 @@ export default function CombatView({
 
           {lastRewards && (
             <div className="mb-2 text-sm text-gray-200">
-              Jutalom: +{lastRewards.goldGain} arany, +{lastRewards.xpGain} XP
+              Jutalom: +{lastRewards.goldGain} arany, +
+              {lastRewards.xpGain} XP
               {lastRewards.levelsGained > 0 &&
                 ` • +${lastRewards.levelsGained} szint, +${lastRewards.addedStatPoints} stat pont (Hub-ban kiosztható)`}
             </div>
