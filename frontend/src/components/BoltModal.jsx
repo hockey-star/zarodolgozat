@@ -1,6 +1,18 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 
 export default function ShopModal({ onClose }) {
+  const [playerData, setPlayerData] = useState(null);
+
+  useEffect(() => {
+    const userId = localStorage.getItem("sk_current_user_id");
+    if (!userId) return;
+
+    fetch(`http://localhost:3000/api/players/${userId}`)
+      .then((res) => res.json())
+      .then((data) => setPlayerData(data))
+      .catch((err) => console.error("Hiba a player fetch-nél:", err));
+  }, []);
+
   return (
     <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
       <div className="relative bg-gray-900 border border-gray-700 rounded-xl w-[90%] h-[80%] flex shadow-xl p-6 text-white">
@@ -15,9 +27,9 @@ export default function ShopModal({ onClose }) {
         {/* Bal oldal: felső karakteradatok */}
         <div className="flex flex-col w-2/3 pr-4">
           <div className="flex justify-between bg-black/40 p-2 rounded mb-4 text-sm">
-            <div>Szint: 12</div>
-            <div>XP: 1345</div>
-            <div>Arany: 560</div>
+            <div>Szint: {playerData?.level ?? "-"}</div>
+            <div>XP: {playerData?.xp ?? "-"}</div>
+            <div>Arany: {playerData?.gold ?? "-"}</div>
           </div>
 
           {/* Görgethető bolt lista */}

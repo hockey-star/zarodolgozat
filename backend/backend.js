@@ -147,6 +147,22 @@ app.post("/api/set-class", (req, res) => {
   });
 });
 
+app.get("/api/players/:id", (req, res) => {
+  const { id } = req.params;
+
+  pool.query(
+    "SELECT id, username, level, xp, gold FROM players WHERE id = ?",
+    [id],
+    (err, result) => {
+      if (err) return res.status(500).json({ error: "Adatbázis hiba" });
+      if (result.length === 0)
+        return res.status(404).json({ error: "Nincs ilyen felhasználó" });
+
+      res.json(result[0]);
+    }
+  );
+});
+
 // --- KASZTOK LEKÉRÉSE A DB-BŐL ---
 app.get("/api/classes", (req, res) => {
   pool.query("SELECT * FROM classes", (err, results) => {
