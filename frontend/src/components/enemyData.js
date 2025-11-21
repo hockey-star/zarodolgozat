@@ -1,11 +1,12 @@
 // enemyData.js
 
+// Ezeket a listákat te használtad – változatlanul meghagyom:
 export const defaultEnemies = [
-    "Bandit",
-    "Lich Mage", 
-    "Ghoul",
-    "Death Knight",
-    "Ghost"
+  "Bandit",
+  "Lich Mage",
+  "Ghoul",
+  "Death Knight",
+  "Ghost",
 ];
 
 export const bossEnemies = [
@@ -13,3 +14,195 @@ export const bossEnemies = [
   "Ancient Dragon",
   "Lich King",
 ];
+
+// Lokális enemy sablonok – NEM DB-sek, csak frontendhez.
+const ENEMY_TEMPLATES = [
+  // ---- Normál ellenfelek ----
+  {
+    name: "Bandit",
+    role: "normal",
+    baseHp: 35,
+    hpPerLevel: 5,
+    baseMinDmg: 5,
+    baseMaxDmg: 9,
+    dmgPerLevel: 1,
+    goldRewardMin: 8,
+    goldRewardMax: 14,
+    xpRewardMin: 10,
+    xpRewardMax: 18,
+  },
+  {
+    name: "Lich Mage",
+    role: "normal",
+    baseHp: 32,
+    hpPerLevel: 4,
+    baseMinDmg: 6,
+    baseMaxDmg: 11,
+    dmgPerLevel: 1,
+    goldRewardMin: 9,
+    goldRewardMax: 15,
+    xpRewardMin: 12,
+    xpRewardMax: 20,
+  },
+  {
+    name: "Ghoul",
+    role: "normal",
+    baseHp: 40,
+    hpPerLevel: 5,
+    baseMinDmg: 5,
+    baseMaxDmg: 10,
+    dmgPerLevel: 1,
+    goldRewardMin: 8,
+    goldRewardMax: 16,
+    xpRewardMin: 11,
+    xpRewardMax: 19,
+  },
+  {
+    name: "Death Knight",
+    role: "normal",
+    baseHp: 45,
+    hpPerLevel: 6,
+    baseMinDmg: 6,
+    baseMaxDmg: 12,
+    dmgPerLevel: 2,
+    goldRewardMin: 10,
+    goldRewardMax: 18,
+    xpRewardMin: 14,
+    xpRewardMax: 22,
+  },
+  {
+    name: "Ghost",
+    role: "normal",
+    baseHp: 30,
+    hpPerLevel: 4,
+    baseMinDmg: 4,
+    baseMaxDmg: 8,
+    dmgPerLevel: 1,
+    goldRewardMin: 7,
+    goldRewardMax: 13,
+    xpRewardMin: 9,
+    xpRewardMax: 16,
+  },
+
+  // ---- Boss-ok ----
+  {
+    name: "Demon Lord",
+    role: "boss",
+    baseHp: 130,
+    hpPerLevel: 8,
+    baseMinDmg: 12,
+    baseMaxDmg: 20,
+    dmgPerLevel: 2,
+    goldRewardMin: 70,
+    goldRewardMax: 110,
+    xpRewardMin: 90,
+    xpRewardMax: 130,
+  },
+  {
+    name: "Ancient Dragon",
+    role: "boss",
+    baseHp: 150,
+    hpPerLevel: 9,
+    baseMinDmg: 13,
+    baseMaxDmg: 22,
+    dmgPerLevel: 2,
+    goldRewardMin: 80,
+    goldRewardMax: 120,
+    xpRewardMin: 100,
+    xpRewardMax: 150,
+  },
+  {
+    name: "Lich King",
+    role: "boss",
+    baseHp: 140,
+    hpPerLevel: 8,
+    baseMinDmg: 14,
+    baseMaxDmg: 23,
+    dmgPerLevel: 2,
+    goldRewardMin: 85,
+    goldRewardMax: 125,
+    xpRewardMin: 110,
+    xpRewardMax: 160,
+  },
+];
+
+// helper: sablon keresése név alapján
+function findTemplate(name) {
+  if (!name) return null;
+  return (
+    ENEMY_TEMPLATES.find(
+      (e) => e.name.toLowerCase() === name.toLowerCase()
+    ) || null
+  );
+}
+
+/**
+ * Random enemy legenerálása.
+ *
+ * param:
+ *  - level: player/aktuális szint
+ *  - boss: true -> csak boss-ok közül sorsol
+ *  - elite: ha akarod, CombatView-ből átadhatod (elite = nehezebb)
+ *  - allowedNames: ha nem üres, csak ezekből a nevekből választ
+ *
+ * return:
+ *  {
+ *    name, role, level,
+ *    maxHp, minDmg, maxDmg,
+ *    goldRewardMin, goldRewardMax,
+ *    xpRewardMin, xpRewardMax
+ *  }
+ */
+export function getRandomEnemy({
+  level = 1,
+  boss = false,
+  elite = false,
+  allowedNames = [],
+}) {
+  let pool = ENEMY_TEMPLATES.slice();
+
+  if (boss) {
+    pool = pool.filter((e) => e.role === "boss");
+  } else {
+    pool = pool.filter((e) => e.role === "normal");
+  }
+
+  if (allowedNames && allowedNames.length > 0) {
+    pool = pool.filter((e) => allowedNames.includes(e.name));
+  }
+
+  if (pool.length === 0) {
+    // fallback, hogy ne dőljön el a játék
+    pool = boss
+      ? ENEMY_TEMPLATES.filter((e) => e.role === "boss")
+      : ENEMY_TEMPLATES.filter((e) => e.role === "normal");
+  }
+
+  const base = pool[Math.floor(Math.random() * pool.length)];
+
+  const lvlOffset = Math.max(level - 1, 0);
+
+  const maxHp = base.baseHp + base.hpPerLevel * lvlOffset;
+
+  let minDmg = base.baseMinDmg + base.dmgPerLevel * lvlOffset;
+  let maxDmg = base.baseMaxDmg + base.dmgPerLevel * lvlOffset;
+
+  if (elite && !boss) {
+    // egyszerű elite buff: +25% dmg +25% hp
+    minDmg = Math.round(minDmg * 1.25);
+    maxDmg = Math.round(maxDmg * 1.25);
+  }
+
+  return {
+    name: base.name,
+    role: boss ? "boss" : elite ? "elite" : "normal",
+    level,
+    maxHp,
+    minDmg,
+    maxDmg,
+    goldRewardMin: base.goldRewardMin,
+    goldRewardMax: base.goldRewardMax,
+    xpRewardMin: base.xpRewardMin,
+    xpRewardMax: base.xpRewardMax,
+  };
+}
