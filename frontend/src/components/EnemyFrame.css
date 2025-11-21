@@ -1,13 +1,7 @@
-@import url('https://fonts.googleapis.com/css2?family=Jacquard+12&family=Jersey+10&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Jersey+10&family=Jersey+20&display=swap');
-
-
-
-
 .enemy-frame {
   position: relative;
-  width: 1000px;   /* frame teljes szélessége */
-  height: 600px;  /* frame teljes magassága */
+  width: 1000px;
+  height: 600px;
 }
 
 .frame {
@@ -28,29 +22,39 @@
   height: 100%;
   object-fit: contain;
   z-index: 10;
+  transition: filter 0.3s ease;
+}
+
+/* DAMAGE FLASH (PIROS) */
+.character.damage {
+  filter: brightness(1.7) drop-shadow(0 0 25px rgb(255, 0, 0));
+}
+
+/* HEAL FLASH (ZÖLD) */
+.character.heal {
+  filter: brightness(1.7) drop-shadow(0 0 25px limegreen);
 }
 
 .name {
   position: absolute;
-  bottom: 385px;  /* frame tetejétől picit fentebb */
+  bottom: 385px;
   width: 100%;
   text-align: center;
   font-weight: bold;
-  color: rgb(255, 0, 0);
+  color: rgb(255,0,0);
   font-size: 20px;
   font-family: 'Jersey 20', sans-serif;
   text-shadow: 1px 1px 3px black;
   z-index: 30;
 }
 
-/* HP sáv a frame belsejében */
 .hp-bar-bg {
   position: absolute;
-  bottom: 194px;          /* a frame aljától picit fentebb */
+  bottom: 194px;
   left: 50%;
   transform: translateX(-50%);
-  width: 43%;             /* a frame szélességének 80%-a */
-  height: 12px;           /* állítható a frame arányaihoz */
+  width: 43%;
+  height: 12px;
   background-color: rgba(0,0,0,0.5);
   border-radius: 10px;
   z-index: 30;
@@ -65,7 +69,7 @@
 
 .hp-text {
   position: absolute;
-  bottom: 193px;           /* HP sáv felett */
+  bottom: 193px;
   left: 50%;
   transform: translateX(-50%);
   color: white;

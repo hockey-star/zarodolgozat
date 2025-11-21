@@ -1,27 +1,23 @@
+// frontend/src/components/LoginScreen.jsx
 import React, { useState, useEffect } from "react";
-import { usePlayer } from "../context/PlayerContext.jsx";
 import "./LoginScreen.css";
+import { usePlayer } from "../context/PlayerContext.jsx";
 
-export default function LoginScreen({ onNext }) {
+export default function LoginScreen({ onLogin }) {
+  const { setPlayer } = usePlayer();
+
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
-  const { player } = usePlayer() || {};
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [isRegistering, setIsRegistering] = useState(false);
   const [showAlert, setShowAlert] = useState(false);
   const [alertMessage, setAlertMessage] = useState("");
   const [hiding, setHiding] = useState(false);
-  const [isRegistering, setIsRegistering] = useState(false);
 
   useEffect(() => {
-    document.body.style.overflow = "hidden";
-    document.documentElement.style.overflow = "hidden";
     document.body.style.margin = "0";
-    document.documentElement.style.margin = "0";
-    return () => {
-      document.body.style.overflow = "auto";
-      document.documentElement.style.overflow = "auto";
-    };
+    return () => (document.body.style.margin = "0");
   }, []);
 
   function showTempAlert(message) {
@@ -37,8 +33,6 @@ export default function LoginScreen({ onNext }) {
   }
 
   async function handle() {
-    if (showAlert) return;
-
     if (!username.trim() && !email.trim()) {
       showTempAlert("Adj meg egy felhasználónevet vagy email címet!");
       return;
@@ -48,173 +42,121 @@ export default function LoginScreen({ onNext }) {
       return;
     }
 
-    if (isRegistering) {
-      if (!email.trim()) {
-        showTempAlert("Adj meg egy email címet!");
-        return;
-      }
+    try {
+      if (isRegistering) {
+        if (!email.trim()) {
+          showTempAlert("Adj meg egy email címet!");
+          return;
+        }
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+          showTempAlert("Érvénytelen email formátum!");
+          return;
+        }
+        if (password !== confirmPassword) {
+          showTempAlert("A jelszavak nem egyeznek!");
+          return;
+        }
 
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(email)) {
-        showTempAlert("Érvénytelen email formátum!");
-        return;
-      }
-
-      if (password !== confirmPassword) {
-        showTempAlert("A jelszavak nem egyeznek!");
-        return;
-      }
-
-      try {
-        const res = await fetch("http://localhost:3000/api/register", {
+        const regRes = await fetch("http://localhost:3000/api/register", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ username, email, password }),
         });
 
-        const data = await res.json();
-        if (!res.ok) {
-          showTempAlert(data.error || "Sikertelen regisztráció!");
+        const regData = await regRes.json();
+        if (!regRes.ok) {
+          showTempAlert(regData.error || "Sikertelen regisztráció!");
           return;
         }
 
-        showTempAlert("Sikeres regisztráció!");
-        setTimeout(() => {
-          setIsRegistering(false);
-          setPassword("");
-          setConfirmPassword("");
-        }, 1000);
-      } catch {
-        showTempAlert("Szerver hiba történt!");
-      }
-    } else {
-      try {
-        const res = await fetch("http://localhost:3000/api/login", {
+        // Auto-login after register
+        const loginRes = await fetch("http://localhost:3000/api/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ identifier: username, password }),
+        });
+        const loginData = await loginRes.json();
+        if (!loginRes.ok) {
+          showTempAlert(loginData.error || "Regisztráltál, de a bejelentkezés nem sikerült.");
+          return;
+        }
+
+        // Store player in context (minimal) and trigger parent
+        setPlayer(loginData.user);
+        localStorage.setItem("sk_current_user", loginData.user.username);
+        onLogin(loginData.user.username);
+        return;
+      } else {
+        const loginRes = await fetch("http://localhost:3000/api/login", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ identifier: username || email, password }),
         });
-
-        const data = await res.json();
-        if (!res.ok) {
-          showTempAlert(data.error || "Hibás bejelentkezési adatok!");
+        const loginData = await loginRes.json();
+        if (!loginRes.ok) {
+          showTempAlert(loginData.error || "Hibás bejelentkezési adatok!");
           return;
         }
 
-        localStorage.setItem("sk_current_user", data.user.username);
-        onNext();
-      } catch {
-        showTempAlert("Szerver hiba történt!");
+        setPlayer(loginData.user);
+        localStorage.setItem("sk_current_user", loginData.user.username);
+        onLogin(loginData.user.username);
       }
+    } catch (e) {
+      console.error("Login error:", e);
+      showTempAlert("Szerver hiba történt!");
     }
   }
 
   useEffect(() => {
-    const handleKeyPress = (e) => {
-      if (e.key === "Enter" && document.activeElement.tagName === "INPUT") {
-        handle();
-      }
+    const handleKey = (e) => {
+      if (e.key === "Enter" && document.activeElement.tagName === "INPUT") handle();
     };
-    window.addEventListener("keydown", handleKeyPress);
-    return () => window.removeEventListener("keydown", handleKeyPress);
-  }, [username, email, password, confirmPassword, showAlert, isRegistering]);
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, [username, email, password, confirmPassword, isRegistering]);
 
   return (
     <div className="fixed inset-0 flex items-center justify-center overflow-hidden font-poppins">
-      <div
-        className={`alertBanner ${
-          showAlert ? (hiding ? "slideUp" : "slideDown") : "hidden"
-        }`}
-      >
+      <div className={`alertBanner ${showAlert ? (hiding ? "slideUp" : "slideDown") : "hidden"}`}>
         {alertMessage}
       </div>
 
-      <video
-        autoPlay
-        loop
-        muted
-        playsInline
-        className="-z-10 absolute top-0 left-0 w-full h-full object-cover object-center"
-      >
+      <video autoPlay loop muted playsInline className="-z-10 absolute top-0 left-0 w-full h-full object-cover object-center">
         <source src="/src/assets/videos/1.mp4" type="video/mp4" />
-        Your browser does not support the video tag.
       </video>
 
       <div className="loginBox relative z-10 w-11/12 sm:w-2/3 md:w-1/3 p-8 text-white shadow-2xl backdrop-blur-sm text-center">
-        <h2 className="bejelentkezes">
-          {isRegistering ? "Regisztráció" : "Bejelentkezés"}
-        </h2>
-        <p className="parancs">
-          {isRegistering
-            ? "*Hozz létre egy új fiókot*"
-            : "*Adj meg egy felhasználónevet és jelszavat a belépéshez*"}
-        </p>
+        <h2 className="bejelentkezes">{isRegistering ? "Regisztráció" : "Bejelentkezés"}</h2>
+        <p className="parancs">{isRegistering ? "*Hozz létre egy új fiókot*" : "*Adj meg egy felhasználónevet és jelszavat a belépéshez*"}</p>
 
-        <input
-          type="text"
-          placeholder="Felhasználónév"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-          className="felhasznalonev bg-red-950 w-full p-3 mb-5 text-yellow-100 text-center placeholder-yellow-100 focus:outline-none focus:ring-2 focus:ring-red-700"
-        />
+        <input type="text" placeholder="Felhasználónév" value={username} onChange={(e) => setUsername(e.target.value)} className="felhasznalonev bg-red-950 w-full p-3 mb-5 text-yellow-100 text-center placeholder-yellow-100 focus:outline-none focus:ring-2 focus:ring-red-700" />
 
-        {isRegistering && (
-          <input
-            type="email"
-            placeholder="Email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="email bg-red-950 w-full p-3 mb-5 text-yellow-100 text-center placeholder-yellow-100 focus:outline-none focus:ring-2 focus:ring-red-700"
-          />
-        )}
+        {isRegistering && <input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} className="email bg-red-950 w-full p-3 mb-5 text-yellow-100 text-center placeholder-yellow-100 focus:outline-none focus:ring-2 focus:ring-red-700" />}
 
-        <input
-          type="password"
-          placeholder="Jelszó"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          className="jelszo bg-red-950 w-full p-3 mb-5 text-yellow-100 text-center placeholder-yellow-100 focus:outline-none focus:ring-2 focus:ring-red-700"
-        />
+        <input type="password" placeholder="Jelszó" value={password} onChange={(e) => setPassword(e.target.value)} className="jelszo bg-red-950 w-full p-3 mb-5 text-yellow-100 text-center placeholder-yellow-100 focus:outline-none focus:ring-2 focus:ring-red-700" />
 
-        {isRegistering && (
-          <input
-            type="password"
-            placeholder="Jelszó megerősítése"
-            value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
-            className="jelszo bg-red-950 w-full p-3 mb-5 text-yellow-100 text-center placeholder-yellow-100 focus:outline-none focus:ring-2 focus:ring-red-700"
-          />
-        )}
+        {isRegistering && <input type="password" placeholder="Jelszó megerősítése" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className="jelszo bg-red-950 w-full p-3 mb-5 text-yellow-100 text-center placeholder-yellow-100 focus:outline-none focus:ring-2 focus:ring-red-700" />}
 
-        <button onClick={handle} className="button">
-          {isRegistering ? "REGISZTRÁCIÓ" : "TOVÁBB"}
-        </button>
+        <button onClick={handle} className="button">{isRegistering ? "REGISZTRÁCIÓ" : "TOVÁBB"}</button>
 
         <p className="regisztracioText">
           {isRegistering ? (
             <>
               <span className="regText">Van már fiókod?</span>{" "}
-              <span
-                className="regisztracioLink"
-                onClick={() => setIsRegistering(false)}
-              >
-                Jelentkezz be
-              </span>
+              <span className="regisztracioLink" onClick={() => setIsRegistering(false)}>Jelentkezz be</span>
             </>
           ) : (
             <>
               <span className="regText">Nincs még fiókod?</span>{" "}
-              <span
-                className="regisztracioLink"
-                onClick={() => setIsRegistering(true)}
-              >
-                Regisztrálj
-              </span>
+              <span className="regisztracioLink" onClick={() => setIsRegistering(true)}>Regisztrálj</span>
             </>
           )}
         </p>
       </div>
 
+      {/* logos bottom — keep as you had it */}
       <div className="logoDiv">
         <div className="logoContainer">
           <div>

@@ -1,124 +1,123 @@
+// GameController.jsx
 import React, { useState } from "react";
-import PathChoice from "./PathChoice.jsx";
-import CombatView from "./CombatView.jsx";
-import { usePlayer } from "../context/PlayerContext.jsx";
+import PathChoice from "./PathChoice";
+import CombatView from "./CombatView";
 
-// 🔹 Szintek és háttérképek (ezeket tedd be a /public/backgrounds mappába)
-const LEVELS = [
-  { id: 1, bg: "/backgrounds/level1.jpg", enemies: ["Erdő Goblin", "Bandita"] },
-  { id: 2, bg: "/backgrounds/level2.jpg", enemies: ["Kósza Farkas", "Vadász"] },
-  { id: 3, bg: "/backgrounds/level3.jpg", enemies: ["Kísértet", "Óriás Patkány"] },
-  { id: 4, bg: "/backgrounds/level4.jpg", enemies: ["Druid", "Mocsári Szörny"] },
-  { id: 5, bg: "/backgrounds/level5.jpg", enemies: ["Bandita Főhadnagy", "Őr"] },
-  { id: 6, bg: "/backgrounds/level6.jpg", enemies: ["Néma Árny", "Dögvész"] },
-  { id: 7, bg: "/backgrounds/level7.jpg", enemies: ["Vadember", "Sötét Lurkó"] },
-  { id: 8, bg: "/backgrounds/level8.jpg", enemies: ["Rablók", "Ördögi Kutya"] },
-  { id: 9, bg: "/backgrounds/level9.jpg", enemies: ["Fekete Lovag", "Óriás Bogár"] },
-  { id: 10, bg: "/backgrounds/level10.jpg", enemies: ["Falkavezér", "Romboló"] },
-  // 🔹 Boss szint
-  { id: 11, bg: "/backgrounds/boss.jpg", enemies: ["Ősi Démon"], boss: true },
-];
+/*
+  Fő vezérlő:
+  - playerHP állapotot tart fenn és továbbadja a CombatView-nek
+  - kezeli a PathChoice választását (fight / elite / mystery)
+  - a mystery esetén kisorsol: fight / heal / loot (~33% mindegy)
+*/
+
+const MAX_HP = 120;
 
 export default function GameController() {
-  const { player } = usePlayer(); // ✅ fix: nem kell `?.()`
-  const playerTemplate = player || { username: "Hős", base: { hp: 50, str: 5 } };
+  const [playerHP, setPlayerHP] = useState(MAX_HP);
+  const [level, setLevel] = useState(1);
+  const [view, setView] = useState("path"); // "path" | "combat"
+  const [pendingCombatProps, setPendingCombatProps] = useState(null); // { level, boss }
+  const [message, setMessage] = useState(null);
+  const [inventory, setInventory] = useState([]);
 
-  const [levelIndex, setLevelIndex] = useState(0);
-  const [view, setView] = useState("path"); // "path" | "combat" | "end"
-  const [playerHP, setPlayerHP] = useState(playerTemplate.base.hp || 50);
-  const [playerDead, setPlayerDead] = useState(false);
+  // Called by CombatView when a fight ends:
+  // newHP - maradt HP, victory - boolean (enemy dead)
+  function handleBattleEnd(newHP, victory) {
+    setPlayerHP(newHP);
+    setPendingCombatProps(null);
+    setView("path");
 
-  const currentLevel = LEVELS[levelIndex];
-
-  // 🔹 Útválasztás kezelése
-  function handlePathChoose() {
-    setView("combat");
+    if (victory) {
+      setLevel(prev => prev + 1);
+      setMessage("Győzelem! Tovább a következő szintre.");
+      setTimeout(() => setMessage(null), 1800);
+    } else {
+      setMessage("Legyőztek... vége a játéknak.");
+      // itt további game-over logika jöhet
+    }
   }
 
-  // 🔹 Csata vége callback
-  function handleBattleEnd(newPlayerHP, won) {
-    setPlayerHP(newPlayerHP);
+  // PathChoice visszahívása
+  function handlePathChoose(choice) {
+    setMessage(null);
 
-    if (!won || newPlayerHP <= 0) {
-      setPlayerDead(true);
-      setView("end");
+    if (choice === "fight") {
+      setPendingCombatProps({ level, boss: false });
+      setView("combat");
       return;
     }
 
-    if (levelIndex + 1 >= LEVELS.length) {
-      // végigment a kampányon
-      setPlayerDead(false);
-      setView("end");
+    if (choice === "elite") {
+      // elite = erősebb prune: boss true
+      setPendingCombatProps({ level, boss: true });
+      setView("combat");
       return;
     }
 
-    // tovább a következő szintre
-    setLevelIndex((prev) => prev + 1);
-    setView("path");
+    if (choice === "mystery") {
+      // Mystery: 3 lehetséges eredmény ~33% each
+      const r = Math.random();
+      if (r < 0.3333) {
+        // mystery -> fight
+        setMessage("Rejtély: veszély! Harc következik!");
+        setPendingCombatProps({ level, boss: false });
+        setTimeout(() => setView("combat"), 800);
+        return;
+      } else if (r < 0.6666) {
+        // mystery -> heal
+        const healAmount = Math.floor(10 + Math.random() * 20); // 10..29 HP
+        const newHP = Math.min(MAX_HP, playerHP + healAmount);
+        setPlayerHP(newHP);
+        setMessage(`Találtál egy gyógyforrást: +${healAmount} HP (most ${newHP}/${MAX_HP})`);
+        setTimeout(() => setMessage(null), 2200);
+        return;
+      } else {
+        // mystery -> loot
+        // egyszerű loot példa — később lehet bővíteni
+        const lootItems = ["Bronz érem", "Gyógyital", "Véletlenszerű relikvia"];
+        const item = lootItems[Math.floor(Math.random() * lootItems.length)];
+        setInventory(prev => [...prev, item]);
+        setMessage(`Szerencse: találtál egy tárgyat: ${item}`);
+        setTimeout(() => setMessage(null), 2200);
+        return;
+      }
+    }
   }
 
-  function restart() {
-    setLevelIndex(0);
-    setPlayerHP(playerTemplate.base.hp || 50);
-    setPlayerDead(false);
-    setView("path");
-  }
-
-  // 🔹 Game Over / Győzelem képernyő
-  if (view === "end") {
-    return (
-      <div className="flex flex-col items-center justify-center h-screen bg-black text-white text-center p-6">
-        <h1 className="text-4xl font-bold mb-4">
-          {playerDead ? "☠️ Meghaltál!" : "🏆 Győzelem!"}
-        </h1>
-        <p className="mb-6">
-          Szinted: {levelIndex + 1} / {LEVELS.length}
-        </p>
-        <button
-          className="px-6 py-3 bg-red-700 rounded-lg hover:bg-red-600 transition"
-          onClick={restart}
-        >
-          Újrakezdés
-        </button>
-      </div>
-    );
-  }
-
-
-if (view === "combat") {
-console.log("View:", view);
-console.log("Level index:", levelIndex);
-console.log("Current BG:", currentLevel.bg);
-
-}
-  
-  // 🔹 Fő logika
   return (
-    <>
+    <div className="min-h-screen w-full relative">
+      {/* felső állapot / üzenet */}
+      <div className="p-4 flex items-center justify-between max-w-6xl mx-auto">
+        <div>
+          <strong>Szint:</strong> {level}
+        </div>
+        <div>
+          <strong>HP:</strong> {playerHP} / {MAX_HP}
+        </div>
+        <div>
+          <strong>Inventory:</strong> {inventory.length > 0 ? inventory.join(", ") : "üres"}
+        </div>
+      </div>
+
+      {message && (
+        <div className="max-w-4xl mx-auto text-center bg-black/60 text-white rounded p-3 mb-4">
+          {message}
+        </div>
+      )}
+
       {view === "path" && (
-        <PathChoice
-          key={`path-${levelIndex}`}
-          onChoose={handlePathChoose}
-          level={levelIndex + 1}
-          background={currentLevel.bg}
-        />
-        
+        <PathChoice onChoose={handlePathChoose} level={level} />
       )}
-      
 
-      {view === "combat" && (
+      {view === "combat" && pendingCombatProps && (
         <CombatView
-          key={`${levelIndex}-${Date.now()}`} // reset local state
-          level={levelIndex + 1}
-          enemies={currentLevel.enemies}
-          boss={!!currentLevel.boss}
-          background={currentLevel.bg}
+          key={`${level}-${pendingCombatProps.boss ? "boss" : "fight"}-${Date.now()}`}
+          level={pendingCombatProps.level}
+          boss={pendingCombatProps.boss}
           playerHP={playerHP}
-          onEnd={handleBattleEnd}
+          onEnd={(newHP, victory) => handleBattleEnd(newHP, victory)}
         />
       )}
-    </>
-    
+    </div>
   );
-
 }
