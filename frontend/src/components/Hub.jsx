@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import CharacterPanel from "./CharacterPanel.jsx";
 import ShopModal from "./BoltModal.jsx";
 import BlacksmithModal from "./KovacsModal.jsx";
@@ -10,11 +10,19 @@ export default function Hub({ onGoCombat }) {
 
   const [showShop, setShowShop] = useState(false);
   const [showBlacksmith, setShowBlacksmith] = useState(false);
+  const [showInv, setShowInv] = useState(false);
 
-  const [playerPos, setPlayerPos] = useState({ x: 50, y: 75 });
+  const [playerPos, setPlayerPos] = useState({ x: 40, y: 75 });
   const [isMoving, setIsMoving] = useState(false);
+  const [language, setLanguage] = useState("hu");
 
-   const [showInv, setShowInv] = useState(false);
+  // 🔹 ÚJ: a jelenlegi célpont és referencia
+  const [currentTarget, setCurrentTarget] = useState(null);
+  const targetRef = useRef(null);
+
+  useEffect(() => {
+    targetRef.current = currentTarget;
+  }, [currentTarget]);
 
   useEffect(() => {
     document.body.style.overflow = "hidden";
@@ -48,24 +56,39 @@ export default function Hub({ onGoCombat }) {
     }, 1000);
   };
 
+  const openModal = (type) => {
+    if (type === "shop") setShowShop(true);
+    if (type === "blacksmith") setShowBlacksmith(true);
+    if (type === "adventure") startAdventure();
+    if (type === "inv") setShowInv(true);
+    if (type === "settings") alert("Beállítások — ide jön majd a modal");
+  };
+
+  // 🔧 JAVÍTOTT MOVE LOGIKA
   const moveTo = (x, y, type) => {
     if (Math.abs(playerPos.x - x) < 1 && Math.abs(playerPos.y - y) < 1) {
-      if (type === "shop") setShowShop(true);
-      if (type === "blacksmith") setShowBlacksmith(true);
-      if (type === "adventure") startAdventure();
-      
+      openModal(type);
       return;
     }
 
+    setCurrentTarget(type);
+    targetRef.current = type;
     setIsMoving(true);
     setPlayerPos({ x, y });
 
     setTimeout(() => {
       setIsMoving(false);
-      if (type === "shop") setShowShop(true);
-      if (type === "blacksmith") setShowBlacksmith(true);
-      if (type === "adventure") startAdventure();
-    }, 1500);
+      if (targetRef.current === type) {
+        openModal(type);
+      }
+    }, 2000);
+  };
+
+  // 🔹 MODÁL BEZÁRÁS
+  const handleClose = (setFn) => {
+    setFn(false);
+    setCurrentTarget(null);
+    targetRef.current = null;
   };
 
   return (
@@ -73,132 +96,145 @@ export default function Hub({ onGoCombat }) {
       className="fixed inset-0 flex items-center justify-center text-white overflow-hidden"
       style={{
         backgroundImage: `url("./src/assets/pics/HUB.jpg")`,
-        backgroundRepeat: "no-repeat",
         backgroundSize: "cover",
-        backgroundPosition: "center",
       }}
     >
-      {/* BAL OLDAL */}
-      <div className="absolute top-4 left-4 flex flex-col gap-2 text-sm select-none">
-        <img src= {"./src/assets/pics/TESZTprof.jpg"} style={{
-          width: "350px",
-          height: "350px",
-          backgroundSize: "cover"
-          }}/>
-
-        <div style={{
-          width: "350px",
-          height: "25px",
-          background: "red", 
-          opacity: "50%"}}></div>
-
-          <div style={{
-          width: "150px",
-          height: "150px",
-          backgroundImage: `url(./src/assets/pics/LVL.png)`,
-          backgroundSize: "cover",
-          alignContent: "center", 
-          opacity: "75%",
-          color: "black",
-          fontSize: "88px",
-          textAlign: "center"}}>25</div>
-
-          <div style={{
-          width: "150px",
-          height: "25px",
-          color: "black",
-          background: "gold",
-          fontSize: "25px",
-          opacity: "50%",
-          textAlign: "center"}}>XP</div>
-
-          
-        <div className="arany">Arany</div>
-
-        {/*INV*/}
-        <img src= {"./src/assets/pics/bakpakk.png"} style={{
-          width: "200px",
-          height: "250px",
-          backgroundSize: "cover",
-          alignContent: "center"
-          }}
-          className="cursor-pointer group"
-          onClick={() => setShowInv(true)}/>
-
-
+      {/* 🔤 NYELVVÁLTÓ */}
+      <div className="absolute top-4 left-4 flex gap-2">
+        <div
+          onClick={() => setLanguage("hu")}
+          className={`cursor-pointer px-2 py-1 rounded text-xs font-semibold ${
+            language === "hu" ? "bg-yellow-600" : "bg-black/50 hover:bg-black/70"
+          }`}
+        >
+          🇭🇺 HU
+        </div>
+        <div
+          onClick={() => setLanguage("en")}
+          className={`cursor-pointer px-2 py-1 rounded text-xs font-semibold ${
+            language === "en" ? "bg-yellow-600" : "bg-black/50 hover:bg-black/70"
+          }`}
+        >
+          🇬🇧 EN
+        </div>
       </div>
 
-      {/* JOBB OLDAL */}
-      <div className="absolute top-4 right-4 flex flex-col gap-2 text-sm select-none items-end">
-        
-      </div>
-
-      {/* KALAND HELY */}
+      {/* KALAND */}
       <div
         className="absolute cursor-pointer group"
         style={{
-          left: "39%",
-          bottom: "45%",
-          width: "20%",
-          height: "55%",
+          left: "50%",
+          bottom: "40%",
+          width: "400px",
+          height: "460px",
+          
         }}
-        onClick={() => moveTo(50, 10, "adventure")}
+        onClick={() => moveTo(60, 50, "adventure")}
       >
-        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition" />
+        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition">
+         
+        </div>
       </div>
 
       {/* KOVÁCS */}
       <div
         className="absolute cursor-pointer group"
         style={{
-          left: "18%",
-          bottom: "18%",
-          width: "15%",
-          height: "35%",
+          left: "15%",
+          bottom: "30%",
+          width: "470px",
+          height: "400px",
+          
         }}
-        onClick={() => moveTo(30, 60, "blacksmith")}
+        onClick={() => moveTo(35, 65, "blacksmith")}
       >
-        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition" />
+        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition">
+         
+        </div>
       </div>
 
       {/* BOLT */}
       <div
         className="absolute cursor-pointer group"
         style={{
-          right: "16%",
-          bottom: "20%",
-          width: "14%",
-          height: "34%",
+          right: "15%",
+          bottom: "7%",
+          width: "600px",
+          height: "350px",
+          
         }}
-        onClick={() => moveTo(70, 58, "shop")}
+        onClick={() => moveTo(50, 85, "shop")}
       >
-        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition" />
+        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition">
+         
+        </div>
       </div>
+
+      {/* INV */}
+      <div
+        className="absolute cursor-pointer group"
+        style={{
+          left: "0%",
+          bottom: "4%",
+          width: "600px",
+          height: "200px",
+          
+        }}
+        onClick={() => moveTo(33, 85, "inv")}
+      >
+        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition">
+          
+        </div>
+      </div>
+
+      {/* BEÁLLÍTÁSOK
+      <div
+        className="absolute cursor-pointer group"
+        style={{
+          left: "35%",
+          bottom: "5%",
+          width: "150px",
+          height: "150px",
+          backgroundColor: "red",
+        }}
+        onClick={() => moveTo(30, 80, "settings")}
+      >
+        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition">
+          {language === "hu" ? "BEÁLL." : "SETTINGS"}
+        </div>
+      </div> */}
 
       {/* PLAYER */}
       <img
         src="./src/assets/pics/TESZT.PNG"
         alt="player"
-        className={`absolute transition-all duration-[1500ms] ease-in-out ${isMoving ? "brightness-125" : ""}`}
+        className={`absolute transition-all duration-[2000ms] ease-in-out ${
+          isMoving ? "brightness-125" : ""
+        }`}
         style={{
           left: `${playerPos.x}%`,
           top: `${playerPos.y}%`,
           transform: "translate(-50%, -50%)",
           width: "4%",
           imageRendering: "pixelated",
+          
         }}
       />
 
       {/* MODÁLOK */}
-      {showShop && <ShopModal onClose={() => setShowShop(false)} />}
-      {showBlacksmith && <BlacksmithModal onClose={() => setShowBlacksmith(false)} />}
-      {showInv && <InvModal onClose={() => setShowInv(false)} />}
+      {showShop && <ShopModal onClose={() => handleClose(setShowShop)} />}
+      {showBlacksmith && (
+        <BlacksmithModal onClose={() => handleClose(setShowBlacksmith)} />
+      )}
+      {showInv && <InvModal onClose={() => handleClose(setShowInv)} />}
 
       {/* KALAND ÉRTESÍTÉS */}
       {isAdventuring && (
         <div className="absolute bottom-[32%] left-0 right-0 text-center">
-          <div className="inline-block bg-black-700 px-4 py-2 rounded shadow-lg">
-            Utazás folyamatban... ({adventureTimer})
+          <div className="inline-block bg-black/70 px-4 py-2 rounded shadow-lg">
+            {language === "hu"
+              ? `Utazás folyamatban... (${adventureTimer})`
+              : `Travelling... (${adventureTimer})`}
           </div>
         </div>
       )}
