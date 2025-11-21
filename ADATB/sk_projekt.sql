@@ -1,9 +1,9 @@
-﻿-- phpMyAdmin SQL Dump
+-- phpMyAdmin SQL Dump
 -- version 5.2.1
 -- https://www.phpmyadmin.net/
 --
 -- Gép: 127.0.0.1
--- Létrehozás ideje: 2025. Nov 17. 11:41
+-- Létrehozás ideje: 2025. Nov 21. 13:58
 -- Kiszolgáló verziója: 10.4.28-MariaDB
 -- PHP verzió: 8.2.4
 
@@ -169,18 +169,24 @@ CREATE TABLE `players` (
   `strength` int(11) DEFAULT 5,
   `intellect` int(11) DEFAULT 5,
   `defense` int(11) DEFAULT 2,
-  `created_at` datetime DEFAULT current_timestamp()
+  `created_at` datetime DEFAULT current_timestamp(),
+  `unspentStatPoints` int(11) DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_hungarian_ci;
 
 --
 -- A tábla adatainak kiíratása `players`
 --
 
-INSERT INTO `players` (`id`, `username`, `email`, `password_hash`, `class_id`, `level`, `xp`, `gold`, `hp`, `max_hp`, `strength`, `intellect`, `defense`, `created_at`) VALUES
-(2, 'TesztJátékos', 'teszt@pelda.com', 'hashedpassword123', 6, 1, 0, 100, 50, 50, 5, 0, 3, '2025-11-11 10:47:22'),
-(3, 'asd', 'asd@gmail.com', 'asd', NULL, 1, 0, 0, 50, 50, 5, 5, 2, '2025-11-13 09:51:41'),
-(4, 'asd2', 'asd2@gmail.com', 'asd', NULL, 1, 0, 0, 50, 50, 5, 5, 2, '2025-11-13 12:20:40'),
-(5, 'tesztteszt', 'teszt@teszt.com', 'asd', NULL, 1, 0, 0, 50, 50, 5, 5, 2, '2025-11-17 11:35:24');
+INSERT INTO `players` (`id`, `username`, `email`, `password_hash`, `class_id`, `level`, `xp`, `gold`, `hp`, `max_hp`, `strength`, `intellect`, `defense`, `created_at`, `unspentStatPoints`) VALUES
+(2, 'TesztJátékos', 'teszt@pelda.com', 'hashedpassword123', 6, 1, 0, 100, 50, 50, 5, 0, 3, '2025-11-11 10:47:22', 0),
+(3, 'asd', 'asd@gmail.com', 'asd', 7, NULL, NULL, 100, NULL, NULL, NULL, NULL, NULL, '2025-11-13 09:51:41', 0),
+(4, 'asd2', 'asd2@gmail.com', 'asd', NULL, 1, 0, 0, 50, 50, 5, 5, 2, '2025-11-13 12:20:40', 0),
+(5, 'tesztteszt', 'teszt@teszt.com', 'asd', NULL, 1, 0, 0, 50, 50, 5, 5, 2, '2025-11-17 11:35:24', 0),
+(6, 'jozsitestmage', 'hunormeg@alexot.hu', '123', 7, 1, 0, 100, 30, 30, 0, 5, 1, '2025-11-20 12:23:41', 0),
+(7, 'TesztPlayer', 'teszt@example.com', 'teszt123', NULL, 1, 1000, 0, 50, 50, 5, 5, 2, '2025-11-20 12:40:32', 0),
+(8, 'asd342', 'asd435@gmail.com', '123', 6, 1, 0, 100, 50, 50, 5, 0, 3, '2025-11-21 08:43:49', 0),
+(9, 'teszt123', 'tesztelek@gmail.com', '123', 6, 11, 67, 157, 200, 245, 26, 0, 3, '2025-11-21 10:16:21', 0),
+(10, 'teszt321', 'teszt321@gmail.com', '123', 7, 2, 2, 22, 60, 60, 5, 6, 2, '2025-11-21 13:56:08', 0);
 
 -- --------------------------------------------------------
 
@@ -304,7 +310,7 @@ ALTER TABLE `paths`
 -- AUTO_INCREMENT a táblához `players`
 --
 ALTER TABLE `players`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
 
 --
 -- AUTO_INCREMENT a táblához `statistics`

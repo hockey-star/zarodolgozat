@@ -111,7 +111,7 @@ export const WARRIOR_ABILITIES = [
     name: "Parry",
     type: "defend",
     dmg: null,
-    heal: 0,
+    heal: 5,
     image: shieldImg,
     rarity: "rare",
     defaultCopies: 0,

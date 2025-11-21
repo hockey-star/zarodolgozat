@@ -1,10 +1,13 @@
+// frontend/src/components/Hub.jsx
 import React, { useState, useEffect, useRef } from "react";
 import CharacterPanel from "./CharacterPanel.jsx";
 import ShopModal from "./BoltModal.jsx";
 import BlacksmithModal from "./KovacsModal.jsx";
 import InvModal from "./Inv.jsx";
+import { usePlayer } from "../context/PlayerContext.jsx"; // <-- FONTOS!!!
 
 export default function Hub({ onGoCombat }) {
+  const { player, setPlayer } = usePlayer(); // <-- Nélkülözhetetlen!
   const [adventureTimer, setAdventureTimer] = useState(0);
   const [isAdventuring, setIsAdventuring] = useState(false);
 
@@ -16,7 +19,7 @@ export default function Hub({ onGoCombat }) {
   const [isMoving, setIsMoving] = useState(false);
   const [language, setLanguage] = useState("hu");
 
-  // 🔹 ÚJ: a jelenlegi célpont és referencia
+  // CÉLPONT
   const [currentTarget, setCurrentTarget] = useState(null);
   const targetRef = useRef(null);
 
@@ -27,17 +30,13 @@ export default function Hub({ onGoCombat }) {
   useEffect(() => {
     document.body.style.overflow = "hidden";
     document.documentElement.style.overflow = "hidden";
-    document.body.style.margin = "0";
-    document.documentElement.style.margin = "0";
-    document.body.style.padding = "0";
-    document.documentElement.style.padding = "0";
-
     return () => {
       document.body.style.overflow = "auto";
       document.documentElement.style.overflow = "auto";
     };
   }, []);
 
+  // 🔥 Kaland indítása
   const startAdventure = () => {
     if (isAdventuring) return;
     setIsAdventuring(true);
@@ -48,7 +47,9 @@ export default function Hub({ onGoCombat }) {
         if (prev <= 1) {
           clearInterval(interval);
           setIsAdventuring(false);
-          onGoCombat();
+
+          // Indítjuk a harcot → callbacket adunk át
+          onGoCombat(handleCombatEnd);
           return 0;
         }
         return prev - 1;
@@ -61,10 +62,9 @@ export default function Hub({ onGoCombat }) {
     if (type === "blacksmith") setShowBlacksmith(true);
     if (type === "adventure") startAdventure();
     if (type === "inv") setShowInv(true);
-    if (type === "settings") alert("Beállítások — ide jön majd a modal");
   };
 
-  // 🔧 JAVÍTOTT MOVE LOGIKA
+  // Játékos mozgatása
   const moveTo = (x, y, type) => {
     if (Math.abs(playerPos.x - x) < 1 && Math.abs(playerPos.y - y) < 1) {
       openModal(type);
@@ -78,18 +78,31 @@ export default function Hub({ onGoCombat }) {
 
     setTimeout(() => {
       setIsMoving(false);
-      if (targetRef.current === type) {
-        openModal(type);
-      }
+      if (targetRef.current === type) openModal(type);
     }, 2000);
   };
 
-  // 🔹 MODÁL BEZÁRÁS
   const handleClose = (setFn) => {
     setFn(false);
     setCurrentTarget(null);
     targetRef.current = null;
   };
+
+  // 🔥🔥 HARCBÓL VISSZATÉRÉS → FULL HEAL ITT TÖRTÉNIK 🔥🔥
+  function handleCombatEnd(finalHP, victory) {
+    console.log("Combat ended. Victory:", victory, "HP:", finalHP);
+
+    if (!setPlayer) return;
+
+    setPlayer((prev) =>
+      prev
+        ? {
+            ...prev,
+            hp: prev.max_hp, // <-- FULL HEAL
+          }
+        : prev
+    );
+  }
 
   return (
     <div
@@ -99,7 +112,7 @@ export default function Hub({ onGoCombat }) {
         backgroundSize: "cover",
       }}
     >
-      {/* 🔤 NYELVVÁLTÓ */}
+      {/* Nyelvváltó */}
       <div className="absolute top-4 left-4 flex gap-2">
         <div
           onClick={() => setLanguage("hu")}
@@ -119,7 +132,7 @@ export default function Hub({ onGoCombat }) {
         </div>
       </div>
 
-      {/* KALAND */}
+      {/* Kaland */}
       <div
         className="absolute cursor-pointer group"
         style={{
@@ -127,16 +140,13 @@ export default function Hub({ onGoCombat }) {
           bottom: "40%",
           width: "400px",
           height: "460px",
-          
         }}
         onClick={() => moveTo(60, 50, "adventure")}
       >
-        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition">
-         
-        </div>
+        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition"></div>
       </div>
 
-      {/* KOVÁCS */}
+      {/* Kovács */}
       <div
         className="absolute cursor-pointer group"
         style={{
@@ -144,16 +154,13 @@ export default function Hub({ onGoCombat }) {
           bottom: "30%",
           width: "470px",
           height: "400px",
-          
         }}
         onClick={() => moveTo(35, 65, "blacksmith")}
       >
-        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition">
-         
-        </div>
+        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition"></div>
       </div>
 
-      {/* BOLT */}
+      {/* Bolt */}
       <div
         className="absolute cursor-pointer group"
         style={{
@@ -161,16 +168,13 @@ export default function Hub({ onGoCombat }) {
           bottom: "7%",
           width: "600px",
           height: "350px",
-          
         }}
         onClick={() => moveTo(50, 85, "shop")}
       >
-        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition">
-         
-        </div>
+        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition"></div>
       </div>
 
-      {/* INV */}
+      {/* Inventory / Deck */}
       <div
         className="absolute cursor-pointer group"
         style={{
@@ -178,33 +182,13 @@ export default function Hub({ onGoCombat }) {
           bottom: "4%",
           width: "600px",
           height: "200px",
-          
         }}
         onClick={() => moveTo(33, 85, "inv")}
       >
-        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition">
-          
-        </div>
+        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition"></div>
       </div>
 
-      {/* BEÁLLÍTÁSOK
-      <div
-        className="absolute cursor-pointer group"
-        style={{
-          left: "35%",
-          bottom: "5%",
-          width: "150px",
-          height: "150px",
-          backgroundColor: "red",
-        }}
-        onClick={() => moveTo(30, 80, "settings")}
-      >
-        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition">
-          {language === "hu" ? "BEÁLL." : "SETTINGS"}
-        </div>
-      </div> */}
-
-      {/* PLAYER */}
+      {/* Player */}
       <img
         src="./src/assets/pics/TESZT.PNG"
         alt="player"
@@ -217,7 +201,6 @@ export default function Hub({ onGoCombat }) {
           transform: "translate(-50%, -50%)",
           width: "4%",
           imageRendering: "pixelated",
-          
         }}
       />
 
@@ -228,12 +211,12 @@ export default function Hub({ onGoCombat }) {
       )}
       {showInv && <InvModal onClose={() => handleClose(setShowInv)} />}
 
-      {/* KALAND ÉRTESÍTÉS */}
+      {/* Utazás számláló */}
       {isAdventuring && (
         <div className="absolute bottom-[32%] left-0 right-0 text-center">
           <div className="inline-block bg-black/70 px-4 py-2 rounded shadow-lg">
             {language === "hu"
-              ? `Utazás folyamatban... (${adventureTimer})`
+              ? `Utazás... (${adventureTimer})`
               : `Travelling... (${adventureTimer})`}
           </div>
         </div>

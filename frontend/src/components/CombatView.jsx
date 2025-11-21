@@ -8,10 +8,9 @@ import {
   getClassKeyFromId,
   ABILITIES_BY_ID,
   buildDefaultDeckForClass,
-  getAbilitiesForClass,
 } from "../data/abilities.js";
 
-// XP görbe
+// XP görbe (marad a mostani)
 function xpToNextLevel(level) {
   if (level <= 1) return 30;
   return 30 + (level - 1) * 20;
@@ -183,7 +182,7 @@ export default function CombatView({
    */
   function buildCombatDeckFromPlayer() {
     const deckIds =
-      (Array.isArray(player?.deck) && player.deck.length > 0)
+      Array.isArray(player?.deck) && player.deck.length > 0
         ? player.deck
         : buildDefaultDeckForClass(classKey);
 
@@ -238,56 +237,55 @@ export default function CombatView({
       return newHand;
     });
   }
+// ENEMY + DECK INIT
+useEffect(() => {
+  if (!player) return;
 
-  // ENEMY + DECK INIT
-  useEffect(() => {
-    if (!player) return;
+  const isElite = !boss && pathType === "elite";
+  const allowedNames = Array.isArray(enemies) ? enemies : [];
 
-    const isElite = !boss && pathType === "elite";
-    const allowedNames = Array.isArray(enemies) ? enemies : [];
+  const enemyData = getRandomEnemy({
+    level,
+    boss,
+    elite: isElite,
+    allowedNames,
+  });
 
-    const enemyData = getRandomEnemy({
-      level,
-      boss,
-      elite: isElite,
-      allowedNames,
-    });
+  const e = {
+    name: enemyData.name,
+    maxHp: enemyData.maxHp,
+    dmg: [enemyData.minDmg, enemyData.maxDmg],
+    rewards: {
+      goldMin: enemyData.goldRewardMin,
+      goldMax: enemyData.goldRewardMax,
+      xpMin: enemyData.xpRewardMin,
+      xpMax: enemyData.xpRewardMax,
+    },
+    role: enemyData.role,
+  };
 
-    const e = {
-      name: enemyData.name,
-      maxHp: enemyData.maxHp,
-      dmg: [enemyData.minDmg, enemyData.maxDmg],
-      rewards: {
-        goldMin: enemyData.goldRewardMin,
-        goldMax: enemyData.goldRewardMax,
-        xpMin: enemyData.xpRewardMin,
-        xpMax: enemyData.xpRewardMax,
-      },
-      role: enemyData.role,
-    };
+  setEnemy(e);
+  setEnemyHP(e.maxHp);
+  setBattleOver(false);
+  setTurn("player");
+  setDefending(false);
+  setLog([`⚔️ A ${e.name} kihívott téged!`]);
+  setHPPopups([]);
+  setPlayerDamaged(false);
+  setEnemyDamaged(false);
+  setPlayerHealed(false);
+  setLastRewards(null);
 
-    setEnemy(e);
-    setEnemyHP(e.maxHp);
-    setBattleOver(false);
-    setTurn("player");
-    setDefending(false);
-    setLog([`⚔️ A ${e.name} kihívott téged!`]);
-    setHPPopups([]);
-    setPlayerDamaged(false);
-    setEnemyDamaged(false);
-    setPlayerHealed(false);
-    setLastRewards(null);
+  // player deckből combat deck építése
+  const combatDeck = buildCombatDeckFromPlayer();
+  const { hand: initialHand, deck: remainingDeck } =
+    drawInitialHand(combatDeck);
+  setDeck(remainingDeck);
+  setDiscardPile([]);
+  setHand(initialHand);
+}, [level, boss, pathType, enemies, player, classKey]);
 
-    // player deckből combat deck építése
-    const combatDeck = buildCombatDeckFromPlayer();
-    const { hand: initialHand, deck: remainingDeck } =
-      drawInitialHand(combatDeck);
-    setDeck(remainingDeck);
-    setDiscardPile([]);
-    setHand(initialHand);
-  }, [level, boss, pathType, enemies, player, classKey]);
-
-  // KÁRTYA KIJÁTSZÁSA
+  // KÁRTYA KIJÁTSZÁSA – CLASS ALAPÚ SKÁLÁZÁS
   function playCard(card) {
     if (battleOver || turn !== "player" || !enemy) return;
 
@@ -296,13 +294,44 @@ export default function CombatView({
 
     const playerStrength = player?.strength ?? 0;
     const playerIntellect = player?.intellect ?? 0;
-    const attackBonus = Math.floor((playerStrength + playerIntellect) / 3);
+    const playerDefense = player?.defense ?? 0;
+
+    // Amíg nincs külön AGI, az íjász használja a STR-t, mint "agi"
+    const playerAgi = playerStrength;
 
     if (card.type === "attack") {
-      const baseMin = (card.dmg?.[0] ?? 4) + attackBonus;
-      const baseMax = (card.dmg?.[1] ?? 8) + attackBonus;
-      const dmg =
+      let baseMin = card.dmg?.[0] ?? 4;
+      let baseMax = card.dmg?.[1] ?? 8;
+
+      // Kaszt alapú dmg bonus
+      if (classKey === "warrior") {
+        const bonus = Math.floor(playerStrength * 0.2);
+        baseMin += bonus;
+        baseMax += bonus;
+      } else if (classKey === "mage") {
+        const bonus = Math.floor(playerIntellect * 0.3);
+        baseMin += bonus;
+        baseMax += bonus;
+      } else if (classKey === "archer") {
+        const bonus = Math.floor(playerAgi * 0.3);
+        baseMin += bonus;
+        baseMax += bonus;
+      }
+
+      if (baseMin < 1) baseMin = 1;
+      if (baseMax < baseMin) baseMax = baseMin;
+
+      let dmg =
         Math.floor(Math.random() * (baseMax - baseMin + 1)) + baseMin;
+
+      // Íjász: crit esély (C verzió)
+      if (classKey === "archer") {
+        const critChance = Math.min(50, playerAgi * 1.5); // max 50%
+        if (Math.random() * 100 < critChance) {
+          dmg = Math.floor(dmg * 2.0);
+          pushLog("💥 Kritikus találat!");
+        }
+      }
 
       setEnemyHP((prev) => {
         const newHP = Math.max(0, prev - dmg);
@@ -318,7 +347,17 @@ export default function CombatView({
     }
 
     if (card.type === "heal") {
-      const healAmount = card.heal || 20;
+      let healAmount = card.heal || 20;
+
+      // Heal scaling
+      if (classKey === "mage") {
+        healAmount += Math.floor(playerIntellect * 0.25);
+      } else if (classKey === "warrior") {
+        healAmount += Math.floor(playerStrength * 0.3);
+      } else if (classKey === "archer") {
+        healAmount += Math.floor(playerAgi * 0.5);
+      }
+
       setPlayerHP((prev) => {
         const newHP = Math.min(prev + healAmount, maxHPFromPlayer);
         addHPPopup(+healAmount, "player", "24%", "120px");
@@ -387,63 +426,58 @@ export default function CombatView({
     return { xpGain, goldGain };
   }
 
-  function handleContinue() {
-    const victory = enemyHP <= 0 && playerHP > 0;
+ function handleContinue() {
+  const victory = enemyHP <= 0 && playerHP > 0;
 
-    if (!victory) {
-      if (onEnd) onEnd(playerHP, false);
-      return;
-    }
-
-    if (!player || !setPlayer) {
-      if (onEnd) onEnd(playerHP, true);
-      return;
-    }
-
-    const { xpGain, goldGain } = rollRewards();
-
-    const oldLevel = player.level ?? 1;
-    let newXP = (player.xp ?? 0) + xpGain;
-    let newLevel = oldLevel;
-    let levelsGained = 0;
-
-    while (newXP >= xpToNextLevel(newLevel)) {
-      newXP -= xpToNextLevel(newLevel);
-      newLevel += 1;
-      levelsGained += 1;
-    }
-
-    const addedStatPoints = levelsGained * 3;
-
-    setLastRewards({
-      xpGain,
-      goldGain,
-      levelsGained,
-      addedStatPoints,
-    });
-
-    pushLog(`🏆 Győzelem! +${goldGain} arany, +${xpGain} XP.`);
-    if (levelsGained > 0) {
-      pushLog(
-        `⬆ Szintlépés: +${levelsGained} szint, +${addedStatPoints} stat pont (Hub-ban kiosztható).`
-      );
-    }
-
-    setPlayer((prev) => ({
-      ...prev,
-      level: newLevel,
-      xp: newXP,
-      gold: (prev.gold ?? 0) + goldGain,
-      hp: playerHP,
-      max_hp: prev.max_hp ?? maxHPFromPlayer,
-      unspentStatPoints:
-        (prev.unspentStatPoints ?? 0) + addedStatPoints,
-    }));
-
-    // TODO: ide jöhet majd backend update
-
-    if (onEnd) onEnd(playerHP, true);
+  if (!victory) {
+    if (onEnd) onEnd(playerHP, false);
+    return;
   }
+
+  if (!player || !setPlayer) {
+    if (onEnd) onEnd(playerHP, true);
+    return;
+  }
+
+  const { xpGain, goldGain } = rollRewards();
+
+  const oldLevel = player.level ?? 1;
+  let newXP = (player.xp ?? 0) + xpGain;
+  let newLevel = oldLevel;
+  let levelsGained = 0;
+
+  while (newXP >= xpToNextLevel(newLevel)) {
+    newXP -= xpToNextLevel(newLevel);
+    newLevel += 1;
+    levelsGained += 1;
+  }
+
+  const addedStatPoints = levelsGained * 3;
+
+  setLastRewards({
+    xpGain,
+    goldGain,
+    levelsGained,
+    addedStatPoints,
+  });
+
+  pushLog(`🏆 Győzelem! +${goldGain} arany, +${xpGain} XP.`);
+
+  setPlayer((prev) => ({
+    ...prev,
+    level: newLevel,
+    xp: newXP,
+    gold: (prev.gold ?? 0) + goldGain,
+    hp: playerHP,
+    max_hp: prev.max_hp,
+    unspentStatPoints:
+      (prev.unspentStatPoints ?? 0) + addedStatPoints,
+  }));
+
+ 
+
+  if (onEnd) onEnd(playerHP, true);
+}
 
   if (!player) {
     return (
@@ -553,7 +587,7 @@ export default function CombatView({
               Jutalom: +{lastRewards.goldGain} arany, +
               {lastRewards.xpGain} XP
               {lastRewards.levelsGained > 0 &&
-                ` • +${lastRewards.levelsGained} szint, +${lastRewards.addedStatPoints} stat pont (Hub-ban kiosztható)`}
+                ` • +${lastRewards.levelsGained} szint, +${lastRewards.addedStatPoints} stat pont (ágyban kiosztható)`}
             </div>
           )}
 

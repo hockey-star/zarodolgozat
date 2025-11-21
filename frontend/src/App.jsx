@@ -20,7 +20,9 @@ function AppInner() {
   // 🔹 LOGIN FLOW
   async function handleLogin(username) {
     try {
-      const res = await fetch(`http://localhost:3000/api/user/${encodeURIComponent(username)}`);
+      const res = await fetch(
+        `http://localhost:3000/api/user/${encodeURIComponent(username)}`
+      );
       const data = await res.json();
       if (!data.exists) return alert("User nem található (backend)");
 
@@ -46,23 +48,51 @@ function AppInner() {
     setCombatFinished(false);
   }
 
+  /**
+   * CombatView → onEnd(playerHP, victory)
+   * Itt döntjük el:
+   *  - ha meghal → vissza Hub, FULL HP
+   *  - ha boss hal meg (level 11 után) → vissza Hub, FULL HP
+   *  - egyébként: következő PathChoice, HP marad (run közben nem healelünk)
+   */
   function handleCombatEnd(playerHP, victory) {
     if (combatFinished) return;
     setCombatFinished(true);
 
+    // ha ELBUKTÁL → vissza hub + full heal
     if (!victory) {
+      setPlayer((prev) =>
+        prev
+          ? {
+              ...prev,
+              hp: prev.max_hp ?? prev.hp,
+            }
+          : prev
+      );
+
       alert("☠️ Elbuktál! Vissza a hubba.");
       setScreen("hub");
       setLevel(1);
       return;
     }
 
+    // ha még nem értél a boss-ig → következő szint, NEM healelünk közben
     if (level < 11) {
       setTimeout(() => {
         setLevel((prev) => prev + 1);
         setScreen("pathChoice");
       }, 300);
     } else {
+      // ha legyőzted a boss-t → vissza Hub + FULL HP
+      setPlayer((prev) =>
+        prev
+          ? {
+              ...prev,
+              hp: prev.max_hp ?? prev.hp,
+            }
+          : prev
+      );
+
       alert("🏆 Gratulálok, legyőzted a boss-t!");
       setScreen("hub");
       setLevel(1);

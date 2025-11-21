@@ -7,15 +7,17 @@ import {
   ABILITIES_BY_ID,
   buildDefaultDeckForClass,
 } from "../data/abilities.js";
-import spellbookImg from "../assets/pics/spellbook.png"; // ⬅ ide tedd a könyv képet
+import spellbookImg from "../assets/pics/spellbook.png";
+import StatModal from "./StatModal.jsx";
 
 export default function Inv({ onClose }) {
   const [showInventory, setShowInventory] = useState(false);
   const [showDeckEditor, setShowDeckEditor] = useState(false);
+  const [showStats, setShowStats] = useState(false);
 
   const { player, setPlayer } = usePlayer();
 
-  const anyModalOpen = showInventory || showDeckEditor;
+  const anyModalOpen = showInventory || showDeckEditor || showStats;
 
   // Melyik kaszt? (warrior/mage/archer)
   const classKey = useMemo(
@@ -138,11 +140,14 @@ export default function Inv({ onClose }) {
       >
         <h2 className="text-center mb-2 text-sm text-white">OTTHON</h2>
 
+        {/* STAT MODAL (ÁGY) */}
+        {showStats && <StatModal onClose={() => setShowStats(false)} />}
+
         {/* ============================
             INVENTORY MODAL (LÁDA)
         ============================ */}
         {showInventory && (
-          <div className="absolute inset-0 bg-black/80 flex items-center justify-center p-10 z-40">
+          <div className="absolute inset-0 bg-black/80 flex items-center justifycenter p-10 z-40">
             <div className="bg-gray-900 p-6 rounded-2xl shadow-xl w-3/4 h-3/4 overflow-auto text-white">
               <h2 className="text-xl font-bold mb-6 text-center">TÁRGYAK</h2>
 
@@ -199,109 +204,112 @@ export default function Inv({ onClose }) {
               </div>
 
               {/* KÖNYV + LAYOUT */}
-<div className="relative flex-1 flex items-center justify-center">
-  {/* Könyv kép */}
- <img
-  src={spellbookImg}
-  alt="Spellbook"
-  style={{
-    width: "1160px",      // ← Ezt növeld vagy csökkentsd
-    height: "auto",
-  }}
-  className="pointer-events-none select-none drop-shadow-[0_0_25px_rgba(0,0,0,0.9)]"
-/>
-
-  {/* Lapokra osztott tartalom – POZICIONÁLHATÓ */}
-  <div
-    className="absolute pointer-events-none"
-    style={{
-      // EZEKET NYUGODTAN TEKERGETHETED:
-      top: "50%",       // függőleges pozíció (50% = közép, több = lejjebb)
-      left: "50%",      // vízszintes közép
-      transform: "translate(-48%, -50%)", // középre igazítás
-      width: "30%",     // hogy mennyire legyen széles a „lapok” területe
-    }}
-  >
-    <div className="flex gap-10 w-full max-w-4xl mx-auto">
-      {/* BAL LAP – Elérhető képességek */}
-      <div className="flex-1 pointer-events-auto">
-        <div className="font-semibold mb-2 text-sm text-yellow-100 drop-shadow-[0_0_6px_rgba(0,0,0,0.8)]">
-          Elérhető képességek
-        </div>
-        <div className="h-[250px] overflow-auto pr-1">
-          <div className="grid grid-cols-2 gap-3">
-            {abilityPool.map((ab) => (
-              <button
-                key={ab.id}
-                className="border border-amber-800/70 bg-amber-950/70 rounded-lg overflow-hidden hover:bg-amber-900/80 transition flex flex-col text-[11px]"
-                onClick={() => handleAddToDeck(ab.id)}
-                title="Kattintás: hozzáadás a paklihoz"
-              >
+              <div className="relative flex-1 flex items-center justify-center">
+                {/* Könyv kép */}
                 <img
-                  src={ab.image}
-                  alt={ab.name}
-                  className="w-full h-16 object-cover"
+                  src={spellbookImg}
+                  alt="Spellbook"
+                  className="max-w-5xl w-full h-auto pointer-events-none select-none drop-shadow-[0_0_25px_rgba(0,0,0,0.9)]"
+                  style={{
+                    // ha nagyobbra kellenek a lapok, itt tudod állítani
+                    // width: "1600px",
+                  }}
                 />
-                <div className="p-1 text-center">
-                  <div className="font-semibold">{ab.name}</div>
-                  <div className="text-[10px] text-amber-200 uppercase">
-                    {ab.type} • {ab.rarity}
-                  </div>
-                </div>
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
 
-      {/* JOBB LAP – Jelenlegi pakli */}
-      <div className="flex-1 pointer-events-auto">
-        <div className="font-semibold mb-2 text-sm text-yellow-100 drop-shadow-[0_0_6px_rgba(0,0,0,0.8)]">
-          Jelenlegi pakli
-        </div>
-        <div className="h-[360px] overflow-auto pr-1">
-          {uniqueDeckIds.length === 0 ? (
-            <div className="text-sm text-amber-100/80">
-              A pakli üres. Kattints bal oldalt egy képességre, hogy hozzáadd.
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 gap-3">
-              {uniqueDeckIds.map((id) => {
-                const ab = ABILITIES_BY_ID[id];
-                if (!ab) return null;
-                const count = deckCounts[id] || 0;
-
-                return (
-                  <button
-                    key={id}
-                    className="relative border border-amber-800/70 bg-amber-950/80 rounded-lg overflow-hidden hover:bg-red-900/80 transition flex flex-col text-[11px]"
-                    onClick={() => handleRemoveOneFromDeck(id)}
-                    title="Kattintás: egy példány eltávolítása a pakliból"
-                  >
-                    <img
-                      src={ab.image}
-                      alt={ab.name}
-                      className="w-full h-16 object-cover"
-                    />
-                    <div className="absolute top-1 left-1 bg-black/80 text-[10px] px-1 py-[1px] rounded">
-                      x{count}
-                    </div>
-                    <div className="p-1 text-center">
-                      <div className="font-semibold">{ab.name}</div>
-                      <div className="text-[10px] text-amber-200 uppercase">
-                        {ab.type} • {ab.rarity}
+                {/* Lapokra osztott tartalom – finomhangolható pozíció */}
+                <div
+                  className="absolute pointer-events-none"
+                  style={{
+                    top: "55%",
+                    left: "50%",
+                    transform: "translate(-50%, -50%)",
+                    width: "70%",
+                  }}
+                >
+                  <div className="flex gap-10 w-full max-w-4xl mx-auto">
+                    {/* BAL LAP – Elérhető képességek */}
+                    <div className="flex-1 pointer-events-auto">
+                      <div className="font-semibold mb-2 text-sm text-yellow-100 drop-shadow-[0_0_6px_rgba(0,0,0,0.8)]">
+                        Elérhető képességek
+                      </div>
+                      <div className="h-[360px] overflow-auto pr-1">
+                        <div className="grid grid-cols-2 gap-3">
+                          {abilityPool.map((ab) => (
+                            <button
+                              key={ab.id}
+                              className="border border-amber-800/70 bg-amber-950/70 rounded-lg overflow-hidden hover:bg-amber-900/80 transition flex flex-col text-[11px]"
+                              onClick={() => handleAddToDeck(ab.id)}
+                              title="Kattintás: hozzáadás a paklihoz"
+                            >
+                              <img
+                                src={ab.image}
+                                alt={ab.name}
+                                className="w-full h-16 object-cover"
+                              />
+                              <div className="p-1 text-center">
+                                <div className="font-semibold">{ab.name}</div>
+                                <div className="text-[10px] text-amber-200 uppercase">
+                                  {ab.type} • {ab.rarity}
+                                </div>
+                              </div>
+                            </button>
+                          ))}
+                        </div>
                       </div>
                     </div>
-                  </button>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
+
+                    {/* JOBB LAP – Jelenlegi pakli */}
+                    <div className="flex-1 pointer-events-auto">
+                      <div className="font-semibold mb-2 text-sm text-yellow-100 drop-shadow-[0_0_6px_rgba(0,0,0,0.8)]">
+                        Jelenlegi pakli
+                      </div>
+                      <div className="h-[360px] overflow-auto pr-1">
+                        {uniqueDeckIds.length === 0 ? (
+                          <div className="text-sm text-amber-100/80">
+                            A pakli üres. Kattints bal oldalt egy képességre, hogy
+                            hozzáadd.
+                          </div>
+                        ) : (
+                          <div className="grid grid-cols-2 gap-3">
+                            {uniqueDeckIds.map((id) => {
+                              const ab = ABILITIES_BY_ID[id];
+                              if (!ab) return null;
+                              const count = deckCounts[id] || 0;
+
+                              return (
+                                <button
+                                  key={id}
+                                  className="relative border border-amber-800/70 bg-amber-950/80 rounded-lg overflow-hidden hover:bg-red-900/80 transition flex flex-col text-[11px]"
+                                  onClick={() => handleRemoveOneFromDeck(id)}
+                                  title="Kattintás: egy példány eltávolítása a pakliból"
+                                >
+                                  <img
+                                    src={ab.image}
+                                    alt={ab.name}
+                                    className="w-full h-16 object-cover"
+                                  />
+                                  {/* darabszám jelölés */}
+                                  <div className="absolute top-1 left-1 bg-black/80 text-[10px] px-1 py-[1px] rounded">
+                                    x{count}
+                                  </div>
+                                  <div className="p-1 text-center">
+                                    <div className="font-semibold">
+                                      {ab.name}
+                                    </div>
+                                    <div className="text-[10px] text-amber-200 uppercase">
+                                      {ab.type} • {ab.rarity}
+                                    </div>
+                                  </div>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
 
               {/* GOMBOK */}
               <div className="mt-3 flex justify-between items-center">
@@ -399,7 +407,7 @@ export default function Inv({ onClose }) {
               </div>
             </div>
 
-            {/* ÁGY */}
+            {/* ÁGY → STAT MODAL */}
             <div
               className={`absolute cursor-pointer group ${
                 anyModalOpen ? "pointer-events-none" : ""
@@ -410,7 +418,7 @@ export default function Inv({ onClose }) {
                 width: "650px",
                 height: "350px",
               }}
-              onClick={onClose}
+              onClick={() => setShowStats(true)}
             >
               <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition"></div>
             </div>

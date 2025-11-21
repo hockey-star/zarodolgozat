@@ -174,6 +174,61 @@ app.get("/api/classes", (req, res) => {
   });
 });
 
+/* ---------------------------
+   UPDATE PLAYER (statok + hp + max_hp + xp + gold)
+   --------------------------- */
+app.put("/api/players/:id", (req, res) => {
+  const { id } = req.params;
+
+  const {
+    strength,
+    intellect,
+    defense,
+    hp,
+    max_hp,
+    xp,
+    level,
+    gold,
+    unspentStatPoints,
+  } = req.body || {};
+
+  pool.query(
+    `
+      UPDATE players SET
+        strength = ?,
+        intellect = ?,
+        defense = ?,
+        hp = ?,
+        max_hp = ?,
+        xp = ?,
+        level = ?,
+        gold = ?,
+        unspentStatPoints = ?
+      WHERE id = ?
+    `,
+    [
+      strength ?? 0,
+      intellect ?? 0,
+      defense ?? 0,
+      hp ?? 50,
+      max_hp ?? 50,
+      xp ?? 0,
+      level ?? 1,
+      gold ?? 0,
+      unspentStatPoints ?? 0,
+      id,
+    ],
+    (err) => {
+      if (err) {
+        console.error("DB UPDATE ERROR:", err);
+        return res.status(500).json({ error: "Stat mentési hiba" });
+      }
+
+      return res.json({ message: "Stat sikeresen mentve!" });
+    }
+  );
+});
+
 
 app.listen(port, () => {
   console.log(`Backend fut a ${port} porton`);
