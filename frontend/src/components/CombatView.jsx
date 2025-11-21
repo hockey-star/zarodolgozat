@@ -10,7 +10,7 @@ import {
   buildDefaultDeckForClass,
 } from "../data/abilities.js";
 
-// XP görbe (marad a mostani)
+// XP görbe
 function xpToNextLevel(level) {
   if (level <= 1) return 30;
   return 30 + (level - 1) * 20;
@@ -25,7 +25,21 @@ function resolveBackground(background, pathType) {
   return "/backgrounds/3.jpg";
 }
 
-// class sprite-ok: csak sprite + név, deck már abilities.js-ben
+// card image helper – **ITT ERŐLTETJÜK RÁ A /cards/... PATH-OT**
+function resolveCardImageFromAbility(ab) {
+  if (!ab) return "";
+  // ha már jó path, hagyjuk
+  if (typeof ab.image === "string" && ab.image.startsWith("/cards/")) {
+    return ab.image;
+  }
+  // egyébként: /cards/<rarity>/<id>.png
+  if (ab.id && ab.rarity) {
+    return `/cards/${ab.rarity}/${ab.id}.png`;
+  }
+  return "";
+}
+
+// class sprite-ok
 const CLASS_CONFIG = {
   6: {
     key: "warrior",
@@ -109,7 +123,7 @@ export default function CombatView({
     [background, pathType]
   );
 
-  // rarity style ugyanaz
+  // rarity style
   const rarityStyle = {
     common: {
       border: "border-gray-600",
@@ -159,14 +173,12 @@ export default function CombatView({
     }
   }
 
-  // ----- PLAYER DECK INITIALIZÁLÁSA, ha még nincs -----
+  // PLAYER DECK INIT, ha nincs
   useEffect(() => {
     if (!player || !setPlayer) return;
 
-    // ha már létezik deck a playerben, nem csinálunk semmit
     if (Array.isArray(player.deck) && player.deck.length > 0) return;
 
-    // különben generálunk egy alap paklit a kaszt függvényében
     const baseDeck = buildDefaultDeckForClass(classKey);
 
     setPlayer((prev) => ({
@@ -175,11 +187,7 @@ export default function CombatView({
     }));
   }, [player, setPlayer, classKey]);
 
-  /**
-   * player.deck (ID lista) -> konkrét kártya példányok combatra
-   * Minden ID-ból egy kártya objektum:
-   * { name, type, dmg, heal, image, rarity }
-   */
+  // player.deck -> combat deck
   function buildCombatDeckFromPlayer() {
     const deckIds =
       Array.isArray(player?.deck) && player.deck.length > 0
@@ -191,13 +199,15 @@ export default function CombatView({
       const ab = ABILITIES_BY_ID[id];
       if (!ab) return;
 
+      const img = resolveCardImageFromAbility(ab);
+
       cards.push({
         abilityId: ab.id,
         name: ab.name,
         type: ab.type,
         dmg: ab.dmg ?? null,
         heal: ab.heal ?? null,
-        image: ab.image,
+        image: img,
         rarity: ab.rarity || "common",
       });
     });
@@ -237,53 +247,54 @@ export default function CombatView({
       return newHand;
     });
   }
-// ENEMY + DECK INIT
-useEffect(() => {
-  if (!player) return;
 
-  const isElite = !boss && pathType === "elite";
-  const allowedNames = Array.isArray(enemies) ? enemies : [];
+  // ENEMY + DECK INIT
+  useEffect(() => {
+    if (!player) return;
 
-  const enemyData = getRandomEnemy({
-    level,
-    boss,
-    elite: isElite,
-    allowedNames,
-  });
+    const isElite = !boss && pathType === "elite";
+    const allowedNames = Array.isArray(enemies) ? enemies : [];
 
-  const e = {
-    name: enemyData.name,
-    maxHp: enemyData.maxHp,
-    dmg: [enemyData.minDmg, enemyData.maxDmg],
-    rewards: {
-      goldMin: enemyData.goldRewardMin,
-      goldMax: enemyData.goldRewardMax,
-      xpMin: enemyData.xpRewardMin,
-      xpMax: enemyData.xpRewardMax,
-    },
-    role: enemyData.role,
-  };
+    const enemyData = getRandomEnemy({
+      level,
+      boss,
+      elite: isElite,
+      allowedNames,
+    });
 
-  setEnemy(e);
-  setEnemyHP(e.maxHp);
-  setBattleOver(false);
-  setTurn("player");
-  setDefending(false);
-  setLog([`⚔️ A ${e.name} kihívott téged!`]);
-  setHPPopups([]);
-  setPlayerDamaged(false);
-  setEnemyDamaged(false);
-  setPlayerHealed(false);
-  setLastRewards(null);
+    const e = {
+      name: enemyData.name,
+      maxHp: enemyData.maxHp,
+      dmg: [enemyData.minDmg, enemyData.maxDmg],
+      rewards: {
+        goldMin: enemyData.goldRewardMin,
+        goldMax: enemyData.goldRewardMax,
+        xpMin: enemyData.xpRewardMin,
+        xpMax: enemyData.xpRewardMax,
+      },
+      role: enemyData.role,
+    };
 
-  // player deckből combat deck építése
-  const combatDeck = buildCombatDeckFromPlayer();
-  const { hand: initialHand, deck: remainingDeck } =
-    drawInitialHand(combatDeck);
-  setDeck(remainingDeck);
-  setDiscardPile([]);
-  setHand(initialHand);
-}, [level, boss, pathType, enemies, player, classKey]);
+    setEnemy(e);
+    setEnemyHP(e.maxHp);
+    setBattleOver(false);
+    setTurn("player");
+    setDefending(false);
+    setLog([`⚔️ A ${e.name} kihívott téged!`]);
+    setHPPopups([]);
+    setPlayerDamaged(false);
+    setEnemyDamaged(false);
+    setPlayerHealed(false);
+    setLastRewards(null);
+
+    // player deckből combat deck építése
+    const combatDeck = buildCombatDeckFromPlayer();
+    const { hand: initialHand, deck: remainingDeck } =
+      drawInitialHand(combatDeck);
+    setDeck(remainingDeck);
+    setDiscardPile([]);
+    setHand(initialHand);
+  }, [level, boss, pathType, enemies, player, classKey]);
 
   // KÁRTYA KIJÁTSZÁSA – CLASS ALAPÚ SKÁLÁZÁS
   function playCard(card) {
@@ -296,14 +307,12 @@ useEffect(() => {
     const playerIntellect = player?.intellect ?? 0;
     const playerDefense = player?.defense ?? 0;
 
-    // Amíg nincs külön AGI, az íjász használja a STR-t, mint "agi"
-    const playerAgi = playerStrength;
+    const playerAgi = playerStrength; // amíg nincs külön AGI
 
     if (card.type === "attack") {
       let baseMin = card.dmg?.[0] ?? 4;
       let baseMax = card.dmg?.[1] ?? 8;
 
-      // Kaszt alapú dmg bonus
       if (classKey === "warrior") {
         const bonus = Math.floor(playerStrength * 0.2);
         baseMin += bonus;
@@ -324,9 +333,9 @@ useEffect(() => {
       let dmg =
         Math.floor(Math.random() * (baseMax - baseMin + 1)) + baseMin;
 
-      // Íjász: crit esély (C verzió)
+      // Íjász: crit esély
       if (classKey === "archer") {
-        const critChance = Math.min(50, playerAgi * 1.5); // max 50%
+        const critChance = Math.min(50, playerAgi * 1.5);
         if (Math.random() * 100 < critChance) {
           dmg = Math.floor(dmg * 2.0);
           pushLog("💥 Kritikus találat!");
@@ -349,7 +358,6 @@ useEffect(() => {
     if (card.type === "heal") {
       let healAmount = card.heal || 20;
 
-      // Heal scaling
       if (classKey === "mage") {
         healAmount += Math.floor(playerIntellect * 0.25);
       } else if (classKey === "warrior") {
@@ -426,58 +434,56 @@ useEffect(() => {
     return { xpGain, goldGain };
   }
 
- function handleContinue() {
-  const victory = enemyHP <= 0 && playerHP > 0;
+  function handleContinue() {
+    const victory = enemyHP <= 0 && playerHP > 0;
 
-  if (!victory) {
-    if (onEnd) onEnd(playerHP, false);
-    return;
-  }
+    if (!victory) {
+      if (onEnd) onEnd(playerHP, false);
+      return;
+    }
 
-  if (!player || !setPlayer) {
+    if (!player || !setPlayer) {
+      if (onEnd) onEnd(playerHP, true);
+      return;
+    }
+
+    const { xpGain, goldGain } = rollRewards();
+
+    const oldLevel = player.level ?? 1;
+    let newXP = (player.xp ?? 0) + xpGain;
+    let newLevel = oldLevel;
+    let levelsGained = 0;
+
+    while (newXP >= xpToNextLevel(newLevel)) {
+      newXP -= xpToNextLevel(newLevel);
+      newLevel += 1;
+      levelsGained += 1;
+    }
+
+    const addedStatPoints = levelsGained * 3;
+
+    setLastRewards({
+      xpGain,
+      goldGain,
+      levelsGained,
+      addedStatPoints,
+    });
+
+    pushLog(`🏆 Győzelem! +${goldGain} arany, +${xpGain} XP.`);
+
+    setPlayer((prev) => ({
+      ...prev,
+      level: newLevel,
+      xp: newXP,
+      gold: (prev.gold ?? 0) + goldGain,
+      hp: playerHP,
+      max_hp: prev.max_hp,
+      unspentStatPoints:
+        (prev.unspentStatPoints ?? 0) + addedStatPoints,
+    }));
+
     if (onEnd) onEnd(playerHP, true);
-    return;
   }
-
-  const { xpGain, goldGain } = rollRewards();
-
-  const oldLevel = player.level ?? 1;
-  let newXP = (player.xp ?? 0) + xpGain;
-  let newLevel = oldLevel;
-  let levelsGained = 0;
-
-  while (newXP >= xpToNextLevel(newLevel)) {
-    newXP -= xpToNextLevel(newLevel);
-    newLevel += 1;
-    levelsGained += 1;
-  }
-
-  const addedStatPoints = levelsGained * 3;
-
-  setLastRewards({
-    xpGain,
-    goldGain,
-    levelsGained,
-    addedStatPoints,
-  });
-
-  pushLog(`🏆 Győzelem! +${goldGain} arany, +${xpGain} XP.`);
-
-  setPlayer((prev) => ({
-    ...prev,
-    level: newLevel,
-    xp: newXP,
-    gold: (prev.gold ?? 0) + goldGain,
-    hp: playerHP,
-    max_hp: prev.max_hp,
-    unspentStatPoints:
-      (prev.unspentStatPoints ?? 0) + addedStatPoints,
-  }));
-
- 
-
-  if (onEnd) onEnd(playerHP, true);
-}
 
   if (!player) {
     return (
@@ -545,6 +551,7 @@ useEffect(() => {
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 flex gap-4 z-50">
           {hand.map((card, i) => {
             const rs = rarityStyle[card.rarity] ?? rarityStyle.common;
+            const imgSrc = card.image; // már a helperből jön
             return (
               <button
                 key={i}
@@ -555,7 +562,7 @@ useEffect(() => {
                 ${rs.glow}`}
               >
                 <img
-                  src={card.image}
+                  src={imgSrc}
                   alt={card.name}
                   className="absolute inset-0 w-full h-full object-cover"
                 />

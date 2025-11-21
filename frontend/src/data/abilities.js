@@ -1,62 +1,109 @@
 // frontend/src/data/abilities.js
 
-import attackImg from "../assets/class-abilities/attack.png";
-import shieldImg from "../assets/class-abilities/shield-wall.png";
-import healImg from "../assets/class-abilities/hp-pot.png";
-import fireballImg from "../assets/class-abilities/fireball.png";
-
-/**
- * Melyik class_id melyik "kulcs"?
- * DB-d alapján:
- *  6 = Harcos
- *  7 = Varázsló
- *  8 = Íjász
- */
+// Kaszt ID -> kulcs
 export function getClassKeyFromId(classId) {
   if (classId === 6) return "warrior";
   if (classId === 7) return "mage";
   if (classId === 8) return "archer";
-  // fallback
   return "warrior";
 }
 
 /**
- * Ability struktúra:
- *  - id: egyedi azonosító (string)
- *  - classKey: "warrior" | "mage" | "archer"
- *  - name: megjelenített név
- *  - type: "attack" | "defend" | "heal"
- *  - dmg: [min,max] ha attack
- *  - heal: szám, ha heal
- *  - image: importált ikon (attackImg / healImg / shieldImg / fireballImg)
- *  - rarity: "common" | "rare" | "epic" | "legendary"
- *  - defaultCopies: hány példány legyen az alap pakliban
+ * FONTOS:
+ *  MINDEN image = string path a public mappába:
+ *    /cards/common/...
+ *    /cards/rare/...
+ *    /cards/epic/...
+ *    /cards/legendary/...
+ *
+ *  NINCS import a ../assets/class-abilities-ből!
  */
 
-/* -------------------- HARCOS (WARRIOR) -------------------- */
-
-export const WARRIOR_ABILITIES = [
+export const ALL_ABILITIES = [
+  // =====================
+  // WARRIOR – COMMON
+  // =====================
   {
     id: "warrior_slash",
     classKey: "warrior",
     name: "Slash",
     type: "attack",
-    dmg: [6, 11],
-    heal: 0,
-    image: attackImg,
+    dmg: [5, 9],
+    heal: null,
     rarity: "common",
-    defaultCopies: 8,
+    image: "/cards/common/warrior_slash.png",
+  },
+
+  // =====================
+  // MAGE – COMMON
+  // =====================
+  {
+    id: "mage_arcane_missiles",
+    classKey: "mage",
+    name: "Arcane Missiles",
+    type: "attack",
+    dmg: [4, 8],
+    heal: null,
+    rarity: "common",
+    image: "/cards/common/mage_arcane_missiles.png",
   },
   {
-    id: "warrior_mortal_strike",
-    classKey: "warrior",
-    name: "Mortal Strike",
+    id: "mage_ice_lance",
+    classKey: "mage",
+    name: "Ice Lance",
     type: "attack",
-    dmg: [9, 15],
-    heal: 0,
-    image: attackImg,
-    rarity: "epic",
-    defaultCopies: 3,
+    dmg: [3, 7],
+    heal: null,
+    rarity: "common",
+    image: "/cards/common/mage_ice_lance.png",
+  },
+
+  // =====================
+  // ARCHER – COMMON
+  // =====================
+  {
+    id: "archer_quick_shot",
+    classKey: "archer",
+    name: "Quick Shot",
+    type: "attack",
+    dmg: [4, 8],
+    heal: null,
+    rarity: "common",
+    image: "/cards/common/archer_quick_shot.png",
+  },
+
+  // =====================
+  // WARRIOR – RARE
+  // =====================
+  {
+    id: "warrior_parry",
+    classKey: "warrior",
+    name: "Parry",
+    type: "defend",
+    dmg: null,
+    heal: null,
+    rarity: "rare",
+    image: "/cards/rare/warrior_parry.png",
+  },
+  {
+    id: "warrior_cleave",
+    classKey: "warrior",
+    name: "Cleave",
+    type: "attack",
+    dmg: [7, 12],
+    heal: null,
+    rarity: "rare",
+    image: "/cards/rare/warrior_cleave.png",
+  },
+  {
+    id: "warrior_rallying_shout",
+    classKey: "warrior",
+    name: "Rallying Shout",
+    type: "heal",
+    dmg: null,
+    heal: 18,
+    rarity: "rare",
+    image: "/cards/rare/warrior_rallying_shout.png",
   },
   {
     id: "warrior_shield_wall",
@@ -64,57 +111,101 @@ export const WARRIOR_ABILITIES = [
     name: "Shield Wall",
     type: "defend",
     dmg: null,
-    heal: 0,
-    image: shieldImg,
+    heal: null,
     rarity: "rare",
-    defaultCopies: 5,
+    image: "/cards/rare/warrior_shield_wall.png",
   },
+
+  // =====================
+  // MAGE – RARE
+  // =====================
+  {
+    id: "mage_arcane_surge",
+    classKey: "mage",
+    name: "Arcane Surge",
+    type: "attack",
+    dmg: [8, 13],
+    heal: null,
+    rarity: "rare",
+    image: "/cards/rare/mage_arcane_surge.png",
+  },
+  {
+    id: "mage_frost_nova",
+    classKey: "mage",
+    name: "Frost Nova",
+    type: "attack",
+    dmg: [6, 10],
+    heal: null,
+    rarity: "rare",
+    image: "/cards/rare/mage_frost_nova.png",
+  },
+  {
+    id: "mage_mana_shield",
+    classKey: "mage",
+    name: "Mana Shield",
+    type: "defend",
+    dmg: null,
+    heal: null,
+    rarity: "rare",
+    image: "/cards/rare/mage_mana_shield.png",
+  },
+
+  // =====================
+  // ARCHER – RARE
+  // =====================
+  {
+    id: "archer_aimed_shot",
+    classKey: "archer",
+    name: "Aimed Shot",
+    type: "attack",
+    dmg: [7, 12],
+    heal: null,
+    rarity: "rare",
+    image: "/cards/rare/archer_aimed_shot.png",
+  },
+  {
+    id: "archer_evasion",
+    classKey: "archer",
+    name: "Evasion",
+    type: "defend",
+    dmg: null,
+    heal: null,
+    rarity: "rare",
+    image: "/cards/rare/archer_evasion.png",
+  },
+  {
+    id: "archer_poison_arrow",
+    classKey: "archer",
+    name: "Poison Arrow",
+    type: "attack",
+    dmg: [5, 9],
+    heal: null,
+    rarity: "rare",
+    image: "/cards/rare/archer_poison_arrow.png",
+  },
+  {
+    id: "archer_snare_trap",
+    classKey: "archer",
+    name: "Snare Trap",
+    type: "defend",
+    dmg: null,
+    heal: null,
+    rarity: "rare",
+    image: "/cards/rare/archer_snare_trap.png",
+  },
+
+  // =====================
+  // WARRIOR – EPIC
+  // =====================
   {
     id: "warrior_battle_cry",
     classKey: "warrior",
     name: "Battle Cry",
-    type: "heal",
-    dmg: null,
-    heal: 20,
-    image: healImg,
-    rarity: "epic",
-    defaultCopies: 2,
-  },
-
-  // --- extra warrior skillek (már elérhetőek a poolban, default deckben még nincsenek) ---
-
-  {
-    id: "warrior_cleave",
-    classKey: "warrior",
-    name: "Cleave",
     type: "attack",
-    dmg: [7, 12],
-    heal: 0,
-    image: attackImg,
-    rarity: "rare",
-    defaultCopies: 0,
-  },
-  {
-    id: "warrior_whirlwind",
-    classKey: "warrior",
-    name: "Whirlwind",
-    type: "attack",
-    dmg: [5, 14],
-    heal: 0,
-    image: attackImg,
+    dmg: [10, 16],
+    heal: null,
     rarity: "epic",
-    defaultCopies: 0,
-  },
-  {
-    id: "warrior_parry",
-    classKey: "warrior",
-    name: "Parry",
-    type: "defend",
-    dmg: null,
-    heal: 5,
-    image: shieldImg,
-    rarity: "rare",
-    defaultCopies: 0,
+    image: "/cards/epic/warrior_battle_cry.png",
   },
   {
     id: "warrior_last_stand",
@@ -123,187 +214,86 @@ export const WARRIOR_ABILITIES = [
     type: "heal",
     dmg: null,
     heal: 30,
-    image: healImg,
     rarity: "epic",
-    defaultCopies: 0,
+    image: "/cards/epic/warrior_last_stand.png",
   },
   {
-    id: "warrior_crushing_blow",
+    id: "warrior_mortal_strike",
     classKey: "warrior",
-    name: "Crushing Blow",
+    name: "Mortal Strike",
     type: "attack",
-    dmg: [11, 18],
-    heal: 0,
-    image: attackImg,
-    rarity: "legendary",
-    defaultCopies: 0,
+    dmg: [14, 20],
+    heal: null,
+    rarity: "epic",
+    image: "/cards/epic/warrior_mortal_strike.png",
   },
   {
-    id: "warrior_rallying_shout",
+    id: "warrior_whirlwind",
     classKey: "warrior",
-    name: "Rallying Shout",
-    type: "heal",
-    dmg: null,
-    heal: 15,
-    image: healImg,
-    rarity: "rare",
-    defaultCopies: 0,
+    name: "Whirlwind",
+    type: "attack",
+    dmg: [8, 14],
+    heal: null,
+    rarity: "epic",
+    image: "/cards/epic/warrior_whirlwind.png",
   },
-];
 
-/* -------------------- VARÁZSLÓ (MAGE) -------------------- */
-
-export const MAGE_ABILITIES = [
+  // =====================
+  // MAGE – EPIC
+  // =====================
+  {
+    id: "mage_drain_life",
+    classKey: "mage",
+    name: "Drain Life",
+    type: "attack",
+    dmg: [9, 15],
+    heal: 8,
+    rarity: "epic",
+    image: "/cards/epic/mage_drain_life.png",
+  },
   {
     id: "mage_fireball",
     classKey: "mage",
     name: "Fireball",
     type: "attack",
-    dmg: [8, 14],
-    heal: 0,
-    image: fireballImg,
+    dmg: [12, 18],
+    heal: null,
     rarity: "epic",
-    defaultCopies: 5,
-  },
-  {
-    id: "mage_arcane_missiles",
-    classKey: "mage",
-    name: "Arcane Missiles",
-    type: "attack",
-    dmg: [5, 11],
-    heal: 0,
-    image: fireballImg,
-    rarity: "common",
-    defaultCopies: 6,
-  },
-  {
-    id: "mage_mana_shield",
-    classKey: "mage",
-    name: "Mana Shield",
-    type: "defend",
-    dmg: null,
-    heal: 0,
-    image: shieldImg,
-    rarity: "rare",
-    defaultCopies: 4,
+    image: "/cards/epic/mage_fireball.png",
   },
   {
     id: "mage_heal_spell",
     classKey: "mage",
-    name: "Heal Spell",
+    name: "Heal",
     type: "heal",
     dmg: null,
-    heal: 22,
-    image: healImg,
+    heal: 25,
     rarity: "epic",
-    defaultCopies: 2,
-  },
-
-  // --- extra mage skillek ---
-
-  {
-    id: "mage_frost_nova",
-    classKey: "mage",
-    name: "Frost Nova",
-    type: "attack",
-    dmg: [6, 10],
-    heal: 0,
-    image: fireballImg,
-    rarity: "rare",
-    defaultCopies: 0,
+    image: "/cards/epic/mage_heal_spell.png",
   },
   {
     id: "mage_lightning_bolt",
     classKey: "mage",
     name: "Lightning Bolt",
     type: "attack",
-    dmg: [9, 16],
-    heal: 0,
-    image: fireballImg,
+    dmg: [11, 17],
+    heal: null,
     rarity: "epic",
-    defaultCopies: 0,
+    image: "/cards/epic/mage_lightning_bolt.png",
   },
-  {
-    id: "mage_arcane_surge",
-    classKey: "mage",
-    name: "Arcane Surge",
-    type: "heal",
-    dmg: null,
-    heal: 15,
-    image: healImg,
-    rarity: "rare",
-    defaultCopies: 0,
-  },
-  {
-    id: "mage_ice_lance",
-    classKey: "mage",
-    name: "Ice Lance",
-    type: "attack",
-    dmg: [7, 12],
-    heal: 0,
-    image: fireballImg,
-    rarity: "common",
-    defaultCopies: 0,
-  },
-  {
-    id: "mage_chain_lightning",
-    classKey: "mage",
-    name: "Chain Lightning",
-    type: "attack",
-    dmg: [10, 17],
-    heal: 0,
-    image: fireballImg,
-    rarity: "legendary",
-    defaultCopies: 0,
-  },
-  {
-    id: "mage_drain_life",
-    classKey: "mage",
-    name: "Drain Life",
-    type: "heal",
-    dmg: [5, 18],
-    heal: 18,
-    image: healImg,
-    rarity: "epic",
-    defaultCopies: 0,
-  },
-];
 
-/* -------------------- ÍJÁSZ (ARCHER) -------------------- */
-
-export const ARCHER_ABILITIES = [
+  // =====================
+  // ARCHER – EPIC
+  // =====================
   {
-    id: "archer_quick_shot",
+    id: "archer_camouflage",
     classKey: "archer",
-    name: "Quick Shot",
-    type: "attack",
-    dmg: [5, 10],
-    heal: 0,
-    image: attackImg,
-    rarity: "common",
-    defaultCopies: 8,
-  },
-  {
-    id: "archer_aimed_shot",
-    classKey: "archer",
-    name: "Aimed Shot",
-    type: "attack",
-    dmg: [7, 13],
-    heal: 0,
-    image: attackImg,
-    rarity: "rare",
-    defaultCopies: 4,
-  },
-  {
-    id: "archer_evasion",
-    classKey: "archer",
-    name: "Evasion",
+    name: "Camouflage",
     type: "defend",
     dmg: null,
-    heal: 0,
-    image: shieldImg,
-    rarity: "rare",
-    defaultCopies: 4,
+    heal: null,
+    rarity: "epic",
+    image: "/cards/epic/archer_camouflage.png",
   },
   {
     id: "archer_healing_herbs",
@@ -311,46 +301,19 @@ export const ARCHER_ABILITIES = [
     name: "Healing Herbs",
     type: "heal",
     dmg: null,
-    heal: 18,
-    image: healImg,
+    heal: 22,
     rarity: "epic",
-    defaultCopies: 2,
-  },
-
-  // --- extra archer skillek ---
-
-  {
-    id: "archer_poison_arrow",
-    classKey: "archer",
-    name: "Poison Arrow",
-    type: "attack",
-    dmg: [6, 11],
-    heal: 0,
-    image: attackImg,
-    rarity: "rare",
-    defaultCopies: 0,
+    image: "/cards/epic/archer_healing_herbs.png",
   },
   {
     id: "archer_multi_shot",
     classKey: "archer",
     name: "Multi Shot",
     type: "attack",
-    dmg: [5, 12],
-    heal: 0,
-    image: attackImg,
+    dmg: [10, 16],
+    heal: null,
     rarity: "epic",
-    defaultCopies: 0,
-  },
-  {
-    id: "archer_snare_trap",
-    classKey: "archer",
-    name: "Snare Trap",
-    type: "defend",
-    dmg: null,
-    heal: 0,
-    image: shieldImg,
-    rarity: "rare",
-    defaultCopies: 0,
+    image: "/cards/epic/archer_multi_shot.png",
   },
   {
     id: "archer_piercing_volley",
@@ -358,75 +321,104 @@ export const ARCHER_ABILITIES = [
     name: "Piercing Volley",
     type: "attack",
     dmg: [9, 15],
-    heal: 0,
-    image: attackImg,
+    heal: null,
     rarity: "epic",
-    defaultCopies: 0,
+    image: "/cards/epic/archer_piercing_volley.png",
+  },
+
+  // =====================
+  // LEGENDARY
+  // =====================
+  {
+    id: "warrior_crushing_blow",
+    classKey: "warrior",
+    name: "Crushing Blow",
+    type: "attack",
+    dmg: [20, 28],
+    heal: null,
+    rarity: "legendary",
+    image: "/cards/legendary/warrior_crushing_blow.png",
   },
   {
-    id: "archer_camouflage",
-    classKey: "archer",
-    name: "Camouflage",
-    type: "defend",
-    dmg: null,
-    heal: 0,
-    image: shieldImg,
-    rarity: "epic",
-    defaultCopies: 0,
+    id: "mage_chain_lightning",
+    classKey: "mage",
+    name: "Chain Lightning",
+    type: "attack",
+    dmg: [18, 26],
+    heal: null,
+    rarity: "legendary",
+    image: "/cards/legendary/mage_chain_lightning.png",
   },
   {
     id: "archer_rapid_fire",
     classKey: "archer",
     name: "Rapid Fire",
     type: "attack",
-    dmg: [6, 13],
-    heal: 0,
-    image: attackImg,
+    dmg: [16, 24],
+    heal: null,
     rarity: "legendary",
-    defaultCopies: 0,
+    image: "/cards/legendary/archer_rapid_fire.png",
   },
 ];
 
-// Összefogó map classKey alapján
-export const ABILITIES_BY_CLASS = {
-  warrior: WARRIOR_ABILITIES,
-  mage: MAGE_ABILITIES,
-  archer: ARCHER_ABILITIES,
-};
+// Gyors lookup
+export const ABILITIES_BY_ID = ALL_ABILITIES.reduce((acc, ab) => {
+  acc[ab.id] = ab;
+  return acc;
+}, {});
 
-/**
- * Gyors lookup map: ability id -> ability objektum
- */
-export const ABILITIES_BY_ID = (() => {
-  const map = {};
-  Object.values(ABILITIES_BY_CLASS).forEach((arr) => {
-    arr.forEach((ab) => {
-      map[ab.id] = ab;
-    });
-  });
-  return map;
-})();
-
-/**
- * Visszaadja az adott kaszt ability listáját.
- */
+// Kasztonkénti lista (Inv / Deck editor)
 export function getAbilitiesForClass(classKey) {
-  return ABILITIES_BY_CLASS[classKey] || ABILITIES_BY_CLASS["warrior"];
+  return ALL_ABILITIES.filter((ab) => ab.classKey === classKey);
 }
 
-/**
- * Generál egy alap decket az adott kaszt számára:
- * - az ability-k defaultCopies száma szerint
- * - sima tömböt ad vissza ability ID-kből (ismétlődhetnek)
- */
+// Alap pakli kasztonként
 export function buildDefaultDeckForClass(classKey) {
-  const pool = getAbilitiesForClass(classKey);
-  const deck = [];
-  pool.forEach((ab) => {
-    const copies = ab.defaultCopies ?? 0;
-    for (let i = 0; i < copies; i++) {
-      deck.push(ab.id);
-    }
-  });
-  return deck;
+  if (classKey === "warrior") {
+    return [
+      "warrior_slash",
+      "warrior_slash",
+      "warrior_slash",
+      "warrior_parry",
+      "warrior_parry",
+      "warrior_cleave",
+      "warrior_rallying_shout",
+      "warrior_shield_wall",
+      "warrior_battle_cry",
+      "warrior_mortal_strike",
+    ];
+  }
+
+  if (classKey === "mage") {
+    return [
+      "mage_arcane_missiles",
+      "mage_arcane_missiles",
+      "mage_ice_lance",
+      "mage_ice_lance",
+      "mage_arcane_surge",
+      "mage_frost_nova",
+      "mage_mana_shield",
+      "mage_fireball",
+      "mage_heal_spell",
+      "mage_lightning_bolt",
+    ];
+  }
+
+  if (classKey === "archer") {
+    return [
+      "archer_quick_shot",
+      "archer_quick_shot",
+      "archer_aimed_shot",
+      "archer_poison_arrow",
+      "archer_evasion",
+      "archer_snare_trap",
+      "archer_multi_shot",
+      "archer_piercing_volley",
+      "archer_camouflage",
+      "archer_healing_herbs",
+    ];
+  }
+
+  // fallback
+  return ["warrior_slash", "warrior_slash", "warrior_parry", "warrior_cleave"];
 }

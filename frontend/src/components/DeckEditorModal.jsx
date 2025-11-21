@@ -8,22 +8,31 @@ import {
   buildDefaultDeckForClass,
 } from "../data/abilities.js";
 
+// ugyanaz a helper
+function resolveCardImageFromAbility(ab) {
+  if (!ab) return "";
+  if (typeof ab.image === "string" && ab.image.startsWith("/cards/")) {
+    return ab.image;
+  }
+  if (ab.id && ab.rarity) {
+    return `/cards/${ab.rarity}/${ab.id}.png`;
+  }
+  return "";
+}
+
 export default function DeckEditorModal({ onClose }) {
   const { player, setPlayer } = usePlayer() || {};
 
-  // Kaszt kulcs: warrior / mage / archer
   const classKey = useMemo(
     () => getClassKeyFromId(player?.class_id),
     [player?.class_id]
   );
 
-  // Az adott kaszthoz tartozó ability pool
   const abilityPool = useMemo(
     () => getAbilitiesForClass(classKey),
     [classKey]
   );
 
-  // Ha nincs deck, fallbackelünk egy alapra (biztonság kedvéért)
   useEffect(() => {
     if (!player || !setPlayer) return;
     if (Array.isArray(player.deck) && player.deck.length > 0) return;
@@ -35,7 +44,6 @@ export default function DeckEditorModal({ onClose }) {
     }));
   }, [player, setPlayer, classKey]);
 
-  // Ideiglenes deck, amivel a modalban dolgozunk (mentésig)
   const [tempDeck, setTempDeck] = useState(
     Array.isArray(player?.deck) ? [...player.deck] : []
   );
@@ -49,13 +57,11 @@ export default function DeckEditorModal({ onClose }) {
   const MAX_DECK_SIZE = 30;
   const MIN_DECK_SIZE = 10;
 
-  // HOZZÁADÁS: 1 példány
   function handleAddToDeck(abilityId) {
     if (tempDeck.length >= MAX_DECK_SIZE) return;
     setTempDeck((prev) => [...prev, abilityId]);
   }
 
-  // ELTÁVOLÍTÁS: 1 példány (ha több van, csak egyet törlünk)
   function handleRemoveOneFromDeck(abilityId) {
     setTempDeck((prev) => {
       const idx = prev.indexOf(abilityId);
@@ -85,7 +91,6 @@ export default function DeckEditorModal({ onClose }) {
     onClose?.();
   }
 
-  // Jelenlegi deck összesítése: abilityId -> darabszám
   const deckCounts = useMemo(() => {
     const counts = {};
     tempDeck.forEach((id) => {
@@ -94,7 +99,6 @@ export default function DeckEditorModal({ onClose }) {
     return counts;
   }, [tempDeck]);
 
-  // Egyedi ability ID-k, amik jelenleg a deckben vannak
   const uniqueDeckIds = useMemo(
     () => Object.keys(deckCounts),
     [deckCounts]
@@ -138,33 +142,36 @@ export default function DeckEditorModal({ onClose }) {
             <div className="font-semibold mb-2">Elérhető képességek</div>
             <div className="flex-1 overflow-auto border border-gray-700 rounded-lg p-2 bg-black/40">
               <div className="grid grid-cols-4 gap-3">
-                {abilityPool.map((ab) => (
-                  <button
-                    key={ab.id}
-                    className="border border-gray-700 rounded-lg overflow-hidden bg-gray-800/70 hover:bg-gray-700 transition flex flex-col text-xs"
-                    onClick={() => handleAddToDeck(ab.id)}
-                    title="Kattintás: hozzáadás a paklihoz"
-                  >
-                    <img
-                      src={ab.image}
-                      alt={ab.name}
-                      className="w-full h-20 object-cover"
-                    />
-                    <div className="p-1 text-center">
-                      <div className="font-semibold text-[11px]">
-                        {ab.name}
+                {abilityPool.map((ab) => {
+                  const imgSrc = resolveCardImageFromAbility(ab);
+                  return (
+                    <button
+                      key={ab.id}
+                      className="border border-gray-700 rounded-lg overflow-hidden bg-gray-800/70 hover:bg-gray-700 transition flex flex-col text-xs"
+                      onClick={() => handleAddToDeck(ab.id)}
+                      title="Kattintás: hozzáadás a paklihoz"
+                    >
+                      <img
+                        src={imgSrc}
+                        alt={ab.name}
+                        className="w-full h-20 object-cover"
+                      />
+                      <div className="p-1 text-center">
+                        <div className="font-semibold text-[11px]">
+                          {ab.name}
+                        </div>
+                        <div className="text-[10px] text-gray-400 uppercase">
+                          {ab.type} • {ab.rarity}
+                        </div>
                       </div>
-                      <div className="text-[10px] text-gray-400 uppercase">
-                        {ab.type} • {ab.rarity}
-                      </div>
-                    </div>
-                  </button>
-                ))}
+                    </button>
+                  );
+                })}
               </div>
             </div>
           </div>
 
-          {/* JELENLEGI DECK (összevonva ability-nként) */}
+          {/* JELENLEGI DECK */}
           <div className="flex-1 flex flex-col overflow-hidden">
             <div className="font-semibold mb-2">Jelenlegi pakli</div>
             <div className="flex-1 overflow-auto border border-gray-700 rounded-lg p-2 bg-black/40">
@@ -179,6 +186,7 @@ export default function DeckEditorModal({ onClose }) {
                     const ab = ABILITIES_BY_ID[id];
                     if (!ab) return null;
                     const count = deckCounts[id] || 0;
+                    const imgSrc = resolveCardImageFromAbility(ab);
 
                     return (
                       <button
@@ -188,11 +196,10 @@ export default function DeckEditorModal({ onClose }) {
                         title="Kattintás: egy példány eltávolítása a pakliból"
                       >
                         <img
-                          src={ab.image}
+                          src={imgSrc}
                           alt={ab.name}
                           className="w-full h-20 object-cover"
                         />
-                        {/* darabszám jelölés */}
                         <div className="absolute top-1 left-1 bg-black/80 text-[10px] px-1 py-[1px] rounded">
                           x{count}
                         </div>

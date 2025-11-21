@@ -10,6 +10,18 @@ import {
 import spellbookImg from "../assets/pics/spellbook.png";
 import StatModal from "./StatModal.jsx";
 
+// UGYANAZ a helper, mint CombatView-ben
+function resolveCardImageFromAbility(ab) {
+  if (!ab) return "";
+  if (typeof ab.image === "string" && ab.image.startsWith("/cards/")) {
+    return ab.image;
+  }
+  if (ab.id && ab.rarity) {
+    return `/cards/${ab.rarity}/${ab.id}.png`;
+  }
+  return "";
+}
+
 export default function Inv({ onClose }) {
   const [showInventory, setShowInventory] = useState(false);
   const [showDeckEditor, setShowDeckEditor] = useState(false);
@@ -19,19 +31,16 @@ export default function Inv({ onClose }) {
 
   const anyModalOpen = showInventory || showDeckEditor || showStats;
 
-  // Melyik kaszt? (warrior/mage/archer)
   const classKey = useMemo(
     () => getClassKeyFromId(player?.class_id),
     [player?.class_id]
   );
 
-  // Ability pool az adott kaszthoz
   const abilityPool = useMemo(
     () => getAbilitiesForClass(classKey),
     [classKey]
   );
 
-  // Alap deck létrehozása, ha nincs
   useEffect(() => {
     if (!player || !setPlayer) return;
     if (Array.isArray(player.deck) && player.deck.length > 0) return;
@@ -44,7 +53,6 @@ export default function Inv({ onClose }) {
     }));
   }, [player, setPlayer, classKey]);
 
-  // IDEIGLENES DECK A MODALBAN
   const [tempDeck, setTempDeck] = useState(player?.deck || []);
 
   useEffect(() => {
@@ -56,7 +64,6 @@ export default function Inv({ onClose }) {
   const MAX_DECK_SIZE = 30;
   const MIN_DECK_SIZE = 10;
 
-  // rarity alapú limit (max példány / ability)
   const MAX_PER_RARITY = {
     common: 4,
     rare: 3,
@@ -64,7 +71,6 @@ export default function Inv({ onClose }) {
     legendary: 1,
   };
 
-  // HOZZÁADÁS: 1 példány, rarity-limit figyelembe vételével
   function handleAddToDeck(abilityId) {
     if (tempDeck.length >= MAX_DECK_SIZE) return;
 
@@ -85,7 +91,6 @@ export default function Inv({ onClose }) {
     setTempDeck((prev) => [...prev, abilityId]);
   }
 
-  // Egy példány eltávolítása egy ability-ből
   function handleRemoveOneFromDeck(abilityId) {
     setTempDeck((prev) => {
       const idx = prev.indexOf(abilityId);
@@ -110,7 +115,6 @@ export default function Inv({ onClose }) {
     setShowDeckEditor(false);
   }
 
-  // Jelenlegi deck összesítése: abilityId -> darabszám
   const deckCounts = useMemo(() => {
     const counts = {};
     tempDeck.forEach((id) => {
@@ -119,7 +123,6 @@ export default function Inv({ onClose }) {
     return counts;
   }, [tempDeck]);
 
-  // Egyedi ability ID-k, amik jelenleg a deckben vannak
   const uniqueDeckIds = useMemo(
     () => Object.keys(deckCounts),
     [deckCounts]
@@ -143,9 +146,7 @@ export default function Inv({ onClose }) {
         {/* STAT MODAL (ÁGY) */}
         {showStats && <StatModal onClose={() => setShowStats(false)} />}
 
-        {/* ============================
-            INVENTORY MODAL (LÁDA)
-        ============================ */}
+        {/* INVENTORY MODAL (LÁDA) */}
         {showInventory && (
           <div className="absolute inset-0 bg-black/80 flex items-center justifycenter p-10 z-40">
             <div className="bg-gray-900 p-6 rounded-2xl shadow-xl w-3/4 h-3/4 overflow-auto text-white">
@@ -180,9 +181,7 @@ export default function Inv({ onClose }) {
           </div>
         )}
 
-        {/* ============================
-            SPELLBOOK / DECK MODAL
-        ============================ */}
+        {/* SPELLBOOK / DECK MODAL */}
         {showDeckEditor && (
           <div className="absolute inset-0 bg-black/80 flex items-center justify-center p-10 z-40">
             <div className="relative bg-transparent w-5/6 h-5/6 text-white flex flex-col">
@@ -210,13 +209,9 @@ export default function Inv({ onClose }) {
                   src={spellbookImg}
                   alt="Spellbook"
                   className="max-w-5xl w-full h-auto pointer-events-none select-none drop-shadow-[0_0_25px_rgba(0,0,0,0.9)]"
-                  style={{
-                    // ha nagyobbra kellenek a lapok, itt tudod állítani
-                    // width: "1600px",
-                  }}
                 />
 
-                {/* Lapokra osztott tartalom – finomhangolható pozíció */}
+                {/* Lapokra osztott tartalom */}
                 <div
                   className="absolute pointer-events-none"
                   style={{
@@ -234,26 +229,29 @@ export default function Inv({ onClose }) {
                       </div>
                       <div className="h-[360px] overflow-auto pr-1">
                         <div className="grid grid-cols-2 gap-3">
-                          {abilityPool.map((ab) => (
-                            <button
-                              key={ab.id}
-                              className="border border-amber-800/70 bg-amber-950/70 rounded-lg overflow-hidden hover:bg-amber-900/80 transition flex flex-col text-[11px]"
-                              onClick={() => handleAddToDeck(ab.id)}
-                              title="Kattintás: hozzáadás a paklihoz"
-                            >
-                              <img
-                                src={ab.image}
-                                alt={ab.name}
-                                className="w-full h-16 object-cover"
-                              />
-                              <div className="p-1 text-center">
-                                <div className="font-semibold">{ab.name}</div>
-                                <div className="text-[10px] text-amber-200 uppercase">
-                                  {ab.type} • {ab.rarity}
+                          {abilityPool.map((ab) => {
+                            const imgSrc = resolveCardImageFromAbility(ab);
+                            return (
+                              <button
+                                key={ab.id}
+                                className="border border-amber-800/70 bg-amber-950/70 rounded-lg overflow-hidden hover:bg-amber-900/80 transition flex flex-col text-[11px]"
+                                onClick={() => handleAddToDeck(ab.id)}
+                                title="Kattintás: hozzáadás a paklihoz"
+                              >
+                                <img
+                                  src={imgSrc}
+                                  alt={ab.name}
+                                  className="w-full h-16 object-cover"
+                                />
+                                <div className="p-1 text-center">
+                                  <div className="font-semibold">{ab.name}</div>
+                                  <div className="text-[10px] text-amber-200 uppercase">
+                                    {ab.type} • {ab.rarity}
+                                  </div>
                                 </div>
-                              </div>
-                            </button>
-                          ))}
+                              </button>
+                            );
+                          })}
                         </div>
                       </div>
                     </div>
@@ -275,6 +273,7 @@ export default function Inv({ onClose }) {
                               const ab = ABILITIES_BY_ID[id];
                               if (!ab) return null;
                               const count = deckCounts[id] || 0;
+                              const imgSrc = resolveCardImageFromAbility(ab);
 
                               return (
                                 <button
@@ -284,11 +283,10 @@ export default function Inv({ onClose }) {
                                   title="Kattintás: egy példány eltávolítása a pakliból"
                                 >
                                   <img
-                                    src={ab.image}
+                                    src={imgSrc}
                                     alt={ab.name}
                                     className="w-full h-16 object-cover"
                                   />
-                                  {/* darabszám jelölés */}
                                   <div className="absolute top-1 left-1 bg-black/80 text-[10px] px-1 py-[1px] rounded">
                                     x{count}
                                   </div>
@@ -336,9 +334,7 @@ export default function Inv({ onClose }) {
           </div>
         )}
 
-        {/* ============================
-            HOTSPOTOK A HÁZBAN
-        ============================ */}
+        {/* HOTSPOTOK A HÁZBAN */}
         <div className="flex justify-between flex-1">
           <div
             style={{
@@ -389,7 +385,7 @@ export default function Inv({ onClose }) {
               <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition"></div>
             </div>
 
-            {/* BEÁLLÍTÁSOK */}
+            {/* BEÁLLÍTÁSOK (placeholder) */}
             <div
               className={`absolute cursor-pointer group ${
                 anyModalOpen ? "pointer-events-none" : ""
