@@ -67,7 +67,7 @@
 .parancs{
     font-family: "Jersey 10", sans-serif;
     color: rgb(255, 255, 255);
-    font-size: 12px;
+    font-size: 15px;
     font-weight: 400;
     font-style: normal;
     letter-spacing: 2px;
@@ -77,7 +77,7 @@
     
 }
 
-.felhasznalonev,.jelszo{
+.felhasznalonev,.jelszo,.email{
     font-family: "Jersey 10", sans-serif;
     font-weight: 400;
     font-style: normal;
@@ -167,6 +167,7 @@
 
 .regText {
   opacity: 0.9;
+  font-size: 15px;
 }
 
 .regisztracioLink {
@@ -175,6 +176,7 @@
   font-weight: 500;
   cursor: pointer;
   transition: 0.15s ease;
+  font-size: 15px;
 }
 
 .regisztracioLink:hover {
