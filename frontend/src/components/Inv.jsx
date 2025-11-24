@@ -204,21 +204,20 @@ export default function Inv({ onClose }) {
 
               {/* KÖNYV + LAYOUT */}
               <div className="relative flex-1 flex items-center justify-center">
-                {/* Könyv kép */}
                 <img
-                  src={spellbookImg}
-                  alt="Spellbook"
-                  className="max-w-5xl w-full h-auto pointer-events-none select-none drop-shadow-[0_0_25px_rgba(0,0,0,0.9)]"
-                />
+                    src={spellbookImg}
+                    alt="Spellbook"
+                    className="w-[85%] h-auto pointer-events-none select-none drop-shadow-[0_0_25px_rgba(0,0,0,0.9)]"
+                  />
 
                 {/* Lapokra osztott tartalom */}
                 <div
                   className="absolute pointer-events-none"
                   style={{
-                    top: "55%",
+                    top: "45%",
                     left: "50%",
                     transform: "translate(-50%, -50%)",
-                    width: "70%",
+                    width: "40%",
                   }}
                 >
                   <div className="flex gap-10 w-full max-w-4xl mx-auto">

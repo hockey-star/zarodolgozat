@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Gép: 127.0.0.1
--- Létrehozás ideje: 2025. Nov 24. 09:06
+-- Létrehozás ideje: 2025. Nov 24. 10:51
 -- Kiszolgáló verziója: 10.4.28-MariaDB
 -- PHP verzió: 8.2.4
 
@@ -186,7 +186,11 @@ INSERT INTO `players` (`id`, `username`, `email`, `password_hash`, `class_id`, `
 (7, 'TesztPlayer', 'teszt@example.com', 'teszt123', NULL, 1, 1000, 0, 50, 50, 5, 5, 2, '2025-11-20 12:40:32', 0),
 (8, 'asd342', 'asd435@gmail.com', '123', 6, 1, 0, 100, 50, 50, 5, 0, 3, '2025-11-21 08:43:49', 0),
 (9, 'teszt123', 'tesztelek@gmail.com', '123', 6, 11, 67, 157, 200, 245, 26, 0, 3, '2025-11-21 10:16:21', 0),
-(10, 'teszt321', 'teszt321@gmail.com', '123', 7, 2, 2, 22, 60, 60, 5, 6, 2, '2025-11-21 13:56:08', 0);
+(10, 'teszt321', 'teszt321@gmail.com', '123', 7, 2, 2, 22, 60, 60, 5, 6, 2, '2025-11-21 13:56:08', 0),
+(11, 'varzslo', 'asddsds@gmail.com', '123', 7, 1, 0, 100, 30, 30, 0, 5, 1, '2025-11-24 09:33:12', 0),
+(12, 'varazs1', 'sadwwdw@gmail.com', '123', 7, 1, 0, 100, 30, 30, 0, 5, 1, '2025-11-24 09:58:29', 0),
+(13, 'varazs123', '123123@gmail.com', '123', 7, 1, 0, 100, 30, 30, 0, 5, 1, '2025-11-24 10:05:07', 0),
+(14, 'war123', 'war@gmail.com', '123', NULL, 1, 0, 0, 50, 50, 5, 5, 2, '2025-11-24 10:44:55', 0);
 
 -- --------------------------------------------------------
 
@@ -201,6 +205,41 @@ CREATE TABLE `player_quests` (
   `progress` int(11) DEFAULT 0,
   `status` enum('locked','in_progress','completed','claimed') DEFAULT 'locked'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_hungarian_ci;
+
+--
+-- A tábla adatainak kiíratása `player_quests`
+--
+
+INSERT INTO `player_quests` (`id`, `player_id`, `quest_id`, `progress`, `status`) VALUES
+(1, 11, 1, 1, 'in_progress'),
+(2, 11, 2, 0, 'locked'),
+(3, 11, 3, 0, 'locked'),
+(4, 11, 4, 0, 'locked'),
+(5, 11, 5, 0, 'locked'),
+(8, 12, 1, 0, 'in_progress'),
+(9, 12, 2, 0, 'locked'),
+(10, 12, 3, 0, 'locked'),
+(11, 12, 4, 0, 'locked'),
+(12, 12, 5, 0, 'locked'),
+(23, 13, 1, 0, 'in_progress'),
+(24, 13, 2, 0, 'locked'),
+(25, 13, 3, 0, 'locked'),
+(26, 13, 4, 0, 'locked'),
+(27, 13, 5, 0, 'locked'),
+(38, 2, 9, 0, 'locked'),
+(39, 8, 9, 0, 'locked'),
+(40, 9, 9, 0, 'locked'),
+(41, 3, 10, 0, 'locked'),
+(42, 6, 10, 0, 'locked'),
+(43, 10, 10, 0, 'locked'),
+(44, 11, 10, 0, 'locked'),
+(45, 12, 10, 0, 'locked'),
+(46, 13, 10, 0, 'locked'),
+(53, 14, 1, 0, 'in_progress'),
+(54, 14, 2, 0, 'locked'),
+(55, 14, 3, 0, 'locked'),
+(56, 14, 4, 0, 'locked'),
+(57, 14, 5, 0, 'locked');
 
 -- --------------------------------------------------------
 
@@ -224,9 +263,14 @@ CREATE TABLE `quests_master` (
 --
 
 INSERT INTO `quests_master` (`id`, `title`, `description`, `task_type`, `target_amount`, `reward_xp`, `reward_gold`, `class_required`) VALUES
-(1, 'Ölj meg 5 ellenséget', 'Kezdő vadászat', 'kill', 5, 20, 50, NULL),
-(2, 'Győzd le az első bosst', 'A sötét erdő mélyén...', 'boss', 1, 100, 200, NULL),
-(3, 'Szerezz meg egy varázskövet', 'Csak mágusoknak!', 'collect', 1, 40, 70, 'mage');
+(1, 'Első vér', 'Ölj meg 3 ellenséget.', 'kill', 3, 15, 30, NULL),
+(2, 'Kezdő vadász', 'Ölj meg 7 ellenséget.', 'kill', 7, 30, 50, NULL),
+(3, 'Apró győzelmek', 'Nyerj meg 3 csatát.', 'custom', 3, 40, 60, NULL),
+(4, 'Első találkozás a boss-szal', 'Győzz le egy bosst.', 'boss', 1, 80, 120, NULL),
+(5, 'Tapasztalt harcos', 'Nyerj meg 5 csatát.', 'custom', 5, 100, 150, NULL),
+(9, 'Trial of the Mountain King', 'Végezd el a Harcosok próbáját és győzd le a Mountain King-et.', 'boss', 1, 300, 400, '6'),
+(10, 'Rite of the Arcane Lord', 'A mágusok végső tesztje: győzd le az Arcane Abomination-t.', 'boss', 1, 300, 400, '7'),
+(11, 'Hunt of the Forest Spirit', 'Az íjászok nagyvadja: öld meg a Forest Spirit Beast-et.', 'boss', 1, 300, 400, '8');
 
 -- --------------------------------------------------------
 
@@ -364,19 +408,19 @@ ALTER TABLE `paths`
 -- AUTO_INCREMENT a táblához `players`
 --
 ALTER TABLE `players`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=15;
 
 --
 -- AUTO_INCREMENT a táblához `player_quests`
 --
 ALTER TABLE `player_quests`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=60;
 
 --
 -- AUTO_INCREMENT a táblához `quests_master`
 --
 ALTER TABLE `quests_master`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
 
 --
 -- AUTO_INCREMENT a táblához `statistics`

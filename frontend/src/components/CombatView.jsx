@@ -25,14 +25,12 @@ function resolveBackground(background, pathType) {
   return "/backgrounds/3.jpg";
 }
 
-// card image helper – **ITT ERŐLTETJÜK RÁ A /cards/... PATH-OT**
+// card image helper – /cards/... PATH
 function resolveCardImageFromAbility(ab) {
   if (!ab) return "";
-  // ha már jó path, hagyjuk
   if (typeof ab.image === "string" && ab.image.startsWith("/cards/")) {
     return ab.image;
   }
-  // egyébként: /cards/<rarity>/<id>.png
   if (ab.id && ab.rarity) {
     return `/cards/${ab.rarity}/${ab.id}.png`;
   }
@@ -62,6 +60,13 @@ const DEFAULT_CLASS_CONFIG = {
   key: "warrior",
   displayName: "Harcos",
   sprite: "/ui/player/player.png",
+};
+
+// 🔥 CLASS QUEST BOSSOK NEVE
+const CLASS_BOSS_MAP = {
+  warrior: "Mountain King",
+  mage: "Arcane Abomination",
+  archer: "Forest Spirit Beast",
 };
 
 export default function CombatView({
@@ -248,52 +253,91 @@ export default function CombatView({
     });
   }
 
-  // ENEMY + DECK INIT
+  // ENEMY + DECK INIT (+ CLASS QUEST BOSS LOGIKA)
   useEffect(() => {
     if (!player) return;
 
-    const isElite = !boss && pathType === "elite";
-    const allowedNames = Array.isArray(enemies) ? enemies : [];
+    async function initBattle() {
+      try {
+        let isElite = !boss && pathType === "elite";
+        let allowedNames = Array.isArray(enemies) ? enemies : [];
 
-    const enemyData = getRandomEnemy({
-      level,
-      boss,
-      elite: isElite,
-      allowedNames,
-    });
+        // 🔥 CLASS QUEST BOSS – ha boss fight van
+        if (boss && player.id) {
+          try {
+            const res = await fetch(
+              `http://localhost:3000/api/quests/${player.id}`
+            );
+            const data = await res.json();
 
-    const e = {
-      name: enemyData.name,
-      maxHp: enemyData.maxHp,
-      dmg: [enemyData.minDmg, enemyData.maxDmg],
-      rewards: {
-        goldMin: enemyData.goldRewardMin,
-        goldMax: enemyData.goldRewardMax,
-        xpMin: enemyData.xpRewardMin,
-        xpMax: enemyData.xpRewardMax,
-      },
-      role: enemyData.role,
-    };
+            const activeClassQuest = Array.isArray(data)
+              ? data.find(
+                  (q) =>
+                    q.status === "in_progress" &&
+                    q.class_required !== null &&
+                    q.class_required !== ""
+                )
+              : null;
 
-    setEnemy(e);
-    setEnemyHP(e.maxHp);
-    setBattleOver(false);
-    setTurn("player");
-    setDefending(false);
-    setLog([`⚔️ A ${e.name} kihívott téged!`]);
-    setHPPopups([]);
-    setPlayerDamaged(false);
-    setEnemyDamaged(false);
-    setPlayerHealed(false);
-    setLastRewards(null);
+            if (activeClassQuest) {
+              const ck = classKey;
+              const bossName = CLASS_BOSS_MAP[ck];
+              if (bossName) {
+                allowedNames = [bossName];
+                pushLog(
+                  `🔥 Class quest boss közeleg: ${bossName} (kaszt: ${ck})`
+                );
+              }
+            }
+          } catch (err) {
+            console.error("Class quest boss check error:", err);
+          }
+        }
 
-    // player deckből combat deck építése
-    const combatDeck = buildCombatDeckFromPlayer();
-    const { hand: initialHand, deck: remainingDeck } =
-      drawInitialHand(combatDeck);
-    setDeck(remainingDeck);
-    setDiscardPile([]);
-    setHand(initialHand);
+        const enemyData = getRandomEnemy({
+          level,
+          boss,
+          elite: isElite,
+          allowedNames,
+        });
+
+        const e = {
+          name: enemyData.name,
+          maxHp: enemyData.maxHp,
+          dmg: [enemyData.minDmg, enemyData.maxDmg],
+          rewards: {
+            goldMin: enemyData.goldRewardMin,
+            goldMax: enemyData.goldRewardMax,
+            xpMin: enemyData.xpRewardMin,
+            xpMax: enemyData.xpRewardMax,
+          },
+          role: enemyData.role,
+        };
+
+        setEnemy(e);
+        setEnemyHP(e.maxHp);
+        setBattleOver(false);
+        setTurn("player");
+        setDefending(false);
+        setLog([`⚔️ A ${e.name} kihívott téged!`]);
+        setHPPopups([]);
+        setPlayerDamaged(false);
+        setEnemyDamaged(false);
+        setPlayerHealed(false);
+        setLastRewards(null);
+
+        const combatDeck = buildCombatDeckFromPlayer();
+        const { hand: initialHand, deck: remainingDeck } =
+          drawInitialHand(combatDeck);
+        setDeck(remainingDeck);
+        setDiscardPile([]);
+        setHand(initialHand);
+      } catch (err) {
+        console.error("Enemy init error:", err);
+      }
+    }
+
+    initBattle();
   }, [level, boss, pathType, enemies, player, classKey]);
 
   // KÁRTYA KIJÁTSZÁSA – CLASS ALAPÚ SKÁLÁZÁS
@@ -314,11 +358,11 @@ export default function CombatView({
       let baseMax = card.dmg?.[1] ?? 8;
 
       if (classKey === "warrior") {
-        const bonus = Math.floor(playerStrength * 0.2);
+        const bonus = Math.floor(playerStrength * 0.35);
         baseMin += bonus;
         baseMax += bonus;
       } else if (classKey === "mage") {
-        const bonus = Math.floor(playerIntellect * 0.3);
+        const bonus = Math.floor(playerIntellect * 0.5);
         baseMin += bonus;
         baseMax += bonus;
       } else if (classKey === "archer") {
@@ -333,7 +377,7 @@ export default function CombatView({
       let dmg =
         Math.floor(Math.random() * (baseMax - baseMin + 1)) + baseMin;
 
-      // Íjász: crit esély
+      // Íjász crit
       if (classKey === "archer") {
         const critChance = Math.min(50, playerAgi * 1.5);
         if (Math.random() * 100 < critChance) {
@@ -434,7 +478,7 @@ export default function CombatView({
     return { xpGain, goldGain };
   }
 
-  function handleContinue() {
+  async function handleContinue() {
     const victory = enemyHP <= 0 && playerHP > 0;
 
     if (!victory) {
@@ -478,9 +522,35 @@ export default function CombatView({
       gold: (prev.gold ?? 0) + goldGain,
       hp: playerHP,
       max_hp: prev.max_hp,
-      unspentStatPoints:
-        (prev.unspentStatPoints ?? 0) + addedStatPoints,
+      unspentStatPoints: (prev.unspentStatPoints ?? 0) + addedStatPoints,
     }));
+
+    // 🔥 QUEST PROGRESS – BACKEND HÍVÁSOK 🔥
+    try {
+      const playerId = player.id;
+
+      const taskType = boss ? "boss" : "kill";
+
+      await fetch("http://localhost:3000/api/quests/progress", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ playerId, taskType }),
+      });
+
+      await fetch("http://localhost:3000/api/quests/progress", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ playerId, taskType: "custom" }),
+      });
+
+      await fetch("http://localhost:3000/api/quests/check", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ playerId }),
+      });
+    } catch (err) {
+      console.error("Quest progress frissítés hiba:", err);
+    }
 
     if (onEnd) onEnd(playerHP, true);
   }
@@ -551,7 +621,7 @@ export default function CombatView({
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 flex gap-4 z-50">
           {hand.map((card, i) => {
             const rs = rarityStyle[card.rarity] ?? rarityStyle.common;
-            const imgSrc = card.image; // már a helperből jön
+            const imgSrc = card.image;
             return (
               <button
                 key={i}
