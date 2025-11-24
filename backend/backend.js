@@ -466,9 +466,15 @@ app.post("/api/quests/check", (req, res) => {
   );
 });
 
-// reward claim
+// reward claim + következő quest + class quest unlock
 app.post("/api/quests/claim", (req, res) => {
   const { playerId, questId } = req.body;
+
+  if (!playerId || !questId) {
+    return res.status(400).json({ error: "Hiányzó playerId vagy questId" });
+  }
+
+  console.log(">>> CLAIM request:", { playerId, questId });
 
   // 1. jutalom lekérdezés
   pool.query(
@@ -480,11 +486,19 @@ app.post("/api/quests/claim", (req, res) => {
     `,
     [playerId, questId],
     (err, results) => {
-      if (err) return res.status(500).json({ error: "DB hiba claimnél" });
-      if (results.length === 0)
+      if (err) {
+        console.error("Claim select error:", err);
+        return res.status(500).json({ error: "DB hiba claimnél" });
+      }
+      if (results.length === 0) {
+        console.warn("Claim: nincs completed quest ilyen paramokkal");
         return res.status(400).json({ error: "Nem claimelhető" });
+      }
 
       const { reward_xp, reward_gold } = results[0];
+      console.log(
+        `>>> CLAIM: reward_xp=${reward_xp}, reward_gold=${reward_gold}`
+      );
 
       // 2. reward hozzáadása playerhez
       pool.query(
@@ -495,8 +509,12 @@ app.post("/api/quests/claim", (req, res) => {
         `,
         [reward_xp, reward_gold, playerId],
         (err2) => {
-          if (err2)
-            return res.status(500).json({ error: "XP/Gold update error" });
+          if (err2) {
+            console.error("XP/Gold update error:", err2);
+            return res
+              .status(500)
+              .json({ error: "XP/Gold update error" });
+          }
 
           // 3. quest státusz "claimed"
           pool.query(
@@ -507,12 +525,148 @@ app.post("/api/quests/claim", (req, res) => {
             `,
             [playerId, questId],
             (err3) => {
-              if (err3)
+              if (err3) {
+                console.error("Claim status update error:", err3);
                 return res
                   .status(500)
                   .json({ error: "Claim status update error" });
+              }
 
-              return res.json({ message: "Küldetés claimelve!" });
+              console.log(">>> CLAIM: quest státusz -> claimed");
+
+              // 4. Következő ALAP quest aktiválása (class_required IS NULL)
+              pool.query(
+                `
+                SELECT qm.id
+                FROM player_quests pq
+                JOIN quests_master qm ON pq.quest_id = qm.id
+                WHERE pq.player_id = ?
+                  AND qm.class_required IS NULL
+                  AND pq.status = 'locked'
+                ORDER BY qm.id ASC
+                LIMIT 1
+                `,
+                [playerId],
+                (nextErr, nextRows) => {
+                  if (nextErr) {
+                    console.error("Next quest select error:", nextErr);
+                  }
+
+                  const activateNextQuest = (cb) => {
+                    if (!nextRows || nextRows.length === 0) {
+                      console.log(
+                        ">>> CLAIM: nincs következő locked alap quest"
+                      );
+                      return cb();
+                    }
+
+                    const nextQuestId = nextRows[0].id;
+                    console.log(
+                      ">>> CLAIM: következő alap quest aktiválása:",
+                      nextQuestId
+                    );
+
+                    pool.query(
+                      `
+                      UPDATE player_quests
+                      SET status = 'in_progress'
+                      WHERE player_id = ? AND quest_id = ?
+                      `,
+                      [playerId, nextQuestId],
+                      (actErr) => {
+                        if (actErr) {
+                          console.error(
+                            "Next quest activate error:",
+                            actErr
+                          );
+                        } else {
+                          console.log(
+                            ">>> CLAIM: alap quest in_progress lett:",
+                            nextQuestId
+                          );
+                        }
+                        cb();
+                      }
+                    );
+                  };
+
+                  // 5. Class quest feloldás, ha mind az 5 alap quest CLAIMED
+                  activateNextQuest(() => {
+                    pool.query(
+                      `
+                      SELECT COUNT(*) AS claimedCount
+                      FROM player_quests pq
+                      JOIN quests_master qm ON pq.quest_id = qm.id
+                      WHERE pq.player_id = ?
+                        AND qm.class_required IS NULL
+                        AND pq.status = 'claimed'
+                      `,
+                      [playerId],
+                      (cntErr, cntRows) => {
+                        if (cntErr) {
+                          console.error(
+                            "Class quest count error:",
+                            cntErr
+                          );
+                          return res.json({
+                            message:
+                              "Küldetés claimelve (class quest ellenőrzés hibás).",
+                          });
+                        }
+
+                        const claimedCount =
+                          cntRows[0]?.claimedCount || 0;
+                        console.log(
+                          ">>> CLAIM: alap claimed quest count =",
+                          claimedCount
+                        );
+
+                        if (claimedCount < 5) {
+                          // még nincs kész mind az 5 alap quest
+                          return res.json({
+                            message: "Küldetés claimelve!",
+                          });
+                        }
+
+                        // mind az 5 alap quest claimed → class quest unlock
+                        pool.query(
+                          `
+                          UPDATE player_quests pq
+                          JOIN quests_master qm ON pq.quest_id = qm.id
+                          JOIN players p ON p.id = pq.player_id
+                          SET pq.status = 'in_progress'
+                          WHERE pq.player_id = ?
+                            AND pq.status = 'locked'
+                            AND qm.class_required = p.class_id
+                          `,
+                          [playerId],
+                          (unlockErr) => {
+                            if (unlockErr) {
+                              console.error(
+                                "Class quest unlock error:",
+                                unlockErr
+                              );
+                              return res.json({
+                                message:
+                                  "Küldetés claimelve, de a class quest feloldása közben hiba történt.",
+                              });
+                            }
+
+                            console.log(
+                              ">>> CLAIM: class quest feloldva (in_progress)"
+                            );
+
+                            return res.json({
+                              message:
+                                "Küldetés claimelve, következő quest / class quest frissítve!",
+                            });
+                          }
+                        );
+                      }
+                    );
+                  });
+                }
+              );
             }
           );
         }
@@ -520,6 +674,7 @@ app.post("/api/quests/claim", (req, res) => {
     }
   );
 });
+
 
 app.listen(port, () => {
   console.log(`Backend fut a ${port} porton`);

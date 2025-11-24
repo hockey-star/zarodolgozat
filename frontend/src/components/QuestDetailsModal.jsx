@@ -24,8 +24,8 @@ export default function QuestDetailsModal({
 
       const data = await res.json();
 
-      if (data.error) {
-        setMsg(data.error);
+      if (!res.ok || data.error) {
+        setMsg(data.error || "Nem sikerült claimelni.");
         return;
       }
 
@@ -55,13 +55,16 @@ export default function QuestDetailsModal({
         </h2>
 
         <div className="text-xs text-yellow-300/80 mb-1">Leírás:</div>
-        <p className="text-sm mb-3 text-yellow-100">{quest.description}</p>
+        <p className="text-sm mb-3 text-yellow-100">
+          {quest.description}
+        </p>
 
         <div className="text-xs text-yellow-300/80 mb-1">Cél:</div>
         <div className="text-sm mb-3">
           {quest.task_type === "kill" && "Ölj meg ellenfeleket."}
           {quest.task_type === "boss" && "Győzz le egy főellenséget."}
-          {quest.task_type === "custom" && "Teljesítsd a speciális feltételt."}
+          {quest.task_type === "custom" &&
+            "Teljesítsd a speciális feltételt."}
         </div>
 
         <div className="text-xs mb-3">
@@ -69,10 +72,14 @@ export default function QuestDetailsModal({
         </div>
 
         <div className="mb-4 text-sm">
-          <div className="text-xs text-yellow-300/80 mb-1">Jutalom:</div>
+          <div className="text-xs text-yellow-300/80 mb-1">
+            Jutalom:
+          </div>
           <div className="flex flex-col">
             <span className="text-green-300">+{quest.reward_xp} XP</span>
-            <span className="text-yellow-300">+{quest.reward_gold} arany</span>
+            <span className="text-yellow-300">
+              +{quest.reward_gold} arany
+            </span>
           </div>
         </div>
 
@@ -95,7 +102,9 @@ export default function QuestDetailsModal({
           )}
 
           {quest.status === "claimed" && (
-            <span className="text-xs text-blue-300">🏁 Már átvetted</span>
+            <span className="text-xs text-blue-300">
+              🏁 Már átvetted
+            </span>
           )}
 
           {canClaim && (
@@ -109,7 +118,9 @@ export default function QuestDetailsModal({
         </div>
 
         {msg && (
-          <div className="mt-3 text-center text-xs text-amber-200">{msg}</div>
+          <div className="mt-3 text-center text-xs text-amber-200">
+            {msg}
+          </div>
         )}
       </div>
     </div>

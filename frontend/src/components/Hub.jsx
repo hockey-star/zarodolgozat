@@ -65,6 +65,11 @@ export default function Hub({ onGoCombat }) {
     if (type === "quest") setShowQuestBoard(true);
   };
 
+  const CLASS_STRING = {
+  6: "warrior",
+  7: "mage",
+  8: "archer",
+};
   // Játékos mozgatása
   const moveTo = (x, y, type) => {
     if (Math.abs(playerPos.x - x) < 1 && Math.abs(playerPos.y - y) < 1) {
@@ -202,7 +207,7 @@ export default function Hub({ onGoCombat }) {
       >
         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition"></div>
       </div>
-
+        
       {/* Játékos sprite */}
       <img
         src="./src/assets/pics/TESZT.PNG"
@@ -224,14 +229,15 @@ export default function Hub({ onGoCombat }) {
       {showBlacksmith && (
         <BlacksmithModal onClose={() => handleClose(setShowBlacksmith)} />
       )}
+      
       {showInv && <InvModal onClose={() => handleClose(setShowInv)} />}
-      {showQuestBoard && (
-        <QuestBoardModal
-          playerId={player.id}
-          playerClassId={player.class_id}
-          onClose={() => handleClose(setShowQuestBoard)}
-        />
-      )}
+      {showQuestBoard && player && (
+  <QuestBoardModal
+    playerId={player.id}
+    playerClassId={CLASS_STRING[player.class_id]} // <-- STRING!
+    onClose={() => handleClose(setShowQuestBoard)}
+  />
+)}
 
       {/* Utazás számláló */}
       {isAdventuring && (
