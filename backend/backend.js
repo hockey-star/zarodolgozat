@@ -229,6 +229,131 @@ app.put("/api/players/:id", (req, res) => {
   );
 });
 
+// KÜLDETÉSEK LÉTREHOZÁSA AZ ÚJ JÁTÉKOSNAK
+pool.query(
+  `
+  INSERT INTO player_quests (player_id, quest_id, status)
+  SELECT ?, qm.id,
+    CASE 
+      WHEN qm.class_required IS NULL THEN 
+        CASE WHEN qm.id = 1 THEN 'in_progress' ELSE 'locked' END
+      ELSE 'locked'
+    END
+  FROM quests_master qm
+  `,
+  [insRes.insertId],
+  (questErr) => {
+    if (questErr) console.error("Quest init error:", questErr);
+  }
+);
+
+app.get("/api/quests/:playerId", (req, res) => {
+  const playerId = req.params.playerId;
+
+  pool.query(
+    `
+    SELECT pq.*, qm.title, qm.description, qm.task_type, 
+           qm.target_amount, qm.reward_xp, qm.reward_gold, qm.class_required
+    FROM player_quests pq
+    JOIN quests_master qm ON pq.quest_id = qm.id
+    WHERE pq.player_id = ?
+    `,
+    [playerId],
+    (err, results) => {
+      if (err) return res.status(500).json({ error: "DB hiba quest lekéréskor" });
+      res.json(results);
+    }
+  );
+});
+
+app.post("/api/quests/progress", (req, res) => {
+  const { playerId, taskType } = req.body;
+
+  pool.query(
+    `
+    UPDATE player_quests pq
+    JOIN quests_master qm ON pq.quest_id = qm.id
+    SET pq.progress = pq.progress + 1
+    WHERE pq.player_id = ?
+      AND qm.task_type = ?
+      AND pq.status = 'in_progress'
+    `,
+    [playerId, taskType],
+    (err) => {
+      if (err) return res.status(500).json({ error: "Progress update error" });
+      res.json({ message: "Progress updated" });
+    }
+  );
+});
+
+app.post("/api/quests/check", (req, res) => {
+  const { playerId } = req.body;
+
+  pool.query(
+    `
+    UPDATE player_quests pq
+    JOIN quests_master qm ON pq.quest_id = qm.id
+    SET pq.status = 'completed'
+    WHERE pq.player_id = ?
+      AND pq.progress >= qm.target_amount
+      AND pq.status = 'in_progress'
+    `,
+    [playerId],
+    (err) => {
+      if (err) return res.status(500).json({ error: "Quest check failed" });
+      res.json({ message: "Quest updated if completed" });
+    }
+  );
+});
+
+app.post("/api/quests/claim", (req, res) => {
+  const { playerId, questId } = req.body;
+
+  // 1. Step: lekérdezzük a jutalmat
+  pool.query(
+    `
+    SELECT qm.reward_xp, qm.reward_gold 
+    FROM quests_master qm
+    JOIN player_quests pq ON pq.quest_id = qm.id
+    WHERE pq.player_id = ? AND qm.id = ? AND pq.status = 'completed'
+    `,
+    [playerId, questId],
+    (err, results) => {
+      if (err) return res.status(500).json({ error: "DB hiba claimnél" });
+      if (results.length === 0) return res.status(400).json({ error: "Nem claimelhető" });
+
+      const { reward_xp, reward_gold } = results[0];
+
+      // 2. Step: reward hozzáadása playerhez
+      pool.query(
+        `
+        UPDATE players
+        SET xp = xp + ?, gold = gold + ?
+        WHERE id = ?
+        `,
+        [reward_xp, reward_gold, playerId],
+        (err) => {
+          if (err) return res.status(500).json({ error: "XP/Gold update error" });
+
+          // 3. Step: quest státusz "claimed"
+          pool.query(
+            `
+            UPDATE player_quests
+            SET status = 'claimed'
+            WHERE player_id = ? AND quest_id = ?
+            `,
+            [playerId, questId],
+            (err) => {
+              if (err) return res.status(500).json({ error: "Claim status update error" });
+              res.json({ message: "Küldetés claimelve!" });
+            }
+          );
+        }
+      );
+    }
+  );
+});
+
 
 app.listen(port, () => {
   console.log(`Backend fut a ${port} porton`);

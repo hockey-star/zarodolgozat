@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Gép: 127.0.0.1
--- Létrehozás ideje: 2025. Nov 21. 13:58
+-- Létrehozás ideje: 2025. Nov 24. 09:06
 -- Kiszolgáló verziója: 10.4.28-MariaDB
 -- PHP verzió: 8.2.4
 
@@ -191,6 +191,46 @@ INSERT INTO `players` (`id`, `username`, `email`, `password_hash`, `class_id`, `
 -- --------------------------------------------------------
 
 --
+-- Tábla szerkezet ehhez a táblához `player_quests`
+--
+
+CREATE TABLE `player_quests` (
+  `id` int(11) NOT NULL,
+  `player_id` int(11) NOT NULL,
+  `quest_id` int(11) NOT NULL,
+  `progress` int(11) DEFAULT 0,
+  `status` enum('locked','in_progress','completed','claimed') DEFAULT 'locked'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_hungarian_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Tábla szerkezet ehhez a táblához `quests_master`
+--
+
+CREATE TABLE `quests_master` (
+  `id` int(11) NOT NULL,
+  `title` varchar(100) NOT NULL,
+  `description` text DEFAULT NULL,
+  `task_type` enum('kill','boss','collect','travel','custom') NOT NULL,
+  `target_amount` int(11) DEFAULT 1,
+  `reward_xp` int(11) DEFAULT 0,
+  `reward_gold` int(11) DEFAULT 0,
+  `class_required` varchar(20) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_hungarian_ci;
+
+--
+-- A tábla adatainak kiíratása `quests_master`
+--
+
+INSERT INTO `quests_master` (`id`, `title`, `description`, `task_type`, `target_amount`, `reward_xp`, `reward_gold`, `class_required`) VALUES
+(1, 'Ölj meg 5 ellenséget', 'Kezdő vadászat', 'kill', 5, 20, 50, NULL),
+(2, 'Győzd le az első bosst', 'A sötét erdő mélyén...', 'boss', 1, 100, 200, NULL),
+(3, 'Szerezz meg egy varázskövet', 'Csak mágusoknak!', 'collect', 1, 40, 70, 'mage');
+
+-- --------------------------------------------------------
+
+--
 -- Tábla szerkezet ehhez a táblához `statistics`
 --
 
@@ -266,6 +306,20 @@ ALTER TABLE `players`
   ADD KEY `fk_player_class` (`class_id`);
 
 --
+-- A tábla indexei `player_quests`
+--
+ALTER TABLE `player_quests`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `player_id` (`player_id`),
+  ADD KEY `quest_id` (`quest_id`);
+
+--
+-- A tábla indexei `quests_master`
+--
+ALTER TABLE `quests_master`
+  ADD PRIMARY KEY (`id`);
+
+--
 -- A tábla indexei `statistics`
 --
 ALTER TABLE `statistics`
@@ -313,6 +367,18 @@ ALTER TABLE `players`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
 
 --
+-- AUTO_INCREMENT a táblához `player_quests`
+--
+ALTER TABLE `player_quests`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT a táblához `quests_master`
+--
+ALTER TABLE `quests_master`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+
+--
 -- AUTO_INCREMENT a táblához `statistics`
 --
 ALTER TABLE `statistics`
@@ -340,6 +406,13 @@ ALTER TABLE `paths`
 --
 ALTER TABLE `players`
   ADD CONSTRAINT `fk_player_class` FOREIGN KEY (`class_id`) REFERENCES `classes` (`id`) ON DELETE SET NULL ON UPDATE CASCADE;
+
+--
+-- Megkötések a táblához `player_quests`
+--
+ALTER TABLE `player_quests`
+  ADD CONSTRAINT `player_quests_ibfk_1` FOREIGN KEY (`player_id`) REFERENCES `players` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `player_quests_ibfk_2` FOREIGN KEY (`quest_id`) REFERENCES `quests_master` (`id`) ON DELETE CASCADE;
 
 --
 -- Megkötések a táblához `statistics`
