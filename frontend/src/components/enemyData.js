@@ -1,6 +1,6 @@
 // enemyData.js
 
-// Ezeket a listákat te használtad – változatlanul meghagyom:
+// Ezeket a listákat te használtad – meghagyom:
 export const defaultEnemies = [
   "Bandit",
   "Lich Mage",
@@ -125,48 +125,47 @@ const ENEMY_TEMPLATES = [
     xpRewardMax: 160,
   },
   {
-  name: "Mountain King",
-  role: "boss",
-  baseHp: 200,
-  hpPerLevel: 10,
-  baseMinDmg: 15,
-  baseMaxDmg: 25,
-  dmgPerLevel: 2,
-  goldRewardMin: 120,
-  goldRewardMax: 180,
-  xpRewardMin: 150,
-  xpRewardMax: 200,
-},
-{
-  name: "Arcane Abomination",
-  role: "boss",
-  baseHp: 150,
-  hpPerLevel: 12,
-  baseMinDmg: 18,
-  baseMaxDmg: 28,
-  dmgPerLevel: 3,
-  goldRewardMin: 140,
-  goldRewardMax: 200,
-  xpRewardMin: 170,
-  xpRewardMax: 230,
-},
-{
-  name: "Forest Spirit Beast",
-  role: "boss",
-  baseHp: 180,
-  hpPerLevel: 11,
-  baseMinDmg: 14,
-  baseMaxDmg: 23,
-  dmgPerLevel: 2,
-  goldRewardMin: 130,
-  goldRewardMax: 190,
-  xpRewardMin: 160,
-  xpRewardMax: 210,
-},
-
+    name: "Mountain King",
+    role: "boss",
+    baseHp: 200,
+    hpPerLevel: 10,
+    baseMinDmg: 15,
+    baseMaxDmg: 25,
+    dmgPerLevel: 2,
+    goldRewardMin: 120,
+    goldRewardMax: 180,
+    xpRewardMin: 150,
+    xpRewardMax: 200,
+  },
+  {
+    name: "Arcane Abomination",
+    role: "boss",
+    baseHp: 150,
+    hpPerLevel: 12,
+    baseMinDmg: 18,
+    baseMaxDmg: 28,
+    dmgPerLevel: 3,
+    goldRewardMin: 140,
+    goldRewardMax: 200,
+    xpRewardMin: 170,
+    xpRewardMax: 230,
+  },
+  {
+    name: "Forest Spirit Beast",
+    role: "boss",
+    baseHp: 180,
+    hpPerLevel: 11,
+    baseMinDmg: 14,
+    baseMaxDmg: 23,
+    dmgPerLevel: 2,
+    goldRewardMin: 130,
+    goldRewardMax: 190,
+    xpRewardMin: 160,
+    xpRewardMax: 210,
+  },
 ];
 
-// helper: sablon keresése név alapján
+// helper: sablon keresése név alapján (most nem nagyon kell, de marad)
 function findTemplate(name) {
   if (!name) return null;
   return (
@@ -177,21 +176,13 @@ function findTemplate(name) {
 }
 
 /**
- * Random enemy legenerálása.
+ * Random enemy generátor.
  *
  * param:
- *  - level: player/aktuális szint
- *  - boss: true -> csak boss-ok közül sorsol
- *  - elite: ha akarod, CombatView-ből átadhatod (elite = nehezebb)
- *  - allowedNames: ha nem üres, csak ezekből a nevekből választ
- *
- * return:
- *  {
- *    name, role, level,
- *    maxHp, minDmg, maxDmg,
- *    goldRewardMin, goldRewardMax,
- *    xpRewardMin, xpRewardMax
- *  }
+ *  - level
+ *  - boss: ha true → boss poolból választ
+ *  - elite: ha true és nem boss → +30% HP & DMG
+ *  - allowedNames: ha nem üres, csak ezek közül a nevekből választ
  */
 export function getRandomEnemy({
   level = 1,
@@ -222,15 +213,15 @@ export function getRandomEnemy({
 
   const lvlOffset = Math.max(level - 1, 0);
 
-  const maxHp = base.baseHp + base.hpPerLevel * lvlOffset;
-
+  let maxHp = base.baseHp + base.hpPerLevel * lvlOffset;
   let minDmg = base.baseMinDmg + base.dmgPerLevel * lvlOffset;
   let maxDmg = base.baseMaxDmg + base.dmgPerLevel * lvlOffset;
 
   if (elite && !boss) {
-    // egyszerű elite buff: +25% dmg +25% hp
-    minDmg = Math.round(minDmg * 1.25);
-    maxDmg = Math.round(maxDmg * 1.25);
+    // 💀 ELITE BUFF: kb +30% HP & DMG
+    maxHp = Math.round(maxHp * 1.3);
+    minDmg = Math.round(minDmg * 1.3);
+    maxDmg = Math.round(maxDmg * 1.3);
   }
 
   return {
