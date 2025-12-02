@@ -28,8 +28,8 @@ const ENEMY_TEMPLATES = [
     dmgPerLevel: 1,
     goldRewardMin: 8,
     goldRewardMax: 14,
-    xpRewardMin: 10,
-    xpRewardMax: 18,
+    xpRewardMin: 20,
+    xpRewardMax: 25,
   },
   {
     name: "Lich Mage",
@@ -41,8 +41,8 @@ const ENEMY_TEMPLATES = [
     dmgPerLevel: 1,
     goldRewardMin: 9,
     goldRewardMax: 15,
-    xpRewardMin: 12,
-    xpRewardMax: 20,
+    xpRewardMin: 20,
+    xpRewardMax: 25,
   },
   {
     name: "Ghoul",
@@ -54,8 +54,8 @@ const ENEMY_TEMPLATES = [
     dmgPerLevel: 1,
     goldRewardMin: 8,
     goldRewardMax: 16,
-    xpRewardMin: 11,
-    xpRewardMax: 19,
+    xpRewardMin: 20,
+    xpRewardMax: 25,
   },
   {
     name: "Death Knight",
@@ -67,8 +67,8 @@ const ENEMY_TEMPLATES = [
     dmgPerLevel: 2,
     goldRewardMin: 10,
     goldRewardMax: 18,
-    xpRewardMin: 14,
-    xpRewardMax: 22,
+    xpRewardMin: 20,
+    xpRewardMax: 25,
   },
   {
     name: "Ghost",
@@ -80,8 +80,8 @@ const ENEMY_TEMPLATES = [
     dmgPerLevel: 1,
     goldRewardMin: 7,
     goldRewardMax: 13,
-    xpRewardMin: 9,
-    xpRewardMax: 16,
+    xpRewardMin: 20,
+    xpRewardMax: 25,
   },
 
   // ---- Boss-ok ----
