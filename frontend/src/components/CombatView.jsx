@@ -106,7 +106,7 @@ export default function CombatView({
   const [enemyHP, setEnemyHP] = useState(0);
   const [turn, setTurn] = useState("player");
   const [battleOver, setBattleOver] = useState(false);
-  const [defending, setDefending] = useState(false);
+  const [defending, setDefending] = useState(false); // lehet szám is (körök)
 
   // Deck / kéz / discard
   const [deck, setDeck] = useState([]);
@@ -118,6 +118,14 @@ export default function CombatView({
   const [playerDamaged, setPlayerDamaged] = useState(false);
   const [playerHealed, setPlayerHealed] = useState(false);
   const [enemyDamaged, setEnemyDamaged] = useState(false);
+
+  // 🔥 ÚJ: átmeneti buffok / negatív hatások
+  const [playerDamageBuff, setPlayerDamageBuff] = useState(null); // {multiplier, remainingAttacks}
+  const [enemyPoison, setEnemyPoison] = useState(null); // {damagePerTurn, remainingTurns}
+  const [enemyBurn, setEnemyBurn] = useState(null); // {damagePerTurn, remainingTurns}
+  const [enemyStun, setEnemyStun] = useState(0); // ❄️ hány enemy-kört hagy ki
+  const [enemyVulnerability, setEnemyVulnerability] = useState(null); // 🔮 {multiplier, remainingTurns}
+  const [enemyBleed, setEnemyBleed] = useState(null); // 🩸 {percent, remainingTurns}
 
   // log + jutalom
   const [log, setLog] = useState([]);
@@ -214,6 +222,17 @@ export default function CombatView({
         heal: ab.heal ?? null,
         image: img,
         rarity: ab.rarity || "common",
+        // 🔥 plusz meta a skillekhez
+        hits: ab.hits || 1,
+        poison: ab.poison || null,
+        damageBuff: ab.damageBuff || null,
+        burn: ab.burn || null,
+        drain: ab.drain || false,
+        stunTurns: ab.stunTurns || 0,
+        defenseTurns: ab.defenseTurns || 0,
+        vulnerabilityDebuff: ab.vulnerabilityDebuff || null,
+        bleed: ab.bleed || null, // 🩸 Slash bleed
+        executeBelowPercent: ab.executeBelowPercent || null, // ☠️ Crushing Blow
       });
     });
 
@@ -325,6 +344,12 @@ export default function CombatView({
         setEnemyDamaged(false);
         setPlayerHealed(false);
         setLastRewards(null);
+        setPlayerDamageBuff(null);
+        setEnemyPoison(null);
+        setEnemyBurn(null);
+        setEnemyStun(0);
+        setEnemyVulnerability(null);
+        setEnemyBleed(null);
 
         const combatDeck = buildCombatDeckFromPlayer();
         const { hand: initialHand, deck: remainingDeck } =
@@ -340,7 +365,7 @@ export default function CombatView({
     initBattle();
   }, [level, boss, pathType, enemies, player, classKey]);
 
-  // KÁRTYA KIJÁTSZÁSA – CLASS ALAPÚ SKÁLÁZÁS
+  // KÁRTYA KIJÁTSZÁSA – CLASS ALAPÚ SKÁLÁZÁS + BLEED + EXECUTE
   function playCard(card) {
     if (battleOver || turn !== "player" || !enemy) return;
 
@@ -374,29 +399,191 @@ export default function CombatView({
       if (baseMin < 1) baseMin = 1;
       if (baseMax < baseMin) baseMax = baseMin;
 
-      let dmg =
-        Math.floor(Math.random() * (baseMax - baseMin + 1)) + baseMin;
+      const hits = card.hits || 1;
+      const dmgRolls = [];
 
-      // Íjász crit
+      for (let i = 0; i < hits; i++) {
+        const roll =
+          Math.floor(Math.random() * (baseMax - baseMin + 1)) + baseMin;
+        dmgRolls.push(roll);
+      }
+
+      // Íjász crit – per hit
       if (classKey === "archer") {
         const critChance = Math.min(50, playerAgi * 1.5);
-        if (Math.random() * 100 < critChance) {
-          dmg = Math.floor(dmg * 2.0);
-          pushLog("💥 Kritikus találat!");
+        for (let i = 0; i < dmgRolls.length; i++) {
+          if (Math.random() * 100 < critChance) {
+            dmgRolls[i] = Math.floor(dmgRolls[i] * 2.0);
+            pushLog("💥 Kritikus találat!");
+          }
         }
       }
 
-      setEnemyHP((prev) => {
-        const newHP = Math.max(0, prev - dmg);
-        addHPPopup(-dmg, "enemy", "74%", "120px");
-        pushLog(`${card.name} → ${enemy.name} kap ${dmg} sebzést.`);
-        return newHP;
+      // ✅ Alap sebzés lista
+      let finalRolls = [...dmgRolls];
+
+      // ☠️ CRUSHING BLOW – EXECUTE (HP% alatt duplázza a sebzést)
+      if (card.executeBelowPercent) {
+        const hpPercent = enemy?.maxHp
+          ? Math.floor((enemyHP / enemy.maxHp) * 100)
+          : 100;
+        if (hpPercent <= card.executeBelowPercent) {
+          finalRolls = finalRolls.map((d) => d * 2);
+          pushLog("☠️ Crushing Blow – kivégzés!");
+        }
+      }
+
+      // Rallying Shout / dmg buff – 1 támadásra
+      if (playerDamageBuff && playerDamageBuff.multiplier) {
+        finalRolls = finalRolls.map((d) =>
+          Math.floor(d * playerDamageBuff.multiplier)
+        );
+        pushLog("🩸 A Rallying Shout erősíti a támadásod!");
+
+        const remaining =
+          (playerDamageBuff.remainingAttacks ?? 1) - 1;
+        if (remaining <= 0) {
+          setPlayerDamageBuff(null);
+        } else {
+          setPlayerDamageBuff((prev) =>
+            prev
+              ? { ...prev, remainingAttacks: remaining }
+              : null
+          );
+        }
+      }
+
+      // 🔮 Enemy vulnerability (Arcane Surge) – extra szorzó minden sebzésre
+      if (enemyVulnerability && enemyVulnerability.multiplier) {
+        finalRolls = finalRolls.map((d) =>
+          Math.floor(d * enemyVulnerability.multiplier)
+        );
+        pushLog(
+          `🔮 A korábbi Arcane Surge miatt ${enemy.name} több sebzést szenved el!`
+        );
+      }
+
+      // 🔥 Sebzés alkalmazása enemy-re KÉSLELTETVE (multi-hit + drain támogatás)
+      finalRolls.forEach((dmg, index) => {
+        setTimeout(() => {
+          // Enemy sebzés
+          setEnemyHP((prev) => {
+            const newHP = Math.max(0, prev - dmg);
+            addHPPopup(-dmg, "enemy", "74%", "120px");
+            pushLog(`${card.name} → ${enemy.name} kap ${dmg} sebzést.`);
+            return newHP;
+          });
+
+          // 🔥 Drain Life – heal tick is
+          if (card.drain && card.heal) {
+            setPlayerHP((prev) => {
+              const newHP = Math.min(prev + card.heal, maxHPFromPlayer);
+              addHPPopup(+card.heal, "player", "24%", "120px");
+              pushLog(`🧛 Drain Life gyógyít: +${card.heal} HP.`);
+              return newHP;
+            });
+          }
+        }, index * 220);
       });
+
+      // Poison Arrow – méreg DoT beállítása
+      if (card.poison && card.poison.damagePerTurn > 0 && card.poison.turns > 0) {
+        const dpt = card.poison.damagePerTurn;
+        const turns = card.poison.turns;
+        setEnemyPoison({
+          damagePerTurn: dpt,
+          remainingTurns: turns,
+        });
+        pushLog(
+          `☠️ ${enemy.name} megmérgezve: ${dpt} sebzés ${turns} körön át.`
+        );
+      }
+
+      // 🩸 Slash – BLEED DoT stack
+      if (card.bleed) {
+        setEnemyBleed((prev) => {
+          if (!prev) {
+            return {
+              percent: card.bleed.basePercent,
+              remainingTurns: card.bleed.turns,
+            };
+          }
+
+          const nextPercent = Math.min(
+            card.bleed.maxPercent,
+            prev.percent + card.bleed.bonusPerStack
+          );
+
+          return {
+            percent: nextPercent,
+            remainingTurns: card.bleed.turns, // frissíti a durációt
+          };
+        });
+
+        pushLog(
+          `🩸 Vérzés! ${enemy.name} minden körben sebződik a Slash miatt.`
+        );
+      }
+
+      // 🔥 Fireball burn – égés DoT
+      if (card.burn && card.burn.percent && card.burn.turns) {
+        const totalHit = finalRolls.reduce((a, b) => a + b, 0);
+        const burnPerTurn = Math.max(
+          1,
+          Math.floor((totalHit * card.burn.percent) / 100)
+        );
+
+        setEnemyBurn({
+          damagePerTurn: burnPerTurn,
+          remainingTurns: card.burn.turns,
+        });
+
+        pushLog(
+          `🔥 ${enemy.name} égni kezd: ${burnPerTurn} sebzés ${card.burn.turns} körön át.`
+        );
+      }
+
+      // ❄️ Frost Nova – stun
+      if (card.stunTurns && card.stunTurns > 0) {
+        setEnemyStun((prev) => prev + card.stunTurns);
+        pushLog(
+          `❄️ ${enemy.name} elkábult, kihagyja a következő körét!`
+        );
+      }
+
+      // 🔮 Arcane Surge – enemy vulnerability debuff
+      if (card.vulnerabilityDebuff && card.vulnerabilityDebuff.multiplier) {
+        const mult = card.vulnerabilityDebuff.multiplier ?? 1.15;
+        const turns = card.vulnerabilityDebuff.turns ?? 3;
+        setEnemyVulnerability({
+          multiplier: mult,
+          remainingTurns: turns,
+        });
+        pushLog(
+          `🔮 ${enemy.name} sebezhetővé válik: +${Math.round(
+            (mult - 1) * 100
+          )}% sebzést kap ${turns} körig!`
+        );
+      }
     }
 
     if (card.type === "defend") {
-      setDefending(true);
-      pushLog("🛡️ Védekezés aktiválva – a következő ütés felezve.");
+      // ✅ Shield Wall – több körös védekezés
+      if (card.defenseTurns && card.defenseTurns > 1) {
+        setDefending(card.defenseTurns);
+        pushLog(
+          `🛡️ ${card.name}: védekezés aktiválva ${card.defenseTurns} körre!`
+        );
+      } else {
+        setDefending(1);
+        pushLog("🛡️ Védekezés aktiválva – a következő ütés felezve.");
+      }
+
+      // ✅ Parry – enemy stun
+      if (card.stunTurns && card.stunTurns > 0) {
+        setEnemyStun((prev) => prev + card.stunTurns);
+        pushLog(`⚔️ Parry! ${enemy.name} elkábul, kihagyja a körét!`);
+      }
     }
 
     if (card.type === "heal") {
@@ -418,6 +605,21 @@ export default function CombatView({
         );
         return newHP;
       });
+
+      // Rallying Shout – sebzés buff a következő támadásra
+      if (card.damageBuff && card.damageBuff.multiplier) {
+        const mult = card.damageBuff.multiplier ?? 1.5;
+        const turns = card.damageBuff.turns ?? 1;
+        setPlayerDamageBuff({
+          multiplier: mult,
+          remainingAttacks: turns,
+        });
+        pushLog(
+          `📣 ${card.name}: a következő ${turns} támadásod +${Math.round(
+            (mult - 1) * 100
+          )}% sebzést okoz!`
+        );
+      }
     }
 
     setTurn("enemy");
@@ -432,17 +634,137 @@ export default function CombatView({
     }
   }, [playerHP, enemyHP, enemy]);
 
-  // ENEMY KÖR
+  // ENEMY KÖR – burn, poison, bleed, stun, attack
   useEffect(() => {
     if (!enemy || battleOver || turn !== "enemy") return;
 
     const t = setTimeout(() => {
+      // 🔥 Égés tick (Fireball burn)
+      if (enemyBurn && enemyHP > 0) {
+        const burnDmg = enemyBurn.damagePerTurn ?? 0;
+        const newHP = Math.max(0, enemyHP - burnDmg);
+
+        if (burnDmg > 0) {
+          setEnemyHP(newHP);
+          addHPPopup(-burnDmg, "enemy", "74%", "120px");
+          pushLog(
+            `🔥 Égés sebzés: ${burnDmg} (${enemy.name} – ${newHP} HP).`
+          );
+        }
+
+        const remaining = (enemyBurn.remainingTurns ?? 1) - 1;
+        if (remaining <= 0 || newHP <= 0) {
+          setEnemyBurn(null);
+        } else {
+          setEnemyBurn((prev) =>
+            prev
+              ? { ...prev, remainingTurns: remaining }
+              : null
+          );
+        }
+
+        if (newHP <= 0) {
+          setDefending(false);
+          setTurn("player");
+          return;
+        }
+      }
+
+      // 🔥 Méreg tick enemy-n, mielőtt támadna
+      if (enemyPoison && enemyHP > 0) {
+        const poisonDmg = enemyPoison.damagePerTurn ?? 0;
+        const newHP = Math.max(0, enemyHP - poisonDmg);
+
+        if (poisonDmg > 0) {
+          setEnemyHP(newHP);
+          addHPPopup(-poisonDmg, "enemy", "74%", "120px");
+          pushLog(
+            `☠️ Méreg sebzés: ${poisonDmg} (${enemy.name} – ${newHP} HP).`
+          );
+        }
+
+        const remaining = (enemyPoison.remainingTurns ?? 1) - 1;
+        if (remaining <= 0 || newHP <= 0) {
+          setEnemyPoison(null);
+        } else {
+          setEnemyPoison((prev) =>
+            prev
+              ? { ...prev, remainingTurns: remaining }
+              : null
+          );
+        }
+
+        // Ha a méreg megölte az enemy-t, ne támadjon
+        if (newHP <= 0) {
+          setDefending(false);
+          setTurn("player");
+          return;
+        }
+      }
+
+      // 🩸 BLEED tick enemy-n
+      if (enemyBleed && enemyHP > 0) {
+        const bleedDmg = Math.max(
+          1,
+          Math.floor((enemy.maxHp * enemyBleed.percent) / 100)
+        );
+        const newHP = Math.max(0, enemyHP - bleedDmg);
+
+        setEnemyHP(newHP);
+        addHPPopup(-bleedDmg, "enemy", "74%", "120px");
+        pushLog(
+          `🩸 Vérzés: ${bleedDmg} sebzés (${enemyBleed.percent}%).`
+        );
+
+        const remaining = (enemyBleed.remainingTurns ?? 1) - 1;
+        if (remaining <= 0 || newHP <= 0) {
+          setEnemyBleed(null);
+        } else {
+          setEnemyBleed((prev) =>
+            prev
+              ? { ...prev, remainingTurns: remaining }
+              : null
+          );
+        }
+
+        if (newHP <= 0) {
+          setDefending(false);
+          setTurn("player");
+          return;
+        }
+      }
+
+      // ❄️ STUN – ha van, enemy kihagyja a körét
+      if (enemyStun > 0 && enemyHP > 0) {
+        pushLog(`❄️ ${enemy.name} elkábulva marad, kihagyja a körét!`);
+        setEnemyStun((prev) => Math.max(0, prev - 1));
+        setDefending(false);
+        setTurn("player");
+
+        // vulnerability debuff időzítése: enemy kör végén csökken
+        if (enemyVulnerability && enemyVulnerability.remainingTurns != null) {
+          const remaining = enemyVulnerability.remainingTurns - 1;
+          if (remaining <= 0) {
+            setEnemyVulnerability(null);
+            pushLog("🔮 Az Arcane Surge hatása elmúlt.");
+          } else {
+            setEnemyVulnerability((prev) =>
+              prev ? { ...prev, remainingTurns: remaining } : null
+            );
+          }
+        }
+
+        return;
+      }
+
+      // ha nem stunolt, akkor támad
       const [minDmg, maxDmg] = enemy.dmg;
       let dmg =
         Math.floor(Math.random() * (maxDmg - minDmg + 1)) + minDmg;
 
-      if (defending) {
+      if (defending && defending > 0) {
         dmg = Math.floor(dmg / 2);
+        setDefending((prev) => Math.max(0, (prev || 1) - 1)); // körök csökkentése
       }
 
       const playerDefense = player?.defense ?? 0;
@@ -456,12 +778,37 @@ export default function CombatView({
 
       pushLog(`💥 ${enemy.name} támad (${final} sebzés).`);
 
-      setDefending(false);
+      // enemy vulnerability körök csökkentése
+      if (enemyVulnerability && enemyVulnerability.remainingTurns != null) {
+        const remaining = enemyVulnerability.remainingTurns - 1;
+        if (remaining <= 0) {
+          setEnemyVulnerability(null);
+          pushLog("🔮 Az Arcane Surge hatása elmúlt.");
+        } else {
+          setEnemyVulnerability((prev) =>
+            prev ? { ...prev, remainingTurns: remaining } : null
+          );
+        }
+      }
+
       setTurn("player");
     }, boss ? 1400 : 900);
 
     return () => clearTimeout(t);
-  }, [turn, enemy, defending, battleOver, boss, player]);
+  }, [
+    turn,
+    enemy,
+    defending,
+    battleOver,
+    boss,
+    player,
+    enemyHP,
+    enemyPoison,
+    enemyBurn,
+    enemyBleed,
+    enemyStun,
+    enemyVulnerability,
+  ]);
 
   // REWARD
   function rollRewards() {
@@ -641,10 +988,16 @@ export default function CombatView({
                   {card.type === "attack" && (
                     <div>
                       Damage: {card.dmg?.[0] ?? "?"}–{card.dmg?.[1] ?? "?"}
+                      {card.hits && card.hits > 1 ? ` x${card.hits}` : ""}
                     </div>
                   )}
                   {card.type === "defend" && <div>Defense</div>}
-                  {card.type === "heal" && <div>Heal: {card.heal}</div>}
+                  {card.type === "heal" && (
+                    <div>
+                      Heal: {card.heal}
+                      {card.damageBuff && " + DMG buff"}
+                    </div>
+                  )}
                 </div>
               </button>
             );
