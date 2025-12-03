@@ -6,6 +6,8 @@ import BlacksmithModal from "./KovacsModal.jsx";
 import InvModal from "./Inv.jsx";
 import QuestBoardModal from "./QuestBoardModal.jsx";
 import { usePlayer } from "../context/PlayerContext.jsx";
+import toltocsik from "../assets/icons/toltocsik.png";
+import "./Hub.css";
 
 export default function Hub({ onGoCombat }) {
   const { player, setPlayer } = usePlayer();
@@ -249,6 +251,25 @@ export default function Hub({ onGoCombat }) {
           </div>
         </div>
       )}
+      {/* TÖLTŐCSÍK – csak akkor látszik, ha épp kalandozik */}
+{isAdventuring && (
+  <div className="loaderBox">
+
+    {/* KERET (PNG) */}
+    <img src={toltocsik} className="loaderFrame" alt="loading frame" />
+
+    {/* A PIROS KITÖLTŐ CSÍK */}
+    <div className="loaderFill" />
+  </div>
+)}
+
+
+
+
+
+
+
     </div>
+    
   );
 }
