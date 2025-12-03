@@ -29,7 +29,7 @@ export default function PathChoice({ onChoose, level = 1 }) {
 
   // ✅ Tooltip szövegek
   const tooltipText = {
-    fight: "Érzed, hogy itt egy normál ellenfél vár rád...",
+    fight: "Érzed, hogy harc közeleg...",
     elite: "Valami nagy és erős közeleg az ösvényen!",
     mystery: "A rejtélyes ösvény titokkal teli...",
     rest: "Biztonságos pihenőhely. Itt gyógyulhatsz.",

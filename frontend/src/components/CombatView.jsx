@@ -4,6 +4,8 @@ import { usePlayer } from "../context/PlayerContext.jsx";
 import { getRandomEnemy } from "./enemyData";
 import EnemyFrame from "./EnemyFrame";
 import HPPopup from "./HPPopup";
+import combatIntroVideo from "../assets/transitions/combat-intro.webm";
+
 import {
   getClassKeyFromId,
   ABILITIES_BY_ID,
@@ -127,6 +129,9 @@ export default function CombatView({
   const [enemyVulnerability, setEnemyVulnerability] = useState(null); // 🔮 {multiplier, remainingTurns}
   const [enemyBleed, setEnemyBleed] = useState(null); // 🩸 {percent, remainingTurns}
 
+  // transition flag
+
+
   // log + jutalom
   const [log, setLog] = useState([]);
   const [lastRewards, setLastRewards] = useState(null);
@@ -135,6 +140,8 @@ export default function CombatView({
     () => resolveBackground(background, pathType),
     [background, pathType]
   );
+
+  // minden új harcnál induljon a transition
 
   // rarity style
   const rarityStyle = {
@@ -963,8 +970,8 @@ export default function CombatView({
         ))}
       </div>
 
-      {/* KÁRTYÁK */}
-      {!battleOver && turn === "player" && (
+      {/* KÁRTYÁK – transition alatt NINCSENEK */}
+      {!battleOver && turn === "player" &&(
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 flex gap-4 z-50">
           {hand.map((card, i) => {
             const rs = rarityStyle[card.rarity] ?? rarityStyle.common;
@@ -1029,6 +1036,10 @@ export default function CombatView({
           </button>
         </div>
       )}
+
+      {/* INTRO TRANSITION VIDEO – WEBM ÁTLÁTSZÓVAL */}
+    
+  
     </div>
   );
 }

@@ -11,6 +11,10 @@ import PathChoice from "./components/PathChoice.jsx";
 import CombatView from "./components/CombatView.jsx";
 import RestCampfire from "./components/RestCampfire.jsx";
 
+// ⬇️ ÚJ IMPORTOK
+import TransitionOverlay from "./components/TransitionOverlay.jsx";
+import combatIntroVideo from "./assets/transitions/combat-intro.webm";
+
 import {
   defaultEnemies,
   bossEnemies,
@@ -24,6 +28,10 @@ function AppInner() {
   const [level, setLevel] = useState(1);
   const [combatFinished, setCombatFinished] = useState(false);
   const [pathRerollKey, setPathRerollKey] = useState(0); // rest után új PathChoice RNG
+
+  // ⬇️ ÚJ: transition állapot
+  const [showTransition, setShowTransition] = useState(false);
+
   const { setPlayer } = usePlayer();
 
   // 🔹 LOGIN FLOW
@@ -62,9 +70,6 @@ function AppInner() {
         const healAmount = Math.floor(maxHp * 0.4); // kb 40% heal
         const newHp = Math.min(maxHp, currentHp + healAmount);
 
-        // opcionális: kis instant info
-        alert(`😴 Pihenés: +${healAmount} HP (most ${newHp}/${maxHp})`);
-
         return {
           ...prev,
           hp: newHp,
@@ -77,10 +82,15 @@ function AppInner() {
       return;
     }
 
-    // minden más: combat path
+    // minden más: combat path + TRANSITION
     setCombatPath(path);
-    setScreen("combat");
     setCombatFinished(false);
+
+    // ⬇️ EKKOR már átmegyünk combat screenre
+    setScreen("combat");
+
+    // ⬇️ ÉS EKKOR indul a villám / sötétítés overlay
+    setShowTransition(true);
   }
 
   /**
@@ -187,9 +197,21 @@ function AppInner() {
           level={level}
           enemies={isFinalBoss ? bossEnemies : defaultEnemies}
           boss={isFinalBoss}
-          background={`./src/assets/backgrounds/3.jpg`}
+          background={`/backgrounds/3.jpg`}   // ha public-ból jön
           pathType={combatPath.type}
           onEnd={handleCombatEnd}
+        />
+      )}
+
+      {/* ⬇️ TRANSITION OVERLAY – csak combat alatt, ha aktív */}
+      {showTransition && (
+        <TransitionOverlay
+             src={combatIntroVideo}
+          onEnd={() => setShowTransition(false)}
+          videoDelay={200}
+          darkOpacityStart={1.0}  // teljesen fekete indulás
+          darkOpacityMid={0.5}    // villám alatt: enyhébb sötét
+          fadeDuration={600}      // kifakulás ideje
         />
       )}
     </>
