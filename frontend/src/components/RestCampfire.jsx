@@ -67,26 +67,26 @@ export default function RestCampfire({ onBackToPath, onGoHub, level }) {
         </h2>
 
         {/* SZÖVEG – betűnként */}
-        <p className="text-sm md:text-base text-gray-200 min-h-[6rem] leading-relaxed">
+        <p className="betu text-sm md:text-lg text-gray-200 min-h-[15rem] leading-relaxed">
           {typedStory.displayed}
         </p>
 
         {/* GOMBOK – csak akkor jelenjenek meg, ha a szöveg kész */}
         {typedStory.done && (
-          <div className="title flex flex-col md:flex-row gap-4 mt-4 animate-fade-in">
+          <div className="betu flex flex-col md:flex-row gap-4 mt-4 animate-fade-in">
             <button
               onClick={onBackToPath}
-              className="title px-6 py-3 rounded-lg bg-blue-800 hover:bg-blue-700 text-sm md:text-base shadow-lg shadow-black/40"
+              className="betu px-6 py-3 rounded-lg bg-blue-800 hover:bg-blue-700 text-sm md:text-base shadow-lg shadow-black/40"
               
             >
-              🔥 Vissza az ösvényre (Szint {level})
+               Vissza az ösvényre (Szint {level})
             </button>
 
             <button
               onClick={onGoHub}
               className="px-6 py-3 rounded-lg bg-gray-800 hover:bg-gray-700 text-sm md:text-base  shadow-lg shadow-black/40"
             >
-              🏠 Hazamész a hubba
+               Hazamész a hubba
             </button>
           </div>
         )}
