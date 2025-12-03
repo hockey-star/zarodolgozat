@@ -5,31 +5,30 @@ export default function TransitionOverlay({
   src,
   onEnd,
 
-  // IDŐZÍTÉSEK (ms)
-  videoDelay = 200,   // mikor induljon a videó
+  // mikor induljon a videó (ms)
+  videoDelay = 200,
 
-  // VIZUÁLIS PARAMÉTEREK
-  darkOpacity = 1.0,  // full fekete takarás
-
-  // ANIM SEBESSÉGEK
-  darkFadeOut = 600   // kifényesedés ideje
+  // SÖTÉTÍTÉS FÁZISOK
+  darkOpacityStart = 1.0,  // induláskor: full fekete
+  darkOpacityMid = 0.6,    // villám közben: enyhébb sötétítés
+  fadeDuration = 600       // kifakulás ideje (ms)
 }) {
   const videoRef = useRef(null);
 
-  // 🔥 INDULÁSKOR MÁR FEKETE LEGYEN
   const [showVideo, setShowVideo] = useState(false);
-  const [fadingOut, setFadingOut] = useState(false);
+  const [phase, setPhase] = useState("start"); // "start" | "mid" | "out"
 
-  // videó időzítés
+  // időzítés: mikor induljon a videó + mikor lépjünk "mid" fázisba
   useEffect(() => {
-    const videoTimer = setTimeout(() => setShowVideo(true), videoDelay);
+    const timer = setTimeout(() => {
+      setShowVideo(true);
+      setPhase("mid"); // ekkor lesz sötétségből kicsit világosabb
+    }, videoDelay);
 
-    return () => {
-      clearTimeout(videoTimer);
-    };
+    return () => clearTimeout(timer);
   }, [videoDelay]);
 
-  // videó indítása
+  // videó indítása, amikor láthatóvá vált
   useEffect(() => {
     if (!showVideo) return;
     const v = videoRef.current;
@@ -43,28 +42,26 @@ export default function TransitionOverlay({
   }, [showVideo]);
 
   function handleVideoEnd() {
-    setFadingOut(true);
+    setPhase("out");        // indul a kifakulás
     setTimeout(() => {
       onEnd?.();
-    }, darkFadeOut);
+    }, fadeDuration);
   }
+
+  // AKTUÁLIS OPACITY a fázis alapján
+  const currentOpacity =
+    phase === "start"
+      ? darkOpacityStart
+      : phase === "mid"
+      ? darkOpacityMid
+      : 0;
 
   return (
     <div
       className="fixed inset-0 pointer-events-none"
       style={{ zIndex: 9999 }}
     >
-      {/* 🔥 TAKARÓ FEKETE RÉTEG – MÁR AZ ELSŐ FRAME-BEN OTT VAN */}
-      <div
-        className="absolute inset-0"
-        style={{
-          backgroundColor: `rgba(0,0,0,${darkOpacity})`,
-          transition: `opacity ${darkFadeOut}ms ease`,
-          opacity: fadingOut ? 0 : 1,   // végén halványodik csak el
-        }}
-      />
-
-      {/* VIDEÓ – csak késleltetve indul, de a fekete már takar */}
+      {/* VIDEÓ – alul */}
       {showVideo && src && (
         <video
           ref={videoRef}
@@ -77,6 +74,16 @@ export default function TransitionOverlay({
           onError={handleVideoEnd}
         />
       )}
+
+      {/* FEKETE RÉGÉ – FELÜL, KIS ÁTLÁTSZÓSÁGGAL */}
+      <div
+        className="absolute inset-0"
+        style={{
+          backgroundColor: "black",
+          opacity: currentOpacity,
+          transition: `opacity ${fadeDuration}ms ease`,
+        }}
+      />
     </div>
   );
 }

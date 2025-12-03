@@ -206,15 +206,12 @@ function AppInner() {
       {/* ⬇️ TRANSITION OVERLAY – csak combat alatt, ha aktív */}
       {showTransition && (
         <TransitionOverlay
-          src={combatIntroVideo}
+             src={combatIntroVideo}
           onEnd={() => setShowTransition(false)}
-
-          // ezek már most jól vannak:
-          darkDelay={0}
           videoDelay={200}
-          darkOpacity={1.0}
-          darkFadeIn={0}
-          darkFadeOut={600}
+          darkOpacityStart={1.0}  // teljesen fekete indulás
+          darkOpacityMid={0.5}    // villám alatt: enyhébb sötét
+          fadeDuration={600}      // kifakulás ideje
         />
       )}
     </>

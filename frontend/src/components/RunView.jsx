@@ -60,9 +60,9 @@ export default function RunView() {
           onEnd={handleTransitionEnd}
           darkDelay={0}
           darkFadeIn={250}
-          darkFadeOut={800}
+          darkFadeOut={400}
           darkOpacity={0.7}
-          videoDelay={250}
+          videoDelay={350}
         />
       )}
     </div>
