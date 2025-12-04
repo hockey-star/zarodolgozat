@@ -286,7 +286,7 @@ export const ALL_ABILITIES = [
   classKey: "mage",
   name: "Drain Life",
   type: "attack",
-  dmg: [4, 6],      // kisebb hit, mert 3x tickel
+  dmg: [1, 3],      // kisebb hit, mert 3x tickel
   heal: 4,         // heal is tickel
   rarity: "epic",
   image: "/cards/epic/mage_drain_life.png",

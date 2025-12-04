@@ -6,6 +6,19 @@ import EnemyFrame from "./EnemyFrame";
 import HPPopup from "./HPPopup";
 import combatIntroVideo from "../assets/transitions/combat-intro.webm";
 
+
+import AbilityEffectLayer from "./AbilityEffectLayer";
+import healFx from "../assets/effects/heal_generic.webm";
+import arcaneMissilesFx from "../assets/effects/mage_arcane_missiles.webm";
+import fireballFx from "../assets/effects/mage_fireball.webm";
+import stunFx from "../assets/effects/stun_generic.webm";
+import arcaneSurgeFx from "../assets/effects/mage_arcane_surge.webm";
+import drainLifeFx from "../assets/effects/mage_drain_life.webm";
+import frostNovaFx from "../assets/effects/mage_frost_nova.webm";
+import lightningBoltFx from "../assets/effects/mage_lightning_bolt.webm";
+import chainLightningFx from "../assets/effects/mage_chain_lightning.webm";
+import icelance from "../assets/effects/mage_icelance.webm";
+import manaShieldFx from "../assets/effects/mage_mana_shield.webm";
 import {
   getClassKeyFromId,
   ABILITIES_BY_ID,
@@ -120,6 +133,17 @@ export default function CombatView({
   const [playerDamaged, setPlayerDamaged] = useState(false);
   const [playerHealed, setPlayerHealed] = useState(false);
   const [enemyDamaged, setEnemyDamaged] = useState(false);
+
+  //effectek
+   const [abilityEffects, setAbilityEffects] = useState([]);
+
+  function spawnAbilityEffect({ src, target = "center", width, height }) {
+    const id = Date.now() + Math.random();
+    setAbilityEffects((prev) => [
+      ...prev,
+      { id, src, target, width, height },
+    ]);
+  }
 
   // 🔥 ÚJ: átmeneti buffok / negatív hatások
   const [playerDamageBuff, setPlayerDamageBuff] = useState(null); // {multiplier, remainingAttacks}
@@ -388,7 +412,85 @@ export default function CombatView({
     if (card.type === "attack") {
       let baseMin = card.dmg?.[0] ?? 4;
       let baseMax = card.dmg?.[1] ?? 8;
+            // 🔮 Arcane Missiles
+      if (card.abilityId === "mage_arcane_missiles") {
+        spawnAbilityEffect({
+          src: arcaneMissilesFx,
+          target: "enemy",
+          width: "300px",
+          height: "300px",
+        });
+      }
+      if (card.abilityId === "mage_ice_lance") {
+      spawnAbilityEffect({
+        src: icelance,
+        target: "enemy",
+        width: "420px",
+        height: "420px",
+      });
+}
 
+      // 🔥 Fireball
+      if (card.abilityId === "mage_fireball") {
+        spawnAbilityEffect({
+          src: fireballFx,
+          target: "enemy",
+          width: "500px",
+          height: "500px",
+        });
+      }
+      // 🔮 Arcane Surge – sima enemy debuff
+  if (card.abilityId === "mage_arcane_surge") {
+    spawnAbilityEffect({
+      src: arcaneSurgeFx,
+      target: "enemy_aoe",
+      width: "500px",
+      height: "500px",
+    });
+  }
+
+  // ❄️ Frost Nova – nagy kör az enemy körül
+  if (card.abilityId === "mage_frost_nova") {
+    spawnAbilityEffect({
+      src: frostNovaFx,
+      target: "enemy_aoe",
+      width: "520px",
+      height: "520px",
+    });
+  }
+
+  // ⚡ Lightning Bolt – single target villám az enemyre
+  if (card.abilityId === "mage_lightning_bolt") {
+    spawnAbilityEffect({
+      src: lightningBoltFx,
+      target: "enemy",
+      width: "450px",
+      height: "450px",
+    });
+  }
+
+  // ⚡ Chain Lightning – villám az enemyen (a videó maga lehet „chain”)
+  if (card.abilityId === "mage_chain_lightning") {
+    spawnAbilityEffect({
+      src: chainLightningFx,
+      target: "enemy",
+      width: "500px",
+      height: "500px",
+    });
+  }
+
+
+  // 🧛 Drain Life – középen „pettyegő” drain effekt player–enemy között
+  if (card.abilityId === "mage_drain_life") {
+    spawnAbilityEffect({
+      src: drainLifeFx,
+      target: "enemy",
+      width: "1200px",
+      height: "400px",
+    });
+  }
+
+  
       if (classKey === "warrior") {
         const bonus = Math.floor(playerStrength * 0.35);
         baseMin += bonus;
@@ -551,13 +653,20 @@ export default function CombatView({
       }
 
       // ❄️ Frost Nova – stun
-      if (card.stunTurns && card.stunTurns > 0) {
+       if (card.stunTurns && card.stunTurns > 0) {
+        // 🔥 stun effekt
+        spawnAbilityEffect({
+          src: stunFx,
+          target: "enemy_stun",
+          width: "330px",
+          height: "330px",
+        });
+
         setEnemyStun((prev) => prev + card.stunTurns);
         pushLog(
           `❄️ ${enemy.name} elkábult, kihagyja a következő körét!`
         );
       }
-
       // 🔮 Arcane Surge – enemy vulnerability debuff
       if (card.vulnerabilityDebuff && card.vulnerabilityDebuff.multiplier) {
         const mult = card.vulnerabilityDebuff.multiplier ?? 1.15;
@@ -573,27 +682,53 @@ export default function CombatView({
         );
       }
     }
+    
+    
+    
+if (card.type === "defend") {
+  // 🛡️ Mage – Mana Shield (villogó pajzs a player körül)
+  if (card.abilityId === "mage_mana_shield") {
+    spawnAbilityEffect({
+      src: manaShieldFx,
+      target: "player_shield",
+      width: "550px",
+      height: "550px",
+    });
+  }
 
-    if (card.type === "defend") {
-      // ✅ Shield Wall – több körös védekezés
-      if (card.defenseTurns && card.defenseTurns > 1) {
-        setDefending(card.defenseTurns);
-        pushLog(
-          `🛡️ ${card.name}: védekezés aktiválva ${card.defenseTurns} körre!`
-        );
-      } else {
-        setDefending(1);
-        pushLog("🛡️ Védekezés aktiválva – a következő ütés felezve.");
-      }
+  // ✅ Shield Wall – több körös védekezés
+  if (card.defenseTurns && card.defenseTurns > 1) {
+    setDefending(card.defenseTurns);
+    pushLog(
+      `🛡️ ${card.name}: védekezés aktiválva ${card.defenseTurns} körre!`
+    );
+  } else {
+    setDefending(1);
+    pushLog("🛡️ Védekezés aktiválva – a következő ütés felezve.");
+  }
 
-      // ✅ Parry – enemy stun
-      if (card.stunTurns && card.stunTurns > 0) {
-        setEnemyStun((prev) => prev + card.stunTurns);
-        pushLog(`⚔️ Parry! ${enemy.name} elkábul, kihagyja a körét!`);
-      }
-    }
+  // ✅ Parry / stun-os defend skillek
+  if (card.stunTurns && card.stunTurns > 0) {
+    spawnAbilityEffect({
+      src: stunFx,
+      target: "enemy_stun",
+      width: "220px",
+      height: "220px",
+    });
 
-    if (card.type === "heal") {
+    setEnemyStun((prev) => prev + card.stunTurns);
+    pushLog(`⚔️ Parry! ${enemy.name} elkábul, kihagyja a körét!`);
+  }
+}
+if (card.type === "heal") {
+      // 🔥 BÁRMELY KASZT HEAL KÁRTYÁJA → UGYANAZ A HEAL VFX A PLAYEREN
+      spawnAbilityEffect({
+        src: healFx,
+        target: "player",
+        width: "450px",
+        height: "450px",
+      });
+
       let healAmount = card.heal || 20;
 
       if (classKey === "mage") {
@@ -1018,7 +1153,7 @@ export default function CombatView({
           <div className="text-4xl mb-4">
             {playerHP <= 0 ? "☠️ Defeat..." : "🏆 Victory!"}
           </div>
-
+        
           {lastRewards && (
             <div className="mb-2 text-sm text-gray-200">
               Jutalom: +{lastRewards.goldGain} arany, +
@@ -1036,10 +1171,17 @@ export default function CombatView({
           </button>
         </div>
       )}
-
+      
       {/* INTRO TRANSITION VIDEO – WEBM ÁTLÁTSZÓVAL */}
-    
-  
+          {/* ABILITY VIDEÓ EFFECT OVERLAY */}
+      <AbilityEffectLayer
+        effects={abilityEffects}
+        onEffectDone={(id) =>
+          setAbilityEffects((prev) => prev.filter((fx) => fx.id !== id))
+        }
+      />
     </div>
   );
 }
+  
+
