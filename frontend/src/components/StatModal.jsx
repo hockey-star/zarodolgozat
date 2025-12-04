@@ -37,7 +37,7 @@ export default function StatModal({ onClose }) {
 
     // BACKEND: save to DB
     setSaving(true);
-    await fetch(Cim.Cim+`/api/players/${player.id}`, {
+    await fetch(`http://localhost:3000/api/players/${player.id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(updated),

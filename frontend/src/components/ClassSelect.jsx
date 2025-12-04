@@ -14,7 +14,7 @@ export default function ClassSelect({ onNext }) {
   useEffect(() => {
   async function loadClasses() {
     try {
-      const res = await fetch(Cim.Cim+`/api/classes`);
+      const res = await fetch(`http://localhost:3000/api/classes`);
       const data = await res.json();
       setClassData(data);
     } catch (err) {
@@ -62,7 +62,7 @@ export default function ClassSelect({ onNext }) {
     }
 
     try {
-      const res = await fetch(Cim.Cim+`/api/set-class`, {
+      const res = await fetch(`http://localhost:3000/api/set-class`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username: player.username, classId: selected }),

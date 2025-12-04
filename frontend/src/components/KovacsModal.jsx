@@ -20,8 +20,8 @@ export default function BlacksmithModal({ onClose }) {
 
     setLoading(true);
     Promise.all([
-      fetch(Cim.Cim+`/api/players/${userId}`).then(r => r.json()),
-      fetch(Cim.Cim+`/api/player/${userId}/items`).then(r => r.json())
+      fetch(`http://localhost:3000/api/players/${userId}`).then(r => r.json()),
+      fetch(`http://localhost:3000/api/player/${userId}/items`).then(r => r.json())
     ])
       .then(([playerRes, itemsRes]) => {
         setPlayerData(playerRes);
@@ -38,7 +38,7 @@ export default function BlacksmithModal({ onClose }) {
   const refreshItems = async () => {
     if (!userId) return;
     try {
-      const res = await fetch(Cim.Cim+`/api/player/${userId}/items`);
+      const res = await fetch(`http://localhost:3000/api/player/${userId}/items`);
       const items = await res.json();
       setPlayerItems(items || []);
       if (items && items.length > 0) {
@@ -58,7 +58,7 @@ export default function BlacksmithModal({ onClose }) {
     setError(null);
 
     try {
-      const res = await fetch(Cim.Cim+`/api/blacksmith/upgrade`, {
+      const res = await fetch(`http://localhost:3000/api/blacksmith/upgrade`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -74,7 +74,7 @@ export default function BlacksmithModal({ onClose }) {
         setError(data.message || "A fejlesztés nem sikerült.");
       } else {
         // siker — frissítjük a játékos XP-t és a tárgylistát
-        const playerRes = await fetch(Cim.Cim+`/api/players/${userId}`).then(r => r.json());
+        const playerRes = await fetch(`http://localhost:3000/api/players/${userId}`).then(r => r.json());
         setPlayerData(playerRes);
         await refreshItems();
       }

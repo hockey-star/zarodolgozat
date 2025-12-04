@@ -12,7 +12,7 @@ export default function ShopModal({ onClose }) {
   // player adat lekérés
   useEffect(() => {
     if (!userId) return;
-    fetch(Cim.Cim+`/api/players/${userId}`)
+    fetch(`http://localhost:3000/api/players/${userId}`)
       .then((res) => res.json())
       .then((data) => setPlayerData(data))
       .catch((err) => console.error("Hiba a player fetch-nél:", err));
@@ -20,7 +20,7 @@ export default function ShopModal({ onClose }) {
 
   // items lekérés
   useEffect(() => {
-    fetch(Cim.Cim+`/api/items`)
+    fetch(`http://localhost:3000/api/items`)
       .then(res => res.json())
       .then(items => setItems(items))
       .catch(e => console.error("Hiba items fetch-nél:", e));
@@ -32,7 +32,7 @@ export default function ShopModal({ onClose }) {
     setError(null);
 
     try {
-      const res = await fetch(Cim.Cim+`/api/shop/buy`, {
+      const res = await fetch(`http://localhost:3000/api/shop/buy`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ playerId: Number(userId), itemId })
@@ -45,7 +45,7 @@ export default function ShopModal({ onClose }) {
         setError(data.message || "A vásárlás nem sikerült.");
       } else {
         // frissítjük a player adatait (gold) és opcionálisan a birtokolt tárgyakat
-        const p = await fetch(Cim.Cim+`/api/players/${userId}`).then(r => r.json());
+        const p = await fetch(`http://localhost:3000/api/players/${userId}`).then(r => r.json());
         setPlayerData(p);
       }
     } catch (e) {
