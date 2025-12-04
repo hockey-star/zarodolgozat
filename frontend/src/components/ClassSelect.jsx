@@ -97,47 +97,44 @@ export default function ClassSelect({ onNext }) {
       <div className="absolute inset-0 flex">
         {classData.map((cls, index) => (
 
-          <div
-            key={cls.id}
-            onClick={() => handleSelect(cls.id, index)}
-            className={`relative w-1/3 h-full cursor-pointer overflow-hidden transition-all duration-500
-              ${selected === cls.id ? "brightness-110" : "hover:brightness-90"}`}
-          >
+<div
+  key={cls.id}
+  onClick={() => handleSelect(cls.id, index)}
+  className={`class-card relative w-1/3 h-full cursor-pointer overflow-hidden transition-all duration-500 ${
+    selected === cls.id ? "selected" : ""
+  }`}
+>
+  {/* VIDEÓ */}
+  <video
+    ref={(el) => (videoRefs.current[index] = el)}
+    src={videoSources[index]}
+    preload="auto"
+    muted
+    className="ClassHatter absolute inset-0 w-full h-full object-cover pointer-events-none"
+  />
 
-            {/* VIDEÓ */}
-            <video
-              ref={(el) => (videoRefs.current[index] = el)}
-              src={videoSources[index]}
-              preload="auto"
-              muted
-              className="ClassHatter absolute inset-0 w-full h-full object-cover"
-            />
+  <div
+    className={`overlay absolute inset-0 transition-colors duration-300 ${
+      selected === cls.id ? "bg-black/0" : "bg-black/30"
+    }`}
+  ></div>
 
-            {/* Overlay ha nem kiválasztott */}
-            <div
-              className={`absolute inset-0 transition-colors duration-300 ${
-                selected === cls.id ? "bg-black/0" : "bg-black/30"
-              }`}
-            ></div>
+  {/* Kaszt neve */}
+  <span
+    className="classname absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-3xl select-none pixelfont transition-all duration-300"
+  >
+    {cls.name}
+  </span>
 
-            {/* Kaszt neve */}
-            <span
-              className={`classname absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 
-                text-3xl select-none pixelfont transition-all duration-300
-                ${selected === cls.id ? "text-red-400 scale-110" : "text-white"}`}
-            >
-              {cls.name}
-            </span>
-
-            {/* Statok (most placeholder, mert DB adja majd) */}
-            <div className="classStats">
-  <div>HP: {cls.base_hp}</div>
-  <div>
-    STR: {cls.base_strength} • INT: {cls.base_intellect} • AGI: {cls.base_dexterity}
+  {/* Statok */}
+  <div className="classStats absolute bottom-10 left-1/2 -translate-x-1/2 text-center text-gray-200 font-[Jersey 10] text-base drop-shadow-lg">
+    <div>HP: {cls.base_hp}</div>
+    <div>
+      STR: {cls.base_strength} • INT: {cls.base_intellect} • AGI: {cls.base_dexterity}
+    </div>
   </div>
 </div>
 
-          </div>
         ))}
       </div>
 

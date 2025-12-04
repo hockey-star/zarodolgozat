@@ -120,3 +120,23 @@ video {
 .ClassHatter{
     border: 5px white;
 }
+
+.classname {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(1);
+  font-family: "Jersey 10", sans-serif;
+  font-size: 2rem;
+  color: #fff;
+  text-align: center;
+  transition: all 0.3s ease;
+  letter-spacing: 0;
+}
+
+.class-card.selected .classname {
+  color: #ff4d4d;
+  text-shadow: 0 0 10px #ff4d4d, 0 0 20px #ff0000;
+  transform: translate(-50%, -50%) scale(1.1);
+  letter-spacing: 5px;
+}

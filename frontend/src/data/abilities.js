@@ -25,13 +25,20 @@ export const ALL_ABILITIES = [
   // =====================
   {
     id: "warrior_slash",
-    classKey: "warrior",
-    name: "Slash",
-    type: "attack",
-    dmg: [5, 9],
-    heal: null,
-    rarity: "common",
-    image: "/cards/common/warrior_slash.png",
+  classKey: "warrior",
+  name: "Slash",
+  type: "attack",
+  dmg: [5, 9],
+  heal: null,
+  rarity: "common",
+  image: "/cards/common/warrior_slash.png",
+
+  bleed: {
+    basePercent: 10,   // ✅ első stack: 10%
+    bonusPerStack: 5, // ✅ minden új Slash +5%
+    maxPercent: 35,   // ✅ plafon
+    turns: 2,         // ✅ ennyi körig tart egy stack
+  },
   },
 
   // =====================
@@ -42,10 +49,12 @@ export const ALL_ABILITIES = [
     classKey: "mage",
     name: "Arcane Missiles",
     type: "attack",
-    dmg: [4, 8],
+    // 3 kis ütés – multi-hit
+    dmg: [2, 4],
     heal: null,
     rarity: "common",
     image: "/cards/common/mage_arcane_missiles.png",
+    hits: 3, // 🔥 3 találat
   },
   {
     id: "mage_ice_lance",
@@ -76,14 +85,16 @@ export const ALL_ABILITIES = [
   // WARRIOR – RARE
   // =====================
   {
-    id: "warrior_parry",
-    classKey: "warrior",
-    name: "Parry",
-    type: "defend",
-    dmg: null,
-    heal: null,
-    rarity: "rare",
-    image: "/cards/rare/warrior_parry.png",
+     id: "warrior_parry",
+  classKey: "warrior",
+  name: "Parry",
+  type: "defend",
+  dmg: null,
+  heal: null,
+  rarity: "rare",
+  image: "/cards/rare/warrior_parry.png",
+
+  stunTurns: 2, // ✅ ÚJ: enemy kihagy 1 kört
   },
   {
     id: "warrior_cleave",
@@ -104,40 +115,56 @@ export const ALL_ABILITIES = [
     heal: 18,
     rarity: "rare",
     image: "/cards/rare/warrior_rallying_shout.png",
+    // 🔥 ÚJ: sebzés buff a következő támadásokra
+    damageBuff: {
+      multiplier: 1.5, // +50% dmg
+      turns: 1, // 1 támadásra
+    },
   },
   {
-    id: "warrior_shield_wall",
-    classKey: "warrior",
-    name: "Shield Wall",
-    type: "defend",
-    dmg: null,
-    heal: null,
-    rarity: "rare",
-    image: "/cards/rare/warrior_shield_wall.png",
+      id: "warrior_shield_wall",
+  classKey: "warrior",
+  name: "Shield Wall",
+  type: "defend",
+  dmg: null,
+  heal: null,
+  rarity: "rare",
+  image: "/cards/rare/warrior_shield_wall.png",
+
+  defenseTurns: 2, // ✅ ÚJ
   },
 
   // =====================
   // MAGE – RARE
   // =====================
   {
-    id: "mage_arcane_surge",
-    classKey: "mage",
-    name: "Arcane Surge",
-    type: "attack",
-    dmg: [8, 13],
-    heal: null,
-    rarity: "rare",
-    image: "/cards/rare/mage_arcane_surge.png",
+   
+  id: "mage_arcane_surge",
+  classKey: "mage",
+  name: "Arcane Surge",
+  type: "attack",
+  dmg: [8, 13],
+  heal: null,
+  rarity: "rare",
+  image: "/cards/rare/mage_arcane_surge.png",
+  // 🔮 enemy vulnerability debuff – +15% sebzést kap
+  vulnerabilityDebuff: {
+    multiplier: 1.15, // +15% dmg
+    turns: 1,         // 3 körig tart
   },
+},
+  
   {
-    id: "mage_frost_nova",
-    classKey: "mage",
-    name: "Frost Nova",
-    type: "attack",
-    dmg: [6, 10],
-    heal: null,
-    rarity: "rare",
-    image: "/cards/rare/mage_frost_nova.png",
+     id: "mage_frost_nova",
+  classKey: "mage",
+  name: "Frost Nova",
+  type: "attack",
+  dmg: [6, 10],
+  heal: null,
+  rarity: "rare",
+  image: "/cards/rare/mage_frost_nova.png",
+  // ❄️ stun – 1 enemy kört kihagy
+  stunTurns: 1,
   },
   {
     id: "mage_mana_shield",
@@ -178,10 +205,16 @@ export const ALL_ABILITIES = [
     classKey: "archer",
     name: "Poison Arrow",
     type: "attack",
-    dmg: [5, 9],
+    // kisebb instant dmg, mert kap DoT-ot
+    dmg: [3, 5],
     heal: null,
     rarity: "rare",
     image: "/cards/rare/archer_poison_arrow.png",
+    // 🔥 ÚJ: méregsebzés
+    poison: {
+      damagePerTurn: 3,
+      turns: 3,
+    },
   },
   {
     id: "archer_snare_trap",
@@ -218,24 +251,31 @@ export const ALL_ABILITIES = [
     image: "/cards/epic/warrior_last_stand.png",
   },
   {
-    id: "warrior_mortal_strike",
-    classKey: "warrior",
-    name: "Mortal Strike",
-    type: "attack",
-    dmg: [14, 20],
-    heal: null,
-    rarity: "epic",
-    image: "/cards/epic/warrior_mortal_strike.png",
+   id: "warrior_mortal_strike",
+  classKey: "warrior",
+  name: "Mortal Strike",
+  type: "attack",
+  dmg: [14, 20],
+  heal: null,
+  rarity: "epic",
+  image: "/cards/epic/warrior_mortal_strike.png",
+
+  vulnerabilityDebuff: {
+    multiplier: 1.25, // ✅ +25% dmg-et kap
+    turns: 2,
+  },
   },
   {
     id: "warrior_whirlwind",
-    classKey: "warrior",
-    name: "Whirlwind",
-    type: "attack",
-    dmg: [8, 14],
-    heal: null,
-    rarity: "epic",
-    image: "/cards/epic/warrior_whirlwind.png",
+  classKey: "warrior",
+  name: "Whirlwind",
+  type: "attack",
+  dmg: [8, 14],
+  heal: null,
+  rarity: "epic",
+  image: "/cards/epic/warrior_whirlwind.png",
+
+  hits: 3, // ✅ körkörös multi-hit érzés
   },
 
   // =====================
@@ -243,23 +283,29 @@ export const ALL_ABILITIES = [
   // =====================
   {
     id: "mage_drain_life",
-    classKey: "mage",
-    name: "Drain Life",
-    type: "attack",
-    dmg: [9, 15],
-    heal: 8,
-    rarity: "epic",
-    image: "/cards/epic/mage_drain_life.png",
+  classKey: "mage",
+  name: "Drain Life",
+  type: "attack",
+  dmg: [4, 6],      // kisebb hit, mert 3x tickel
+  heal: 4,         // heal is tickel
+  rarity: "epic",
+  image: "/cards/epic/mage_drain_life.png",
+  hits: 3,         // 🔥 3 tick
+  drain: true,     // 🔥 jelzi hogy ez drain jellegű
   },
   {
-    id: "mage_fireball",
-    classKey: "mage",
-    name: "Fireball",
-    type: "attack",
-    dmg: [12, 18],
-    heal: null,
-    rarity: "epic",
-    image: "/cards/epic/mage_fireball.png",
+     id: "mage_fireball",
+  classKey: "mage",
+  name: "Fireball",
+  type: "attack",
+  dmg: [12, 18],
+  heal: null,
+  rarity: "epic",
+  image: "/cards/epic/mage_fireball.png",
+  burn: {
+    percent: 10,   // 🔥 a direkt sebzés 10%-a körönként
+    turns: 2,      // 🔥 3 körig ég
+  },
   },
   {
     id: "mage_heal_spell",
@@ -330,24 +376,27 @@ export const ALL_ABILITIES = [
   // LEGENDARY
   // =====================
   {
-    id: "warrior_crushing_blow",
-    classKey: "warrior",
-    name: "Crushing Blow",
-    type: "attack",
-    dmg: [20, 28],
-    heal: null,
-    rarity: "legendary",
-    image: "/cards/legendary/warrior_crushing_blow.png",
+     id: "warrior_crushing_blow",
+  classKey: "warrior",
+  name: "Crushing Blow",
+  type: "attack",
+  dmg: [20, 28],
+  heal: null,
+  rarity: "legendary",
+  image: "/cards/legendary/warrior_crushing_blow.png",
+
+  executeBelowPercent: 30, // ✅ kivégző mechanika
   },
   {
-    id: "mage_chain_lightning",
-    classKey: "mage",
-    name: "Chain Lightning",
-    type: "attack",
-    dmg: [18, 26],
-    heal: null,
-    rarity: "legendary",
-    image: "/cards/legendary/mage_chain_lightning.png",
+     id: "mage_chain_lightning",
+  classKey: "mage",
+  name: "Chain Lightning",
+  type: "attack",
+  dmg: [3, 12],   // kisebb, mert többször csap
+  heal: null,
+  rarity: "legendary",
+  image: "/cards/legendary/mage_chain_lightning.png",
+  hits: 3,        // 🔥 4 villámcsapás egymás után
   },
   {
     id: "archer_rapid_fire",

@@ -4,22 +4,25 @@ import CharacterPanel from "./CharacterPanel.jsx";
 import ShopModal from "./BoltModal.jsx";
 import BlacksmithModal from "./KovacsModal.jsx";
 import InvModal from "./Inv.jsx";
-import { usePlayer } from "../context/PlayerContext.jsx"; // <-- FONTOS!!!
+import QuestBoardModal from "./QuestBoardModal.jsx";
+import { usePlayer } from "../context/PlayerContext.jsx";
+import toltocsik from "../assets/icons/toltocsik.png";
+import "./Hub.css";
 
 export default function Hub({ onGoCombat }) {
-  const { player, setPlayer } = usePlayer(); // <-- Nélkülözhetetlen!
+  const { player, setPlayer } = usePlayer();
   const [adventureTimer, setAdventureTimer] = useState(0);
   const [isAdventuring, setIsAdventuring] = useState(false);
 
   const [showShop, setShowShop] = useState(false);
   const [showBlacksmith, setShowBlacksmith] = useState(false);
   const [showInv, setShowInv] = useState(false);
+  const [showQuestBoard, setShowQuestBoard] = useState(false);
 
   const [playerPos, setPlayerPos] = useState({ x: 40, y: 75 });
   const [isMoving, setIsMoving] = useState(false);
   const [language, setLanguage] = useState("hu");
 
-  // CÉLPONT
   const [currentTarget, setCurrentTarget] = useState(null);
   const targetRef = useRef(null);
 
@@ -36,7 +39,7 @@ export default function Hub({ onGoCombat }) {
     };
   }, []);
 
-  // 🔥 Kaland indítása
+  // Kaland indítása
   const startAdventure = () => {
     if (isAdventuring) return;
     setIsAdventuring(true);
@@ -48,8 +51,7 @@ export default function Hub({ onGoCombat }) {
           clearInterval(interval);
           setIsAdventuring(false);
 
-          // Indítjuk a harcot → callbacket adunk át
-          onGoCombat(handleCombatEnd);
+          onGoCombat && onGoCombat();
           return 0;
         }
         return prev - 1;
@@ -62,8 +64,14 @@ export default function Hub({ onGoCombat }) {
     if (type === "blacksmith") setShowBlacksmith(true);
     if (type === "adventure") startAdventure();
     if (type === "inv") setShowInv(true);
+    if (type === "quest") setShowQuestBoard(true);
   };
 
+  const CLASS_STRING = {
+  6: "warrior",
+  7: "mage",
+  8: "archer",
+};
   // Játékos mozgatása
   const moveTo = (x, y, type) => {
     if (Math.abs(playerPos.x - x) < 1 && Math.abs(playerPos.y - y) < 1) {
@@ -88,7 +96,7 @@ export default function Hub({ onGoCombat }) {
     targetRef.current = null;
   };
 
-  // 🔥🔥 HARCBÓL VISSZATÉRÉS → FULL HEAL ITT TÖRTÉNIK 🔥🔥
+  // Harcból visszatérés – full heal
   function handleCombatEnd(finalHP, victory) {
     console.log("Combat ended. Victory:", victory, "HP:", finalHP);
 
@@ -98,7 +106,7 @@ export default function Hub({ onGoCombat }) {
       prev
         ? {
             ...prev,
-            hp: prev.max_hp, // <-- FULL HEAL
+            hp: prev.max_hp,
           }
         : prev
     );
@@ -188,7 +196,21 @@ export default function Hub({ onGoCombat }) {
         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition"></div>
       </div>
 
-      {/* Player */}
+      {/* Quest Board interakciós zóna */}
+      <div
+        className="absolute cursor-pointer group"
+        style={{
+          left: "65%",
+          top: "10%",
+          width: "320px",
+          height: "220px",
+        }}
+        onClick={() => moveTo(65, 30, "quest")}
+      >
+        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition"></div>
+      </div>
+        
+      {/* Játékos sprite */}
       <img
         src="./src/assets/pics/TESZT.PNG"
         alt="player"
@@ -209,7 +231,15 @@ export default function Hub({ onGoCombat }) {
       {showBlacksmith && (
         <BlacksmithModal onClose={() => handleClose(setShowBlacksmith)} />
       )}
+      
       {showInv && <InvModal onClose={() => handleClose(setShowInv)} />}
+      {showQuestBoard && player && (
+  <QuestBoardModal
+    playerId={player.id}
+    playerClassId={CLASS_STRING[player.class_id]} // <-- STRING!
+    onClose={() => handleClose(setShowQuestBoard)}
+  />
+)}
 
       {/* Utazás számláló */}
       {isAdventuring && (
@@ -221,6 +251,25 @@ export default function Hub({ onGoCombat }) {
           </div>
         </div>
       )}
+      {/* TÖLTŐCSÍK – csak akkor látszik, ha épp kalandozik */}
+{isAdventuring && (
+  <div className="loaderBox">
+
+    {/* KERET (PNG) */}
+    <img src={toltocsik} className="loaderFrame" alt="loading frame" />
+
+    {/* A PIROS KITÖLTŐ CSÍK */}
+    <div className="loaderFill" />
+  </div>
+)}
+
+
+
+
+
+
+
     </div>
+    
   );
 }

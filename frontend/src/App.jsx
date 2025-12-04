@@ -9,12 +9,29 @@ import Hub from "./components/Hub.jsx";
 import AdventureHandler from "./components/AdventureHandler.jsx";
 import PathChoice from "./components/PathChoice.jsx";
 import CombatView from "./components/CombatView.jsx";
+import RestCampfire from "./components/RestCampfire.jsx";
+
+// ⬇️ ÚJ IMPORTOK
+import TransitionOverlay from "./components/TransitionOverlay.jsx";
+import combatIntroVideo from "./assets/transitions/combat-intro.webm";
+
+import {
+  defaultEnemies,
+  bossEnemies,
+} from "./components/enemyData.js";
+
+const FINAL_BOSS_LEVEL = 16;
 
 function AppInner() {
   const [screen, setScreen] = useState("login");
   const [combatPath, setCombatPath] = useState(null);
   const [level, setLevel] = useState(1);
-  const [combatFinished, setCombatFinished] = useState(false); // védelem dupla trigger ellen
+  const [combatFinished, setCombatFinished] = useState(false);
+  const [pathRerollKey, setPathRerollKey] = useState(0); // rest után új PathChoice RNG
+
+  // ⬇️ ÚJ: transition állapot
+  const [showTransition, setShowTransition] = useState(false);
+
   const { setPlayer } = usePlayer();
 
   // 🔹 LOGIN FLOW
@@ -36,30 +53,54 @@ function AppInner() {
     }
   }
 
-  // 🔹 KÖZTES NAVIGÁCIÓ
   function goto(next) {
     setScreen(next);
   }
 
-  // 🔹 HARCFLOW
-  function handleStartCombat(path) {
+  // 🔹 PathChoice → REST / FIGHT / ELITE / MYSTERY
+  function handleStartPath(path) {
+    // path: { type: "fight" | "elite" | "mystery" | "rest" }
+
+    // 😴 REST – kitérés, NEM lépteti a levelt
+    if (path.type === "rest") {
+      setPlayer((prev) => {
+        if (!prev) return prev;
+        const maxHp = prev.max_hp ?? prev.hp ?? 100;
+        const currentHp = prev.hp ?? maxHp;
+        const healAmount = Math.floor(maxHp * 0.4); // kb 40% heal
+        const newHp = Math.min(maxHp, currentHp + healAmount);
+
+        return {
+          ...prev,
+          hp: newHp,
+        };
+      });
+
+      // átmegyünk a tábortűz képernyőre
+      setCombatPath(null);
+      setScreen("restCampfire");
+      return;
+    }
+
+    // minden más: combat path + TRANSITION
     setCombatPath(path);
-    setScreen("combat");
     setCombatFinished(false);
+
+    // ⬇️ EKKOR már átmegyünk combat screenre
+    setScreen("combat");
+
+    // ⬇️ ÉS EKKOR indul a villám / sötétítés overlay
+    setShowTransition(true);
   }
 
   /**
    * CombatView → onEnd(playerHP, victory)
-   * Itt döntjük el:
-   *  - ha meghal → vissza Hub, FULL HP
-   *  - ha boss hal meg (level 11 után) → vissza Hub, FULL HP
-   *  - egyébként: következő PathChoice, HP marad (run közben nem healelünk)
    */
   function handleCombatEnd(playerHP, victory) {
     if (combatFinished) return;
     setCombatFinished(true);
 
-    // ha ELBUKTÁL → vissza hub + full heal
+    // ELBUKTÁL → vissza hub + full heal
     if (!victory) {
       setPlayer((prev) =>
         prev
@@ -73,17 +114,19 @@ function AppInner() {
       alert("☠️ Elbuktál! Vissza a hubba.");
       setScreen("hub");
       setLevel(1);
+      setCombatPath(null);
       return;
     }
 
-    // ha még nem értél a boss-ig → következő szint, NEM healelünk közben
-    if (level < 11) {
+    // ha még NEM final boss volt
+    if (level < FINAL_BOSS_LEVEL) {
       setTimeout(() => {
-        setLevel((prev) => prev + 1);
+        setLevel((prev) => prev + 1); // 🔥 csak COMBAT után lépünk előre!
         setScreen("pathChoice");
+        setCombatPath(null);
       }, 300);
     } else {
-      // ha legyőzted a boss-t → vissza Hub + FULL HP
+      // FINAL BOSS legyőzve
       setPlayer((prev) =>
         prev
           ? {
@@ -93,10 +136,26 @@ function AppInner() {
           : prev
       );
 
-      alert("🏆 Gratulálok, legyőzted a boss-t!");
+      alert("🏆 Gratulálok, legyőzted a végső bosst!");
       setScreen("hub");
       setLevel(1);
+      setCombatPath(null);
     }
+  }
+
+  const isFinalBoss = level === FINAL_BOSS_LEVEL;
+
+  // 🔹 REST CAMPFIRE -> vissza az ösvényre (ugyanaz a szint, új random opciók)
+  function handleRestBackToPath() {
+    setPathRerollKey((prev) => prev + 1); // új RNG PathChoice-ban
+    setScreen("pathChoice");
+  }
+
+  // 🔹 REST CAMPFIRE -> hazamész
+  function handleRestGoHub() {
+    setLevel(1);
+    setCombatPath(null);
+    setScreen("hub");
   }
 
   return (
@@ -109,7 +168,6 @@ function AppInner() {
 
       {screen === "hub" && (
         <Hub
-          onGoAdventure={() => setScreen("adventure")}
           onGoCombat={() => setScreen("pathChoice")}
         />
       )}
@@ -121,22 +179,39 @@ function AppInner() {
       {screen === "pathChoice" && (
         <PathChoice
           level={level}
-          onChoose={handleStartCombat}
-          background={`./src/assets/backgrounds/3.jpg`}
+          rerollKey={pathRerollKey}
+          onChoose={handleStartPath}
+        />
+      )}
+
+      {screen === "restCampfire" && (
+        <RestCampfire
+          level={level}
+          onBackToPath={handleRestBackToPath}
+          onGoHub={handleRestGoHub}
         />
       )}
 
       {screen === "combat" && combatPath && (
         <CombatView
           level={level}
-          enemies={
-            level === 11
-              ? ["Vérfarkas Úr", "Ősi Árny"]
-              : ["Goblin", "Bandita", "Sötét Harcos"]
-          }
-          boss={level === 11}
-          background={`./src/assets/backgrounds/3.jpg`}
+          enemies={isFinalBoss ? bossEnemies : defaultEnemies}
+          boss={isFinalBoss}
+          background={`/backgrounds/3.jpg`}   // ha public-ból jön
+          pathType={combatPath.type}
           onEnd={handleCombatEnd}
+        />
+      )}
+
+      {/* ⬇️ TRANSITION OVERLAY – csak combat alatt, ha aktív */}
+      {showTransition && (
+        <TransitionOverlay
+             src={combatIntroVideo}
+          onEnd={() => setShowTransition(false)}
+          videoDelay={200}
+          darkOpacityStart={1.0}  // teljesen fekete indulás
+          darkOpacityMid={0.5}    // villám alatt: enyhébb sötét
+          fadeDuration={600}      // kifakulás ideje
         />
       )}
     </>

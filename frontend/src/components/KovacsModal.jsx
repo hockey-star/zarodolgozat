@@ -87,6 +87,7 @@ export default function BlacksmithModal({ onClose }) {
   };
 
   // Loading / modal mindig jelenik, csak a tartalom mutat mást
+  
   return (
     <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
       <div className="relative bg-gray-900 border border-gray-700 rounded-xl w-[80%] h-[70%] flex flex-col shadow-xl p-6 text-white">

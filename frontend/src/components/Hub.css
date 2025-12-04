@@ -1,0 +1,45 @@
+/* LOADER DOBOZ */
+.loaderBox {
+  position: fixed;
+  bottom: 5%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 500px;          /* ÁLLÍTSD AHOGY NEKED JÓ! */
+  height: auto;
+  z-index: 9999999;
+  pointer-events: none;
+}
+
+/* A PNG keret */
+.loaderFrame {
+  width: 100%;
+  height: auto;
+  display: block;
+  image-rendering: pixelated;
+  position: relative;
+  z-index: 3;
+}
+
+/* A belső piros csík – KÖZÉPRE IGAZÍTVA */
+.loaderFill {
+  position: absolute;
+  top: 50%;               /* KÖZÉPEN FUT */
+  left: 15.5%;               /* belső csík bal kezdete (pixel alapján) */
+  width: 70%;             /* belső csík szélessége */
+  height: 7px;           /* BELTÉR TERÜLETE pixel alapján */
+  transform: translateY(-50%);
+
+  background: linear-gradient(90deg, #ff4d4d, #b30000);
+  box-shadow: 0 0 6px rgba(255, 20, 20, 0.8);
+
+  transform-origin: left;
+  animation: loadBarFill 5s linear forwards;
+  image-rendering: pixelated;
+
+  z-index: 2;
+}
+
+@keyframes loadBarFill {
+  from { transform: translateY(-50%) scaleX(0); }
+  to   { transform: translateY(-50%) scaleX(1); }
+}
