@@ -21,7 +21,7 @@ function AppInner() {
   async function handleLogin(username) {
     try {
       const res = await fetch(
-        `http://localhost:3000/api/user/${encodeURIComponent(username)}`
+        Cim.Cim+`/api/user/${encodeURIComponent(username)}`
       );
       const data = await res.json();
       if (!data.exists) return alert("User nem található (backend)");

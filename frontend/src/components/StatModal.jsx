@@ -1,6 +1,7 @@
 // frontend/src/components/StatModal.jsx
 import React, { useState } from "react";
 import { usePlayer } from "../context/PlayerContext.jsx";
+import Cim from "../Cim.jsx";
 
 function xpToNextLevel(level) {
   if (level <= 1) return 30;
@@ -36,7 +37,7 @@ export default function StatModal({ onClose }) {
 
     // BACKEND: save to DB
     setSaving(true);
-    await fetch(`http://localhost:3000/api/players/${player.id}`, {
+    await fetch(Cim.Cim+`/api/players/${player.id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(updated),

@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from "react";
 import "./LoginScreen.css";
 import { usePlayer } from "../context/PlayerContext.jsx";
+import Cim from "../Cim.jsx";
 
 export default function LoginScreen({ onLogin }) {
   const { setPlayer } = usePlayer();
@@ -58,7 +59,7 @@ export default function LoginScreen({ onLogin }) {
           return;
         }
 
-        const regRes = await fetch("http://localhost:3000/api/register", {
+        const regRes = await fetch(Cim.Cim+`/api/register`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ username, email, password }),
@@ -70,7 +71,7 @@ export default function LoginScreen({ onLogin }) {
           return;
         }
 
-        const loginRes = await fetch("http://localhost:3000/api/login", {
+        const loginRes = await fetch(Cim.Cim+`/api/login`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ identifier: username, password }),
@@ -89,7 +90,7 @@ export default function LoginScreen({ onLogin }) {
         onLogin(loginData.user.username);
         return;
       } else {
-        const loginRes = await fetch("http://localhost:3000/api/login", {
+        const loginRes = await fetch(Cim.Cim+`/api/login`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ identifier: username || email, password }),

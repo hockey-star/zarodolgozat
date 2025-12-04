@@ -8,6 +8,7 @@ import {
   buildDefaultDeckForClass,
 } from "../data/abilities.js";
 
+
 // ugyanaz a helper
 function resolveCardImageFromAbility(ab) {
   if (!ab) return "";

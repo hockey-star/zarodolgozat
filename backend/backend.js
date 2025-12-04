@@ -229,6 +229,121 @@ app.put("/api/players/:id", (req, res) => {
   );
 });
 
+{/*Vesz*/}
+
+app.post("/api/shop/buy", (req, res) => {
+    const { playerId, itemId } = req.body;
+
+    // 1. Játékos lekérdezése
+    pool.query("SELECT gold FROM players WHERE id = ?", [playerId], (err, players) => {
+        if (err) return res.status(500).json({ error: "DB hiba" });
+        if (players.length === 0) return res.status(404).json({ error: "Nincs ilyen játékos" });
+
+        const gold = players[0].gold;
+
+        // 2. Tárgy lekérdezése
+        pool.query("SELECT price FROM items WHERE id = ?", [itemId], (err, itemRes) => {
+            if (err) return res.status(500).json({ error: "DB hiba" });
+            if (itemRes.length === 0) return res.status(404).json({ error: "Tárgy nem található" });
+
+            const price = itemRes[0].price;
+
+            // 3. Ellenőrzés
+            if (gold < price) {
+                return res.status(400).json({ error: "Nincs elég arany" });
+            }
+
+            // 4. Arany levonás
+            pool.query(
+                "UPDATE players SET gold = gold - ? WHERE id = ?",
+                [price, playerId],
+                err => {
+                    if (err) return res.status(500).json({ error: "DB hiba arany levonásakor" });
+                    
+                    // 5. Item hozzáadás
+                    pool.query(
+                        `INSERT INTO birtokol (player_id, item_id, quantity)
+                         VALUES (?, ?, 1)
+                         ON DUPLICATE KEY UPDATE quantity = quantity + 1`,
+                        [playerId, itemId],
+                        err => {
+                            if (err) return res.status(500).json({ error: "DB hiba tárgy hozzáadásakor" });
+
+                            return res.json({ success: true, message: "Sikeres vásárlás" });
+                        }
+                    );
+                }
+            );
+        });
+    });
+});
+
+
+{/*fejleszt*/}
+
+app.post("/api/blacksmith/upgrade", (req, res) => {
+    const { playerId, itemId } = req.body;
+
+    // 1. játékos xp
+    pool.query("SELECT xp FROM players WHERE id = ?", [playerId], (err, playerRes) => {
+        if (err) return res.status(500).json({ error: "DB hiba" });
+
+        const playerXP = playerRes[0].xp;
+
+        // 2. tárgy adatok a birtokolbol
+        pool.query(
+            "SELECT * FROM birtokol WHERE player_id = ? AND item_id = ?",
+            [playerId, itemId],
+            (err, itemRes) => {
+                if (err) return res.status(500).json({ error: "DB hiba" });
+                if (itemRes.length === 0) return res.status(400).json({ error: "Nincs ilyen tárgyad" });
+
+                const item = itemRes[0];
+                const cost = (item.upgrade_level + 1) * 200;
+
+                if (playerXP < cost)
+                    return res.status(400).json({ error: "Nincs elég XP" });
+
+                // 3. XP levonás
+                pool.query("UPDATE players SET xp = xp - ? WHERE id = ?", [cost, playerId]);
+
+                // 4. Upgrade level növelése
+                pool.query(
+                    "UPDATE birtokol SET upgrade_level = upgrade_level + 1 WHERE id = ?",
+                    [item.id]
+                );
+
+                res.json({
+  message: "Sikeres fejlesztés",
+  newUpgradeLevel: item.upgrade_level + 1
+});
+            }
+        );
+    });
+});
+
+app.get("/api/items", (req, res) => {
+  pool.query("SELECT * FROM items", (err, items) => {
+    if (err) return res.status(500).json({ error: "DB error" });
+    res.json(items);
+  });
+});
+
+app.get("/api/player/:id/items", (req, res) => {
+  pool.query(
+    `SELECT pi.*, i.name, i.type, i.min_dmg, i.max_dmg, 
+            i.intellect_bonus, i.defense_bonus, i.hp_bonus, i.rarity
+     FROM birtokol pi
+     JOIN items i ON i.id = pi.item_id
+     WHERE pi.player_id = ?`,
+    [req.params.id],
+    (err, results) => {
+      if (err) return res.status(500).json({ error: "DB error" });
+      res.json(results);
+    }
+  );
+});
+
 
 app.listen(port, () => {
   console.log(`Backend fut a ${port} porton`);
