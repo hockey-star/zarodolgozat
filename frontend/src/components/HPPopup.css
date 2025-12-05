@@ -19,14 +19,14 @@
   color: red;
   text-shadow: 1px 1px 3px black;
   font-family: "Jersey 10", sans-serif;
-  font-size: 50px;
+  font-size: 80px;
 }
 
 .hp-popup.heal {
   color: lime;
   text-shadow: 1px 1px 3px black;
   font-family: "Jersey 10", sans-serif;
-  font-size: 50px;
+  font-size: 80px;
 }
 
 @keyframes floatUp {
