@@ -144,12 +144,12 @@ export default function Hub({ onGoCombat }) {
       <div
         className="absolute cursor-pointer group"
         style={{
-          left: "50%",
-          bottom: "40%",
-          width: "400px",
-          height: "460px",
+          left: "38%",
+          bottom: "15%",
+          width: "440px",
+          height: "500px",
         }}
-        onClick={() => moveTo(60, 50, "adventure")}
+        onClick={() => moveTo(50, 80, "adventure")}
       >
         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition"></div>
       </div>
@@ -158,12 +158,12 @@ export default function Hub({ onGoCombat }) {
       <div
         className="absolute cursor-pointer group"
         style={{
-          left: "15%",
-          bottom: "30%",
-          width: "470px",
-          height: "400px",
+          left: "5%",
+          bottom: "10%",
+          width: "600px",
+          height: "350px",
         }}
-        onClick={() => moveTo(35, 65, "blacksmith")}
+        onClick={() => moveTo(30, 85, "blacksmith")}
       >
         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition"></div>
       </div>
@@ -172,12 +172,12 @@ export default function Hub({ onGoCombat }) {
       <div
         className="absolute cursor-pointer group"
         style={{
-          right: "15%",
-          bottom: "7%",
-          width: "600px",
-          height: "350px",
+          right: "20%",
+          bottom: "10%",
+          width: "330px",
+          height: "450px",
         }}
-        onClick={() => moveTo(50, 85, "shop")}
+        onClick={() => moveTo(65, 80, "shop")}
       >
         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition"></div>
       </div>
@@ -186,12 +186,12 @@ export default function Hub({ onGoCombat }) {
       <div
         className="absolute cursor-pointer group"
         style={{
-          left: "0%",
-          bottom: "4%",
-          width: "600px",
-          height: "200px",
+          right: "5%",
+          bottom: "10%",
+          width: "280px",
+          height: "250px",
         }}
-        onClick={() => moveTo(33, 85, "inv")}
+        onClick={() => moveTo(85, 85, "inv")}
       >
         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition"></div>
       </div>
@@ -200,12 +200,12 @@ export default function Hub({ onGoCombat }) {
       <div
         className="absolute cursor-pointer group"
         style={{
-          left: "65%",
+          right: "40%",
           top: "10%",
           width: "320px",
           height: "220px",
         }}
-        onClick={() => moveTo(65, 30, "quest")}
+        onClick={() => moveTo(50, 80, "quest")}
       >
         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition"></div>
       </div>
@@ -221,8 +221,8 @@ export default function Hub({ onGoCombat }) {
           left: `${playerPos.x}%`,
           top: `${playerPos.y}%`,
           transform: "translate(-50%, -50%)",
-          width: "4%",
-          imageRendering: "pixelated",
+          width: "5%",
+         
         }}
       />
 
