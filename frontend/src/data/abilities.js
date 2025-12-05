@@ -286,8 +286,8 @@ export const ALL_ABILITIES = [
   classKey: "mage",
   name: "Drain Life",
   type: "attack",
-  dmg: [4, 6],      // kisebb hit, mert 3x tickel
-  heal: 4,         // heal is tickel
+  dmg: [1, 3],      // kisebb hit, mert 3x tickel
+  heal: 5,         // heal is tickel
   rarity: "epic",
   image: "/cards/epic/mage_drain_life.png",
   hits: 3,         // 🔥 3 tick
@@ -298,7 +298,7 @@ export const ALL_ABILITIES = [
   classKey: "mage",
   name: "Fireball",
   type: "attack",
-  dmg: [12, 18],
+  dmg: [16, 23],
   heal: null,
   rarity: "epic",
   image: "/cards/epic/mage_fireball.png",
@@ -326,6 +326,7 @@ export const ALL_ABILITIES = [
     heal: null,
     rarity: "epic",
     image: "/cards/epic/mage_lightning_bolt.png",
+    stunTurns: 1,
   },
 
   // =====================

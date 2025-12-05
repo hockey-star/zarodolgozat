@@ -37,12 +37,12 @@
 
 .name {
   position: absolute;
-  bottom: 385px;
+  bottom: 463px;
   width: 100%;
   text-align: center;
   font-weight: bold;
   color: rgb(255,0,0);
-  font-size: 20px;
+  font-size: 45px;
   font-family: 'Jersey 20', sans-serif;
   text-shadow: 1px 1px 3px black;
   z-index: 30;
@@ -50,11 +50,11 @@
 
 .hp-bar-bg {
   position: absolute;
-  bottom: 194px;
+  bottom: 94px;
   left: 50%;
   transform: translateX(-50%);
   width: 43%;
-  height: 12px;
+  height: 25px;
   background-color: rgba(0,0,0,0.5);
   border-radius: 10px;
   z-index: 30;
@@ -69,10 +69,11 @@
 
 .hp-text {
   position: absolute;
-  bottom: 193px;
+  bottom: 84px;
   left: 50%;
+  font-family: 'Jersey 20', sans-serif;
   transform: translateX(-50%);
   color: white;
-  font-size: 10px;
+  font-size: 30px;
   z-index: 30;
 }

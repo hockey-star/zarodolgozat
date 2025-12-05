@@ -1,23 +1,25 @@
+// frontend/src/components/HPPopup.jsx
 import React, { useEffect, useState } from "react";
 import "./HPPopup.css";
 
-export default function HPPopup({ value, x, y, onDone }) {
+export default function HPPopup({ value, onDone }) {
   const [visible, setVisible] = useState(true);
 
   useEffect(() => {
     const t = setTimeout(() => {
       setVisible(false);
-      onDone();
+      onDone?.();
     }, 800); // 0.8s animáció
     return () => clearTimeout(t);
-  }, []);
+  }, [onDone]);
 
-  return visible ? (
+  if (!visible) return null;
+
+  return (
     <div
       className={`hp-popup ${value < 0 ? "damage" : "heal"}`}
-      style={{ left: x, top: y }}
     >
       {value > 0 ? `+${value}` : value}
     </div>
-  ) : null;
+  );
 }

@@ -1,16 +1,30 @@
 // frontend/src/components/CombatView.jsx
-import React, { useEffect, useState, useMemo } from "react";
+
+import React, { useEffect, useState, useMemo, useRef } from "react";
 import { usePlayer } from "../context/PlayerContext.jsx";
 import { getRandomEnemy } from "./enemyData";
 import EnemyFrame from "./EnemyFrame";
 import HPPopup from "./HPPopup";
-import combatIntroVideo from "../assets/transitions/combat-intro.webm";
 
+import AbilityEffectLayer from "./AbilityEffectLayer";
+import healFx from "../assets/effects/heal_generic.webm";
+import arcaneMissilesFx from "../assets/effects/mage_arcane_missiles.webm";
+import fireballFx from "../assets/effects/mage_fireball.webm";
+import stunFx from "../assets/effects/stun_generic.webm";
+import arcaneSurgeFx from "../assets/effects/mage_arcane_surge.webm";
+import drainLifeFx from "../assets/effects/mage_drain_life.webm";
+import frostNovaFx from "../assets/effects/mage_frost_nova.webm";
+import lightningBoltFx from "../assets/effects/mage_lightning_bolt.webm";
+import chainLightningFx from "../assets/effects/mage_chain_lightning.webm";
+import icelance from "../assets/effects/mage_icelance.webm";
+import manaShieldFx from "../assets/effects/mage_mana_shield.webm";
 import {
   getClassKeyFromId,
   ABILITIES_BY_ID,
   buildDefaultDeckForClass,
 } from "../data/abilities.js";
+
+const BASE_UI_SCALE = 0.8; // itt tudod globálisan összébb venni az UI-t
 
 // XP görbe
 function xpToNextLevel(level) {
@@ -81,6 +95,24 @@ export default function CombatView({
 }) {
   const { player, setPlayer } = usePlayer() || {};
 
+  // 1920x1080-as UI skála
+  const [uiScale, setUiScale] = useState(1);
+
+  useEffect(() => {
+    function updateScale() {
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+      const scaleW = vw / 1650;
+      const scaleH = vh / 1050;
+      const s = Math.min(scaleW, scaleH);
+      setUiScale(s);
+    }
+
+    updateScale();
+    window.addEventListener("resize", updateScale);
+    return () => window.removeEventListener("resize", updateScale);
+  }, []);
+
   const initialHPFromPlayer = player?.hp ?? 100;
   const maxHPFromPlayer = player?.max_hp ?? initialHPFromPlayer;
 
@@ -116,21 +148,30 @@ export default function CombatView({
   const [hand, setHand] = useState([]);
 
   // animációk
-  const [hpPopups, setHPPopups] = useState([]);
+  const [hpPopups, setHPPopups] = useState([]); // {id, value, target}
   const [playerDamaged, setPlayerDamaged] = useState(false);
   const [playerHealed, setPlayerHealed] = useState(false);
   const [enemyDamaged, setEnemyDamaged] = useState(false);
 
-  // 🔥 ÚJ: átmeneti buffok / negatív hatások
-  const [playerDamageBuff, setPlayerDamageBuff] = useState(null); // {multiplier, remainingAttacks}
-  const [enemyPoison, setEnemyPoison] = useState(null); // {damagePerTurn, remainingTurns}
-  const [enemyBurn, setEnemyBurn] = useState(null); // {damagePerTurn, remainingTurns}
-  const [enemyStun, setEnemyStun] = useState(0); // ❄️ hány enemy-kört hagy ki
-  const [enemyVulnerability, setEnemyVulnerability] = useState(null); // 🔮 {multiplier, remainingTurns}
-  const [enemyBleed, setEnemyBleed] = useState(null); // 🩸 {percent, remainingTurns}
+  // effectek
+  const [abilityEffects, setAbilityEffects] = useState([]);
+  const logEndRef = useRef(null);
 
-  // transition flag
+  function spawnAbilityEffect({ src, target = "center", width, height }) {
+    const id = Date.now() + Math.random();
+    setAbilityEffects((prev) => [
+      ...prev,
+      { id, src, target, width, height },
+    ]);
+  }
 
+  // átmeneti buffok / debuffok
+  const [playerDamageBuff, setPlayerDamageBuff] = useState(null);
+  const [enemyPoison, setEnemyPoison] = useState(null);
+  const [enemyBurn, setEnemyBurn] = useState(null);
+  const [enemyStun, setEnemyStun] = useState(0);
+  const [enemyVulnerability, setEnemyVulnerability] = useState(null);
+  const [enemyBleed, setEnemyBleed] = useState(null);
 
   // log + jutalom
   const [log, setLog] = useState([]);
@@ -141,9 +182,6 @@ export default function CombatView({
     [background, pathType]
   );
 
-  // minden új harcnál induljon a transition
-
-  // rarity style
   const rarityStyle = {
     common: {
       border: "border-gray-600",
@@ -164,18 +202,30 @@ export default function CombatView({
   };
 
   function pushLog(msg) {
-    setLog((prev) => [...prev, msg]);
+  setLog((prev) => {
+    const last = prev[prev.length - 1];
+
+    // ❌ Ha ugyanaz az üzenet jönne be újra egymás után, nem rakjuk be
+    if (last === msg) return prev;
+
+    return [...prev, msg];
+  });
+}
+useEffect(() => {
+  if (logEndRef.current) {
+    logEndRef.current.scrollIntoView({ behavior: "smooth" });
   }
+}, [log]);
 
   function enemyImage(name) {
     if (!name) return "";
     return `/ui/enemies/${name.toLowerCase().replace(/ /g, "-")}.png`;
   }
 
-  // HP popup
-  function addHPPopup(value, target, x, y) {
+  // 🔹 HP popup helper – csak targetet kap
+  function addHPPopup(value, target) {
     const id = Date.now() + Math.random();
-    setHPPopups((prev) => [...prev, { id, value, target, x, y }]);
+    setHPPopups((prev) => [...prev, { id, value, target }]);
 
     if (value < 0) {
       if (target === "player") {
@@ -229,7 +279,6 @@ export default function CombatView({
         heal: ab.heal ?? null,
         image: img,
         rarity: ab.rarity || "common",
-        // 🔥 plusz meta a skillekhez
         hits: ab.hits || 1,
         poison: ab.poison || null,
         damageBuff: ab.damageBuff || null,
@@ -238,8 +287,8 @@ export default function CombatView({
         stunTurns: ab.stunTurns || 0,
         defenseTurns: ab.defenseTurns || 0,
         vulnerabilityDebuff: ab.vulnerabilityDebuff || null,
-        bleed: ab.bleed || null, // 🩸 Slash bleed
-        executeBelowPercent: ab.executeBelowPercent || null, // ☠️ Crushing Blow
+        bleed: ab.bleed || null,
+        executeBelowPercent: ab.executeBelowPercent || null,
       });
     });
 
@@ -288,7 +337,7 @@ export default function CombatView({
         let isElite = !boss && pathType === "elite";
         let allowedNames = Array.isArray(enemies) ? enemies : [];
 
-        // 🔥 CLASS QUEST BOSS – ha boss fight van
+        // CLASS QUEST BOSS
         if (boss && player.id) {
           try {
             const res = await fetch(
@@ -372,7 +421,7 @@ export default function CombatView({
     initBattle();
   }, [level, boss, pathType, enemies, player, classKey]);
 
-  // KÁRTYA KIJÁTSZÁSA – CLASS ALAPÚ SKÁLÁZÁS + BLEED + EXECUTE
+  // KÁRTYA KIJÁTSZÁSA – (logika ugyanaz, csak addHPPopup targettel)
   function playCard(card) {
     if (battleOver || turn !== "player" || !enemy) return;
 
@@ -382,12 +431,77 @@ export default function CombatView({
     const playerStrength = player?.strength ?? 0;
     const playerIntellect = player?.intellect ?? 0;
     const playerDefense = player?.defense ?? 0;
-
-    const playerAgi = playerStrength; // amíg nincs külön AGI
+    const playerAgi = playerStrength;
 
     if (card.type === "attack") {
       let baseMin = card.dmg?.[0] ?? 4;
       let baseMax = card.dmg?.[1] ?? 8;
+
+      // effektek...
+      if (card.abilityId === "mage_arcane_missiles") {
+        spawnAbilityEffect({
+          src: arcaneMissilesFx,
+          target: "enemy",
+          width: "1000px",
+          height: "1000px",
+        });
+      }
+      if (card.abilityId === "mage_ice_lance") {
+        spawnAbilityEffect({
+          src: icelance,
+          target: "enemy",
+          width: "1000px",
+          height: "1050px",
+        });
+      }
+      if (card.abilityId === "mage_fireball") {
+        spawnAbilityEffect({
+          src: fireballFx,
+          target: "enemy",
+          width: "1000px",
+          height: "1000px",
+        });
+      }
+      if (card.abilityId === "mage_arcane_surge") {
+        spawnAbilityEffect({
+          src: arcaneSurgeFx,
+          target: "enemy_aoe",
+          width: "1200px",
+          height: "1200px",
+        });
+      }
+      if (card.abilityId === "mage_frost_nova") {
+        spawnAbilityEffect({
+          src: frostNovaFx,
+          target: "enemy_aoe",
+          width: "1000px",
+          height: "1000px",
+        });
+      }
+      if (card.abilityId === "mage_lightning_bolt") {
+        spawnAbilityEffect({
+          src: lightningBoltFx,
+          target: "enemy",
+          width: "1050px",
+          height: "1050px",
+        });
+      }
+      if (card.abilityId === "mage_chain_lightning") {
+        spawnAbilityEffect({
+          src: chainLightningFx,
+          target: "enemy",
+          width: "1000px",
+          height: "1000px",
+        });
+      }
+      if (card.abilityId === "mage_drain_life") {
+        spawnAbilityEffect({
+          src: drainLifeFx,
+          target: "enemy",
+          width: "1600px",
+          height: "700px",
+        });
+      }
 
       if (classKey === "warrior") {
         const bonus = Math.floor(playerStrength * 0.35);
@@ -415,7 +529,6 @@ export default function CombatView({
         dmgRolls.push(roll);
       }
 
-      // Íjász crit – per hit
       if (classKey === "archer") {
         const critChance = Math.min(50, playerAgi * 1.5);
         for (let i = 0; i < dmgRolls.length; i++) {
@@ -426,10 +539,8 @@ export default function CombatView({
         }
       }
 
-      // ✅ Alap sebzés lista
       let finalRolls = [...dmgRolls];
 
-      // ☠️ CRUSHING BLOW – EXECUTE (HP% alatt duplázza a sebzést)
       if (card.executeBelowPercent) {
         const hpPercent = enemy?.maxHp
           ? Math.floor((enemyHP / enemy.maxHp) * 100)
@@ -440,7 +551,6 @@ export default function CombatView({
         }
       }
 
-      // Rallying Shout / dmg buff – 1 támadásra
       if (playerDamageBuff && playerDamageBuff.multiplier) {
         finalRolls = finalRolls.map((d) =>
           Math.floor(d * playerDamageBuff.multiplier)
@@ -460,7 +570,6 @@ export default function CombatView({
         }
       }
 
-      // 🔮 Enemy vulnerability (Arcane Surge) – extra szorzó minden sebzésre
       if (enemyVulnerability && enemyVulnerability.multiplier) {
         finalRolls = finalRolls.map((d) =>
           Math.floor(d * enemyVulnerability.multiplier)
@@ -470,22 +579,19 @@ export default function CombatView({
         );
       }
 
-      // 🔥 Sebzés alkalmazása enemy-re KÉSLELTETVE (multi-hit + drain támogatás)
       finalRolls.forEach((dmg, index) => {
         setTimeout(() => {
-          // Enemy sebzés
           setEnemyHP((prev) => {
             const newHP = Math.max(0, prev - dmg);
-            addHPPopup(-dmg, "enemy", "74%", "120px");
+            addHPPopup(-dmg, "enemy");
             pushLog(`${card.name} → ${enemy.name} kap ${dmg} sebzést.`);
             return newHP;
           });
 
-          // 🔥 Drain Life – heal tick is
           if (card.drain && card.heal) {
             setPlayerHP((prev) => {
               const newHP = Math.min(prev + card.heal, maxHPFromPlayer);
-              addHPPopup(+card.heal, "player", "24%", "120px");
+              addHPPopup(+card.heal, "player");
               pushLog(`🧛 Drain Life gyógyít: +${card.heal} HP.`);
               return newHP;
             });
@@ -493,7 +599,6 @@ export default function CombatView({
         }, index * 220);
       });
 
-      // Poison Arrow – méreg DoT beállítása
       if (card.poison && card.poison.damagePerTurn > 0 && card.poison.turns > 0) {
         const dpt = card.poison.damagePerTurn;
         const turns = card.poison.turns;
@@ -506,7 +611,6 @@ export default function CombatView({
         );
       }
 
-      // 🩸 Slash – BLEED DoT stack
       if (card.bleed) {
         setEnemyBleed((prev) => {
           if (!prev) {
@@ -523,7 +627,7 @@ export default function CombatView({
 
           return {
             percent: nextPercent,
-            remainingTurns: card.bleed.turns, // frissíti a durációt
+            remainingTurns: card.bleed.turns,
           };
         });
 
@@ -532,7 +636,6 @@ export default function CombatView({
         );
       }
 
-      // 🔥 Fireball burn – égés DoT
       if (card.burn && card.burn.percent && card.burn.turns) {
         const totalHit = finalRolls.reduce((a, b) => a + b, 0);
         const burnPerTurn = Math.max(
@@ -550,15 +653,20 @@ export default function CombatView({
         );
       }
 
-      // ❄️ Frost Nova – stun
       if (card.stunTurns && card.stunTurns > 0) {
+        spawnAbilityEffect({
+          src: stunFx,
+          target: "enemy_stun",
+          width: "500px",
+          height: "500px",
+        });
+
         setEnemyStun((prev) => prev + card.stunTurns);
         pushLog(
           `❄️ ${enemy.name} elkábult, kihagyja a következő körét!`
         );
       }
 
-      // 🔮 Arcane Surge – enemy vulnerability debuff
       if (card.vulnerabilityDebuff && card.vulnerabilityDebuff.multiplier) {
         const mult = card.vulnerabilityDebuff.multiplier ?? 1.15;
         const turns = card.vulnerabilityDebuff.turns ?? 3;
@@ -575,7 +683,15 @@ export default function CombatView({
     }
 
     if (card.type === "defend") {
-      // ✅ Shield Wall – több körös védekezés
+      if (card.abilityId === "mage_mana_shield") {
+        spawnAbilityEffect({
+          src: manaShieldFx,
+          target: "player_shield",
+          width: "1150px",
+          height: "1000px",
+        });
+      }
+
       if (card.defenseTurns && card.defenseTurns > 1) {
         setDefending(card.defenseTurns);
         pushLog(
@@ -586,14 +702,27 @@ export default function CombatView({
         pushLog("🛡️ Védekezés aktiválva – a következő ütés felezve.");
       }
 
-      // ✅ Parry – enemy stun
       if (card.stunTurns && card.stunTurns > 0) {
+        spawnAbilityEffect({
+          src: stunFx,
+          target: "enemy_stun",
+          width: "1000px",
+          height: "1500px",
+        });
+
         setEnemyStun((prev) => prev + card.stunTurns);
         pushLog(`⚔️ Parry! ${enemy.name} elkábul, kihagyja a körét!`);
       }
     }
 
     if (card.type === "heal") {
+      spawnAbilityEffect({
+        src: healFx,
+        target: "player",
+        width: "1000px",
+        height: "1000px",
+      });
+
       let healAmount = card.heal || 20;
 
       if (classKey === "mage") {
@@ -606,14 +735,13 @@ export default function CombatView({
 
       setPlayerHP((prev) => {
         const newHP = Math.min(prev + healAmount, maxHPFromPlayer);
-        addHPPopup(+healAmount, "player", "24%", "120px");
+        addHPPopup(+healAmount, "player");
         pushLog(
           `✨ ${card.name}: +${healAmount} HP (most ${newHP}/${maxHPFromPlayer})`
         );
         return newHP;
       });
 
-      // Rallying Shout – sebzés buff a következő támadásra
       if (card.damageBuff && card.damageBuff.multiplier) {
         const mult = card.damageBuff.multiplier ?? 1.5;
         const turns = card.damageBuff.turns ?? 1;
@@ -641,19 +769,18 @@ export default function CombatView({
     }
   }, [playerHP, enemyHP, enemy]);
 
-  // ENEMY KÖR – burn, poison, bleed, stun, attack
+  // ENEMY KÖR – (logika változatlan, csak addHPPopup targettel)
   useEffect(() => {
     if (!enemy || battleOver || turn !== "enemy") return;
 
     const t = setTimeout(() => {
-      // 🔥 Égés tick (Fireball burn)
       if (enemyBurn && enemyHP > 0) {
         const burnDmg = enemyBurn.damagePerTurn ?? 0;
         const newHP = Math.max(0, enemyHP - burnDmg);
 
         if (burnDmg > 0) {
           setEnemyHP(newHP);
-          addHPPopup(-burnDmg, "enemy", "74%", "120px");
+          addHPPopup(-burnDmg, "enemy");
           pushLog(
             `🔥 Égés sebzés: ${burnDmg} (${enemy.name} – ${newHP} HP).`
           );
@@ -677,14 +804,13 @@ export default function CombatView({
         }
       }
 
-      // 🔥 Méreg tick enemy-n, mielőtt támadna
       if (enemyPoison && enemyHP > 0) {
         const poisonDmg = enemyPoison.damagePerTurn ?? 0;
         const newHP = Math.max(0, enemyHP - poisonDmg);
 
         if (poisonDmg > 0) {
           setEnemyHP(newHP);
-          addHPPopup(-poisonDmg, "enemy", "74%", "120px");
+          addHPPopup(-poisonDmg, "enemy");
           pushLog(
             `☠️ Méreg sebzés: ${poisonDmg} (${enemy.name} – ${newHP} HP).`
           );
@@ -701,7 +827,6 @@ export default function CombatView({
           );
         }
 
-        // Ha a méreg megölte az enemy-t, ne támadjon
         if (newHP <= 0) {
           setDefending(false);
           setTurn("player");
@@ -709,7 +834,6 @@ export default function CombatView({
         }
       }
 
-      // 🩸 BLEED tick enemy-n
       if (enemyBleed && enemyHP > 0) {
         const bleedDmg = Math.max(
           1,
@@ -718,7 +842,7 @@ export default function CombatView({
         const newHP = Math.max(0, enemyHP - bleedDmg);
 
         setEnemyHP(newHP);
-        addHPPopup(-bleedDmg, "enemy", "74%", "120px");
+        addHPPopup(-bleedDmg, "enemy");
         pushLog(
           `🩸 Vérzés: ${bleedDmg} sebzés (${enemyBleed.percent}%).`
         );
@@ -741,14 +865,12 @@ export default function CombatView({
         }
       }
 
-      // ❄️ STUN – ha van, enemy kihagyja a körét
       if (enemyStun > 0 && enemyHP > 0) {
         pushLog(`❄️ ${enemy.name} elkábulva marad, kihagyja a körét!`);
         setEnemyStun((prev) => Math.max(0, prev - 1));
         setDefending(false);
         setTurn("player");
 
-        // vulnerability debuff időzítése: enemy kör végén csökken
         if (enemyVulnerability && enemyVulnerability.remainingTurns != null) {
           const remaining = enemyVulnerability.remainingTurns - 1;
           if (remaining <= 0) {
@@ -764,14 +886,13 @@ export default function CombatView({
         return;
       }
 
-      // ha nem stunolt, akkor támad
       const [minDmg, maxDmg] = enemy.dmg;
       let dmg =
         Math.floor(Math.random() * (maxDmg - minDmg + 1)) + minDmg;
 
       if (defending && defending > 0) {
         dmg = Math.floor(dmg / 2);
-        setDefending((prev) => Math.max(0, (prev || 1) - 1)); // körök csökkentése
+        setDefending((prev) => Math.max(0, (prev || 1) - 1));
       }
 
       const playerDefense = player?.defense ?? 0;
@@ -779,13 +900,12 @@ export default function CombatView({
 
       setPlayerHP((prev) => {
         const newHP = Math.max(0, prev - final);
-        addHPPopup(-final, "player", "24%", "120px");
+        addHPPopup(-final, "player");
         return newHP;
       });
 
       pushLog(`💥 ${enemy.name} támad (${final} sebzés).`);
 
-      // enemy vulnerability körök csökkentése
       if (enemyVulnerability && enemyVulnerability.remainingTurns != null) {
         const remaining = enemyVulnerability.remainingTurns - 1;
         if (remaining <= 0) {
@@ -817,7 +937,8 @@ export default function CombatView({
     enemyVulnerability,
   ]);
 
-  // REWARD
+  // REWARD & handleContinue – marad ugyanaz (nem írom újra végig, de ha kell, elküldöm azt a blokkot is)
+
   function rollRewards() {
     if (!enemy || !enemy.rewards) {
       return { xpGain: 0, goldGain: 0 };
@@ -879,10 +1000,8 @@ export default function CombatView({
       unspentStatPoints: (prev.unspentStatPoints ?? 0) + addedStatPoints,
     }));
 
-    // 🔥 QUEST PROGRESS – BACKEND HÍVÁSOK 🔥
     try {
       const playerId = player.id;
-
       const taskType = boss ? "boss" : "kill";
 
       await fetch("http://localhost:3000/api/quests/progress", {
@@ -918,128 +1037,182 @@ export default function CombatView({
   }
 
   return (
-    <div className="relative w-full min-h-screen text-white">
-      {/* BACKGROUND */}
-      <div style={{ position: "fixed", inset: 0, zIndex: 0 }}>
+    <div className="fixed inset-0 text-white overflow-hidden">
+      {/* háttér full screen */}
+      <div className="absolute inset-0 -z-10">
         <img
           src={bg}
           alt="bg"
-          style={{ width: "100%", height: "100%", objectFit: "cover" }}
+          className="w-full h-full object-cover"
         />
       </div>
 
-      {/* PLAYER + ENEMY FRAMEEK */}
-      <div className="pt-12 flex justify-around w-full max-w-6xl mx-auto z-10 relative">
-        {/* PLAYER */}
-        <EnemyFrame
-          name={player.username || "Player"}
-          hp={playerHP}
-          maxHP={maxHPFromPlayer}
-          image={classConfig.sprite}
-          damaged={playerDamaged}
-          healed={playerHealed}
-        />
-
-        {/* ENEMY */}
-        <EnemyFrame
-          name={enemy?.name}
-          hp={enemyHP}
-          maxHP={enemy?.maxHp}
-          image={enemyImage(enemy?.name)}
-          damaged={enemyDamaged}
-        />
-
-        {/* POPUP-ok */}
-        {hpPopups.map((p) => (
-          <HPPopup
-            key={p.id}
-            value={p.value}
-            x={p.x}
-            y={p.y}
-            onDone={() =>
-              setHPPopups((prev) => prev.filter((pp) => pp.id !== p.id))
-            }
-          />
-        ))}
-      </div>
-
-      {/* COMBAT LOG */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-[1%] w-3/4 max-w-2xl bg-black/50 rounded p-4 h-48 overflow-y-auto font-mono text-sm z-10">
-        {log.map((l, i) => (
-          <div key={i}>{l}</div>
-        ))}
-      </div>
-
-      {/* KÁRTYÁK – transition alatt NINCSENEK */}
-      {!battleOver && turn === "player" &&(
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 flex gap-4 z-50">
-          {hand.map((card, i) => {
-            const rs = rarityStyle[card.rarity] ?? rarityStyle.common;
-            const imgSrc = card.image;
-            return (
-              <button
-                key={i}
-                onClick={() => playCard(card)}
-                className={`relative w-36 h-52 rounded-xl overflow-hidden
-                border-4 ${rs.border}
-                transform transition-all duration-200 hover:scale-110
-                ${rs.glow}`}
-              >
-                <img
-                  src={imgSrc}
-                  alt={card.name}
-                  className="absolute inset-0 w-full h-full object-cover"
-                />
-                <div className="absolute bottom-0 w-full bg-black/70 text-center p-1 text-sm">
-                  <div className="font-bold">{card.name}</div>
-                  {card.type === "attack" && (
-                    <div>
-                      Damage: {card.dmg?.[0] ?? "?"}–{card.dmg?.[1] ?? "?"}
-                      {card.hits && card.hits > 1 ? ` x${card.hits}` : ""}
-                    </div>
-                  )}
-                  {card.type === "defend" && <div>Defense</div>}
-                  {card.type === "heal" && (
-                    <div>
-                      Heal: {card.heal}
-                      {card.damageBuff && " + DMG buff"}
-                    </div>
-                  )}
-                </div>
-              </button>
-            );
-          })}
-        </div>
-      )}
-
-      {/* END BATTLE */}
-      {battleOver && (
-        <div className="text-center mt-6 z-50 relative">
-          <div className="text-4xl mb-4">
-            {playerHP <= 0 ? "☠️ Defeat..." : "🏆 Victory!"}
+      {/* 1920x1080 UI canvas, skálázva */}
+      <div className="absolute inset-0 flex items-center justify-center">
+        <div
+          className="relative"
+          style={{
+            width: "1650px",
+            height: "1050px",
+            transform: `scale(${uiScale * BASE_UI_SCALE})`,
+            transformOrigin: "center center",
+          }}
+        >
+          {/* PLAYER FRAME – bal oldalt */}
+          <div className="absolute top-24 left-[20%] -translate-x-1/2 z-10">
+            <div className="relative">
+              <EnemyFrame
+                name={player.username || "Player"}
+                hp={playerHP}
+                maxHP={maxHPFromPlayer}
+                image={classConfig.sprite}
+                damaged={playerDamaged}
+                healed={playerHealed}
+              />
+              {/* PLAYER POPUPOK */}
+              {hpPopups
+                .filter((p) => p.target === "player")
+                .map((p) => (
+                  <HPPopup
+                    key={p.id}
+                    value={p.value}
+                    onDone={() =>
+                      setHPPopups((prev) =>
+                        prev.filter((pp) => pp.id !== p.id)
+                      )
+                    }
+                  />
+                ))}
+            </div>
           </div>
 
-          {lastRewards && (
-            <div className="mb-2 text-sm text-gray-200">
-              Jutalom: +{lastRewards.goldGain} arany, +
-              {lastRewards.xpGain} XP
-              {lastRewards.levelsGained > 0 &&
-                ` • +${lastRewards.levelsGained} szint, +${lastRewards.addedStatPoints} stat pont (ágyban kiosztható)`}
+          {/* ENEMY FRAME – jobb oldalt */}
+          <div className="absolute top-24 left-[80%] -translate-x-1/2 z-10">
+            <div className="relative">
+              <EnemyFrame
+                name={enemy?.name}
+                hp={enemyHP}
+                maxHP={enemy?.maxHp}
+                image={enemyImage(enemy?.name)}
+                damaged={enemyDamaged}
+              />
+              {/* ENEMY POPUPOK */}
+              {hpPopups
+                .filter((p) => p.target === "enemy")
+                .map((p) => (
+                  <HPPopup
+                    key={p.id}
+                    value={p.value}
+                    onDone={() =>
+                      setHPPopups((prev) =>
+                        prev.filter((pp) => pp.id !== p.id)
+                      )
+                    }
+                  />
+                ))}
+            </div>
+          </div>
+
+        {/* ✅ COMBAT LOG – AUTO SCROLL-AL */}
+        <div
+          className="absolute top-[62%] left-1/2 
+          -translate-x-1/2 
+          w-3/4 max-w-2xl 
+          bg-black/50 rounded p-4 
+          h-48 overflow-y-auto 
+          font-mono text-sm z-10"
+        >
+          {log.map((l, i) => (
+            <div key={i} className="mb-1">{l}</div>
+          ))}
+
+          {/* ✅ EZ KELL A LEGALJÁRA AZ AUTO-SCROLLHOZ */}
+          <div ref={logEndRef} />
+        </div>
+
+          {/* KÁRTYÁK */}
+          {!battleOver && turn === "player" && (
+           <div
+              className="absolute left-1/2 -translate-x-1/2 flex gap-4 z-50"
+              style={{ bottom: "-80px" }}   // ⬅️ EZ MOZGATJA LEJJEBB
+            >
+              {hand.map((card, i) => {
+                const rs = rarityStyle[card.rarity] ?? rarityStyle.common;
+                const imgSrc = card.image;
+
+                return (
+                  <button
+                    key={i}
+                    onClick={() => playCard(card)}
+                    className={`relative w-40 h-60 rounded-xl overflow-hidden
+                      border-4 ${rs.border}
+                      transform transition-all duration-200 hover:scale-125
+                      ${rs.glow}`}
+                  >
+                    <img
+                      src={imgSrc}
+                      alt={card.name}
+                      className="absolute inset-0 w-full h-full object-cover"
+                    />
+                    <div className="absolute bottom-0 w-full bg-black/70 text-center p-1 text-sm">
+                      <div className="font-bold">{card.name}</div>
+
+                      {card.type === "attack" && (
+                        <div>
+                          Damage: {card.dmg?.[0] ?? "?"}–{card.dmg?.[1] ?? "?"}
+                          {card.hits && card.hits > 1 ? ` x${card.hits}` : ""}
+                        </div>
+                      )}
+
+                      {card.type === "defend" && <div>Defense</div>}
+
+                      {card.type === "heal" && (
+                        <div>
+                          Heal: {card.heal}
+                          {card.damageBuff && " + DMG buff"}
+                        </div>
+                      )}
+                                  </div>
+                    </button>
+                  );
+                })}
+</div>
+          )}
+
+          {/* VÉGEREDMÉNY */}
+          {battleOver && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center z-50">
+              <div className="text-4xl mb-4">
+                {playerHP <= 0 ? "☠️ Defeat..." : "🏆 Victory!"}
+              </div>
+
+              {lastRewards && (
+                <div className="mb-2 text-sm text-gray-200">
+                  Jutalom: +{lastRewards.goldGain} arany, +
+                  {lastRewards.xpGain} XP
+                  {lastRewards.levelsGained > 0 &&
+                    ` • +${lastRewards.levelsGained} szint, +${lastRewards.addedStatPoints} stat pont (ágyban kiosztható)`}
+                </div>
+              )}
+
+              <button
+                onClick={handleContinue}
+                className="px-8 py-3 rounded-lg bg-gray-800 hover:bg-gray-700 transition text-lg"
+              >
+                Continue
+              </button>
             </div>
           )}
 
-          <button
-            onClick={handleContinue}
-            className="px-8 py-3 rounded-lg bg-gray-800 hover:bg-gray-700 transition text-lg"
-          >
-            Continue
-          </button>
+          {/* ABILITY VIDEÓ EFFEKTEK */}
+          <AbilityEffectLayer
+            effects={abilityEffects}
+            onEffectDone={(id) =>
+              setAbilityEffects((prev) => prev.filter((fx) => fx.id !== id))
+            }
+          />
         </div>
-      )}
-
-      {/* INTRO TRANSITION VIDEO – WEBM ÁTLÁTSZÓVAL */}
-    
-  
+      </div>
     </div>
   );
 }
