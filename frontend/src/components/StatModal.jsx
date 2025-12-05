@@ -1,7 +1,7 @@
 // frontend/src/components/StatModal.jsx
 import React, { useState } from "react";
 import { usePlayer } from "../context/PlayerContext.jsx";
-import Cim from "../Cim.jsx";
+
 
 function xpToNextLevel(level) {
   if (level <= 1) return 30;

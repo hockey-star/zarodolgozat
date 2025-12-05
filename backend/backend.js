@@ -356,21 +356,21 @@ app.post("/api/shop/buy", (req, res) => {
         const gold = players[0].gold;
 
         // 2. Tárgy lekérdezése
-        pool.query("SELECT price FROM items WHERE id = ?", [itemId], (err, itemRes) => {
+        pool.query("SELECT prize FROM items WHERE id = ?", [itemId], (err, itemRes) => {
             if (err) return res.status(500).json({ error: "DB hiba" });
             if (itemRes.length === 0) return res.status(404).json({ error: "Tárgy nem található" });
 
-            const price = itemRes[0].price;
+            const prize = itemRes[0].prize;
 
             // 3. Ellenőrzés
-            if (gold < price) {
+            if (gold < prize) {
                 return res.status(400).json({ error: "Nincs elég arany" });
             }
 
             // 4. Arany levonás
             pool.query(
                 "UPDATE players SET gold = gold - ? WHERE id = ?",
-                [price, playerId],
+                [prize, playerId],
                 err => {
                     if (err) return res.status(500).json({ error: "DB hiba arany levonásakor" });
                     
@@ -396,44 +396,93 @@ app.post("/api/shop/buy", (req, res) => {
 {/*fejleszt*/}
 
 app.post("/api/blacksmith/upgrade", (req, res) => {
-    const { playerId, itemId } = req.body;
+  const { playerId, itemId } = req.body;
+  if (!playerId || !itemId) return res.status(400).json({ success:false, error: "Hiányzó paraméter" });
 
-    // 1. játékos xp
-    pool.query("SELECT xp FROM players WHERE id = ?", [playerId], (err, playerRes) => {
-        if (err) return res.status(500).json({ error: "DB hiba" });
+  // költség-multiplikátor: összhangban a frontenddel (250)
+  const MULT = 250;
 
-        const playerXP = playerRes[0].xp;
+  pool.getConnection((err, conn) => {
+    if (err) {
+      console.error("Conn error:", err);
+      return res.status(500).json({ success:false, error: "DB connection error" });
+    }
 
-        // 2. tárgy adatok a birtokolbol
-        pool.query(
-            "SELECT * FROM birtokol WHERE player_id = ? AND item_id = ?",
-            [playerId, itemId],
-            (err, itemRes) => {
-                if (err) return res.status(500).json({ error: "DB hiba" });
-                if (itemRes.length === 0) return res.status(400).json({ error: "Nincs ilyen tárgyad" });
+    conn.beginTransaction(async (err) => {
+      if (err) {
+        conn.release();
+        console.error("TX begin error:", err);
+        return res.status(500).json({ success:false, error: "DB transaction error" });
+      }
 
-                const item = itemRes[0];
-                const cost = (item.upgrade_level + 1) * 200;
-
-                if (playerXP < cost)
-                    return res.status(400).json({ error: "Nincs elég XP" });
-
-                // 3. XP levonás
-                pool.query("UPDATE players SET xp = xp - ? WHERE id = ?", [cost, playerId]);
-
-                // 4. Upgrade level növelése
-                pool.query(
-                    "UPDATE birtokol SET upgrade_level = upgrade_level + 1 WHERE id = ?",
-                    [item.id]
-                );
-
-                res.json({
-  message: "Sikeres fejlesztés",
-  newUpgradeLevel: item.upgrade_level + 1
-});
-            }
+      try {
+        // 1) lekérjük a játékos XP-jét (zárás miatt FOR UPDATE - MySQL esetén)
+        const [playerRows] = await new Promise((resolve, reject) =>
+          conn.query("SELECT xp FROM players WHERE id = ? FOR UPDATE", [playerId], (e, r) => e ? reject(e) : resolve([r]))
         );
-    });
+        if (!playerRows || playerRows.length === 0) throw { status:400, message: "Nincs ilyen játékos" };
+        const playerXP = playerRows[0].xp;
+
+        // 2) lekérjük a birtokol sort (is lock)
+        const [itemRows] = await new Promise((resolve, reject) =>
+          conn.query(
+            "SELECT * FROM birtokol WHERE player_id = ? AND item_id = ? FOR UPDATE",
+            [playerId, itemId],
+            (e, r) => e ? reject(e) : resolve([r])
+          )
+        );
+        if (!itemRows || itemRows.length === 0) throw { status:400, message: "Nincs ilyen tárgyad" };
+        const item = itemRows[0];
+
+        const cost = (item.upgrade_level + 1) * MULT;
+        if (playerXP < cost) throw { status:400, message: "Nincs elég XP" };
+
+        // 3) levonjuk az XP-t
+        await new Promise((resolve, reject) =>
+          conn.query("UPDATE players SET xp = xp - ? WHERE id = ?", [cost, playerId], (e, r) => e ? reject(e) : resolve(r))
+        );
+
+        // 4) növeljük az upgrade_level-t (itt WHERE id = item.id ha birtokol.id azonosító)
+        // ha a birtokol tábla primer kulcsa 'id', használjuk azt; ha nincs, használjuk player_id+item_id
+        const whereClause = item.id ? "WHERE id = ?" : "WHERE player_id = ? AND item_id = ?";
+        const whereParams = item.id ? [item.id] : [playerId, itemId];
+
+        await new Promise((resolve, reject) =>
+          conn.query(
+            `UPDATE birtokol SET upgrade_level = upgrade_level + 1 ${whereClause}`,
+            whereParams,
+            (e, r) => e ? reject(e) : resolve(r)
+          )
+        );
+
+        // 5) lekérjük az új upgrade szintet és a maradék XP-t a válaszba
+        const [newItemRows] = await new Promise((resolve, reject) =>
+          conn.query("SELECT upgrade_level FROM birtokol WHERE player_id = ? AND item_id = ?", [playerId, itemId], (e, r) => e ? reject(e) : resolve([r]))
+        );
+        const newUpgradeLevel = newItemRows && newItemRows[0] ? newItemRows[0].upgrade_level : item.upgrade_level + 1;
+
+        const [newPlayerRows] = await new Promise((resolve, reject) =>
+          conn.query("SELECT xp FROM players WHERE id = ?", [playerId], (e, r) => e ? reject(e) : resolve([r]))
+        );
+        const newXP = newPlayerRows && newPlayerRows[0] ? newPlayerRows[0].xp : playerXP - cost;
+
+        await new Promise((resolve, reject) => conn.commit(err2 => err2 ? reject(err2) : resolve()));
+
+        conn.release();
+        return res.json({
+          success: true,
+          message: "Sikeres fejlesztés",
+          newUpgradeLevel,
+          newXP
+        });
+      } catch (e) {
+        conn.rollback(() => conn.release());
+        console.error("Upgrade error:", e);
+        if (e && e.status) return res.status(e.status).json({ success:false, error: e.message });
+        return res.status(500).json({ success:false, error: "Szerverhiba a fejlesztés közben" });
+      }
+    }); // beginTransaction
+  }); // getConnection
 });
 
 app.get("/api/items", (req, res) => {
@@ -444,17 +493,24 @@ app.get("/api/items", (req, res) => {
 });
 
 app.get("/api/player/:id/items", (req, res) => {
+  const playerId = req.params.id;
   pool.query(
     `SELECT pi.*, i.name, i.type, i.min_dmg, i.max_dmg, 
             i.intellect_bonus, i.defense_bonus, i.hp_bonus, i.rarity
      FROM birtokol pi
      JOIN items i ON i.id = pi.item_id
      WHERE pi.player_id = ?`,
-    [req.params.id],
+    [playerId],
     (err, results) => {
-      if (err) return res.status(500).json({ error: "DB error" });
-      });
-      });
+      if (err) {
+        console.error("DB error in /api/player/:id/items", err);
+        return res.status(500).json({ error: "DB error" });
+      }
+      // visszaküldjük az eredményt a kliensnek
+      res.json(results);
+    }
+  );
+});
 
 
 // Játékos összes questje

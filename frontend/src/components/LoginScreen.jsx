@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from "react";
 import "./LoginScreen.css";
 import { usePlayer } from "../context/PlayerContext.jsx";
-import Cim from "../Cim.jsx";
+
 
 export default function LoginScreen({ onLogin }) {
   const { setPlayer } = usePlayer();

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import Cim from "../Cim.jsx";
+
 
 export default function ShopModal({ onClose }) {
   const [playerData, setPlayerData] = useState(null);
@@ -57,7 +57,8 @@ export default function ShopModal({ onClose }) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
+    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50"
+    >
       <div className="relative bg-gray-900 border border-gray-700 rounded-xl w-[90%] h-[80%] flex shadow-xl p-6 text-white">
         <button onClick={onClose} className="absolute top-3 right-3 text-gray-400 hover:text-red-400">X</button>
 
@@ -97,19 +98,10 @@ export default function ShopModal({ onClose }) {
         </div>
 
         <div className="w-1/3 bg-black/40 rounded p-4 border-l border-gray-700">
-          <h2 className="text-lg mb-3">Tárgy összehasonlítás</h2>
-          <div className="flex justify-between text-sm">
+          <h2 className="text-lg mb-3">Tárgy:</h2>
+          <div className="flex justify-between">
             <div>
-              <p className="text-gray-400">Jelenlegi</p>
-              <p>Vas kard +3</p>
-              <p>Támadás: 12</p>
-              <p>Védelem: 4</p>
-            </div>
-            <div>
-              <p className="text-gray-400">Új</p>
-              <p>Vas kard +5</p>
-              <p>Támadás: 16</p>
-              <p>Védelem: 6</p>
+              <img src="/public/cards/epic/warrior_mortal_strike.png"/>
             </div>
           </div>
         </div>

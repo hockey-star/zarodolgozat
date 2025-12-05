@@ -3,7 +3,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { DEFAULT_CLASSES } from "../data/classes.js";
 import { usePlayer } from "../context/PlayerContext.jsx";
 import "./ClassSelect.css";
-import Cim from "../Cim.jsx";
+
 
 
 export default function ClassSelect({ onNext }) {
