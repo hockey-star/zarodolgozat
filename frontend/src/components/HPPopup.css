@@ -1,11 +1,14 @@
+/* frontend/src/components/HPPopup.css */
 @import url('https://fonts.googleapis.com/css2?family=Jacquard+12&family=Jersey+10&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Jersey+10&family=Jersey+20&display=swap');
 
 .hp-popup {
   position: absolute;
+  left: 50%;
+  top: -10px; /* a frame fölött picivel */
+  transform: translateX(-50%);
   font-weight: bold;
   font-size: 18px;
-  transform: translateX(-50%);
   opacity: 1;
   animation: floatUp 0.8s forwards;
   pointer-events: none;

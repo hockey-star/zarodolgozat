@@ -11,7 +11,6 @@ import PathChoice from "./components/PathChoice.jsx";
 import CombatView from "./components/CombatView.jsx";
 import RestCampfire from "./components/RestCampfire.jsx";
 
-// ⬇️ ÚJ IMPORTOK
 import TransitionOverlay from "./components/TransitionOverlay.jsx";
 import combatIntroVideo from "./assets/transitions/combat-intro.webm";
 
@@ -27,14 +26,11 @@ function AppInner() {
   const [combatPath, setCombatPath] = useState(null);
   const [level, setLevel] = useState(1);
   const [combatFinished, setCombatFinished] = useState(false);
-  const [pathRerollKey, setPathRerollKey] = useState(0); // rest után új PathChoice RNG
-
-  // ⬇️ ÚJ: transition állapot
+  const [pathRerollKey, setPathRerollKey] = useState(0);
   const [showTransition, setShowTransition] = useState(false);
 
   const { setPlayer } = usePlayer();
 
-  // 🔹 LOGIN FLOW
   async function handleLogin(username) {
     try {
       const res = await fetch(
@@ -57,17 +53,13 @@ function AppInner() {
     setScreen(next);
   }
 
-  // 🔹 PathChoice → REST / FIGHT / ELITE / MYSTERY
   function handleStartPath(path) {
-    // path: { type: "fight" | "elite" | "mystery" | "rest" }
-
-    // 😴 REST – kitérés, NEM lépteti a levelt
     if (path.type === "rest") {
       setPlayer((prev) => {
         if (!prev) return prev;
         const maxHp = prev.max_hp ?? prev.hp ?? 100;
         const currentHp = prev.hp ?? maxHp;
-        const healAmount = Math.floor(maxHp * 0.4); // kb 40% heal
+        const healAmount = Math.floor(maxHp * 0.4);
         const newHp = Math.min(maxHp, currentHp + healAmount);
 
         return {
@@ -76,31 +68,21 @@ function AppInner() {
         };
       });
 
-      // átmegyünk a tábortűz képernyőre
       setCombatPath(null);
       setScreen("restCampfire");
       return;
     }
 
-    // minden más: combat path + TRANSITION
     setCombatPath(path);
     setCombatFinished(false);
-
-    // ⬇️ EKKOR már átmegyünk combat screenre
     setScreen("combat");
-
-    // ⬇️ ÉS EKKOR indul a villám / sötétítés overlay
     setShowTransition(true);
   }
 
-  /**
-   * CombatView → onEnd(playerHP, victory)
-   */
   function handleCombatEnd(playerHP, victory) {
     if (combatFinished) return;
     setCombatFinished(true);
 
-    // ELBUKTÁL → vissza hub + full heal
     if (!victory) {
       setPlayer((prev) =>
         prev
@@ -118,15 +100,13 @@ function AppInner() {
       return;
     }
 
-    // ha még NEM final boss volt
     if (level < FINAL_BOSS_LEVEL) {
       setTimeout(() => {
-        setLevel((prev) => prev + 1); // 🔥 csak COMBAT után lépünk előre!
+        setLevel((prev) => prev + 1);
         setScreen("pathChoice");
         setCombatPath(null);
       }, 300);
     } else {
-      // FINAL BOSS legyőzve
       setPlayer((prev) =>
         prev
           ? {
@@ -145,13 +125,11 @@ function AppInner() {
 
   const isFinalBoss = level === FINAL_BOSS_LEVEL;
 
-  // 🔹 REST CAMPFIRE -> vissza az ösvényre (ugyanaz a szint, új random opciók)
   function handleRestBackToPath() {
-    setPathRerollKey((prev) => prev + 1); // új RNG PathChoice-ban
+    setPathRerollKey((prev) => prev + 1);
     setScreen("pathChoice");
   }
 
-  // 🔹 REST CAMPFIRE -> hazamész
   function handleRestGoHub() {
     setLevel(1);
     setCombatPath(null);
@@ -197,21 +175,20 @@ function AppInner() {
           level={level}
           enemies={isFinalBoss ? bossEnemies : defaultEnemies}
           boss={isFinalBoss}
-          background={`/backgrounds/3.jpg`}   // ha public-ból jön
+          background={`/backgrounds/3.jpg`}
           pathType={combatPath.type}
           onEnd={handleCombatEnd}
         />
       )}
 
-      {/* ⬇️ TRANSITION OVERLAY – csak combat alatt, ha aktív */}
       {showTransition && (
         <TransitionOverlay
-             src={combatIntroVideo}
+          src={combatIntroVideo}
           onEnd={() => setShowTransition(false)}
           videoDelay={200}
-          darkOpacityStart={1.0}  // teljesen fekete indulás
-          darkOpacityMid={0.5}    // villám alatt: enyhébb sötét
-          fadeDuration={600}      // kifakulás ideje
+          darkOpacityStart={1.0}
+          darkOpacityMid={0.5}
+          fadeDuration={600}
         />
       )}
     </>
@@ -222,9 +199,7 @@ export default function App() {
   return (
     <PlayerProvider>
       <div className="min-h-screen bg-black text-gray-100">
-        <div className="max-w-5xl mx-auto">
-          <AppInner />
-        </div>
+        <AppInner />
       </div>
     </PlayerProvider>
   );
