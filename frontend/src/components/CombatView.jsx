@@ -768,7 +768,43 @@ useEffect(() => {
       setBattleOver(true);
     }
   }, [playerHP, enemyHP, enemy]);
+// 🏆 GYŐZELEM UTÁN AZONNAL SZÁMOLJUK A JUTALMAT
+useEffect(() => {
+  if (!enemy) return;
+  if (!player) return;
 
+  const victory = enemyHP <= 0 && playerHP > 0;
+  if (!victory) return;
+
+  // ha már van reward, ne számoljuk újra
+  if (lastRewards) return;
+
+  const { xpGain, goldGain } = rollRewards();
+
+  const oldLevel = player.level ?? 1;
+  let newXP = (player.xp ?? 0) + xpGain;
+  let newLevel = oldLevel;
+  let levelsGained = 0;
+
+  while (newXP >= xpToNextLevel(newLevel)) {
+    newXP -= xpToNextLevel(newLevel);
+    newLevel += 1;
+    levelsGained += 1;
+  }
+
+  const addedStatPoints = levelsGained * 3;
+
+  setLastRewards({
+    xpGain,
+    goldGain,
+    levelsGained,
+    addedStatPoints,
+    newXP,
+    newLevel,
+  });
+
+  pushLog(`🏆 Győzelem! +${goldGain} arany, +${xpGain} XP.`);
+}, [enemy, enemyHP, playerHP, player, lastRewards]);
   // ENEMY KÖR – (logika változatlan, csak addHPPopup targettel)
   useEffect(() => {
     if (!enemy || battleOver || turn !== "enemy") return;
