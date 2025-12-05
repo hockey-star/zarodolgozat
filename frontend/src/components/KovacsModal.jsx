@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import Cim from "../Cim.jsx";
+
 
 export default function BlacksmithModal({ onClose }) {
   const [playerData, setPlayerData] = useState(null);
@@ -90,7 +90,14 @@ export default function BlacksmithModal({ onClose }) {
   
   return (
     <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
-      <div className="relative bg-gray-900 border border-gray-700 rounded-xl w-[80%] h-[70%] flex flex-col shadow-xl p-6 text-white">
+      <div className="relative w-[85%] h-[85%] flex-col shadow-xl p-6 text-white"
+      
+      style={{
+    backgroundImage: "url('./src/assets/pics/KOVACS.png')",
+    backgroundSize: "cover",
+    backgroundPosition: "center",
+    backgroundRepeat: "no-repeat"
+  }}>
         <button onClick={onClose} className="absolute top-3 right-3 text-gray-400 hover:text-red-400">✕</button>
 
         {loading ? (
@@ -124,8 +131,9 @@ export default function BlacksmithModal({ onClose }) {
             {error && <div className="text-red-400 text-sm mb-2">{error}</div>}
 
             <div className="flex justify-between flex-1">
-              <div className="w-1/3 bg-black/40 rounded p-4 border border-gray-700">
+              <div className="w-[15%] bg-black/40 rounded p-4 border border-gray-700">
                 <h2 className="text-center mb-2 text-sm">Jelenlegi tárgy</h2>
+                <div className="text-center">
                 {selectedItem ? (
                   <>
                     <p>{selectedItem.name} +{selectedItem.upgrade_level}</p>
@@ -134,10 +142,11 @@ export default function BlacksmithModal({ onClose }) {
                     <p>HP: {selectedItem.hp_bonus}</p>
                   </>
                 ) : <p>—</p>}
+                </div>
               </div>
 
               <div className="w-1/3 flex flex-col items-center justify-center text-center">
-                <p className="text-gray-400 text-3xl">→</p>
+                
                 <p className="text-sm mt-2">
                   Fejlesztés költsége: {selectedItem ? ((selectedItem.upgrade_level + 1) * 250) : "-"} XP
                 </p>
@@ -150,8 +159,9 @@ export default function BlacksmithModal({ onClose }) {
                 </button>
               </div>
 
-              <div className="w-1/3 bg-black/40 rounded p-4 border border-gray-700">
+              <div className="w-[15%] bg-black/40 rounded p-4 border border-gray-700">
                 <h2 className="text-center mb-2 text-sm">Fejlesztett tárgy</h2>
+                <div className="text-center">
                 {selectedItem ? (
                   <>
                     <p>{selectedItem.name} +{selectedItem.upgrade_level + 1}</p>
@@ -160,6 +170,7 @@ export default function BlacksmithModal({ onClose }) {
                     <p>HP: {selectedItem.hp_bonus + 10}</p>
                   </>
                 ) : <p>—</p>}
+                </div>
               </div>
             </div>
           </>
