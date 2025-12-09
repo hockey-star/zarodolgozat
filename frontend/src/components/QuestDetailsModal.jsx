@@ -1,5 +1,6 @@
 // frontend/src/components/QuestDetailsModal.jsx
 import React, { useState } from "react";
+import { usePlayer } from "../context/PlayerContext.jsx";
 
 export default function QuestDetailsModal({
   quest,
@@ -8,6 +9,7 @@ export default function QuestDetailsModal({
   playerId,
 }) {
   const [msg, setMsg] = useState("");
+  const { setPlayer } = usePlayer();   // ⬅⬅⬅ EZ HIÁNYZOTT
 
   async function handleClaim() {
     setMsg("");
@@ -30,6 +32,29 @@ export default function QuestDetailsModal({
       }
 
       setMsg("✅ Jutalom átvéve!");
+
+      // 🔄 játékos újratöltése a szerverről
+      try {
+        const fresh = await fetch(
+          `http://localhost:3000/api/players/${playerId}`
+        ).then((r) => r.json());
+
+        // ⚠ csak azt írjuk felül, amit biztosan visszakapunk
+        setPlayer((prev) =>
+          !prev
+            ? prev
+            : {
+                ...prev,
+                xp: fresh.xp,
+                level: fresh.level,
+                gold: fresh.gold,
+                // ha majd a backendben visszaküldöd:
+                // unspentStatPoints: fresh.unspentStatPoints ?? prev.unspentStatPoints,
+              }
+        );
+      } catch (e) {
+        console.error("Player refresh error:", e);
+      }
 
       if (onClaimSuccess) onClaimSuccess(quest.quest_id);
     } catch (err) {

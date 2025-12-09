@@ -14,7 +14,28 @@ const pool = mysql.createPool({
   password: "",
   database: "sk_projekt",
 });
+// ---------------- XP LOGIKA (SZINTLÉPÉSHEZ) ----------------
 
+function xpToNextLevel(level) {
+  if (level <= 1) return 30;
+  return 30 + (level - 1) * 20; // ugyanaz mint frontenden
+}
+
+function applyXpGain(oldLevel, oldXp, xpGain) {
+  let level = oldLevel ?? 1;
+  let xp = (oldXp ?? 0) + (xpGain ?? 0);
+  let levelsGained = 0;
+
+  while (xp >= xpToNextLevel(level)) {
+    xp -= xpToNextLevel(level);
+    level += 1;
+    levelsGained += 1;
+  }
+
+  const addedStatPoints = levelsGained * 3;
+
+  return { level, xp, levelsGained, addedStatPoints };
+}
 /* ---------------------------
    REGISTER
    --------------------------- */
@@ -343,7 +364,100 @@ app.put("/api/players/:id", (req, res) => {
   );
 });
 
+/* ---------------------------
+   COMBAT REWARD (XP + GOLD + LEVEL)
+   --------------------------- */
+
+app.post("/api/combat/reward", (req, res) => {
+  const { playerId, xpGain, goldGain, hpAfterBattle } = req.body || {};
+
+  if (!playerId) {
+    return res.status(400).json({ error: "playerId hiányzik" });
+  }
+
+  // 1) Játékos lekérdezése
+  pool.query(
+    "SELECT id, level, xp, gold, hp, max_hp, unspentStatPoints FROM players WHERE id = ?",
+    [playerId],
+    (err, results) => {
+      if (err) {
+        console.error("DB error (combat reward - select player):", err);
+        return res.status(500).json({ error: "DB hiba" });
+      }
+      if (results.length === 0) {
+        return res.status(404).json({ error: "Nincs ilyen játékos" });
+      }
+
+      const player = results[0];
+      const gainXp = xpGain || 0;
+      const gainGold = goldGain || 0;
+
+      // 2) XP → LEVEL logika
+      const {
+        level: newLevel,
+        xp: newXp,
+        levelsGained,
+        addedStatPoints,
+      } = applyXpGain(player.level, player.xp, gainXp);
+
+      const newGold = (player.gold || 0) + gainGold;
+
+      // HP mentése (ha küldöd a frontról)
+      const newHpRaw =
+        typeof hpAfterBattle === "number" ? hpAfterBattle : player.hp;
+      const newHp = Math.min(newHpRaw, player.max_hp);
+
+      // 3) UPDATE players
+      pool.query(
+        `
+        UPDATE players
+        SET level = ?, xp = ?, gold = ?, hp = ?, unspentStatPoints = unspentStatPoints + ?
+        WHERE id = ?
+        `,
+        [newLevel, newXp, newGold, newHp, addedStatPoints, player.id],
+        (updErr) => {
+          if (updErr) {
+            console.error("DB error (combat reward - update player):", updErr);
+            return res.status(500).json({ error: "DB hiba updatekor" });
+          }
+
+          // 4) Friss player vissza
+          pool.query(
+            `
+            SELECT id, username, class_id, level, xp, gold, hp, max_hp, strength, intellect, defense, unspentStatPoints
+            FROM players
+            WHERE id = ?
+            `,
+            [player.id],
+            (sel2Err, updatedRows) => {
+              if (sel2Err) {
+                console.error("DB error (combat reward - reselect):", sel2Err);
+                return res.status(500).json({ error: "DB hiba reselectkor" });
+              }
+
+              const updatedPlayer = updatedRows[0];
+
+              return res.json({
+                success: true,
+                rewards: {
+                  xpGain: gainXp,
+                  goldGain: gainGold,
+                  levelsGained,
+                  addedStatPoints,
+                },
+                player: updatedPlayer,
+              });
+            }
+          );
+        }
+      );
+    }
+  );
+});
+
 {/*Vesz*/}
+
+
 
 app.post("/api/shop/buy", (req, res) => {
     const { playerId, itemId } = req.body;
@@ -393,11 +507,14 @@ app.post("/api/shop/buy", (req, res) => {
 });
 
 
-{/*fejleszt*/}
-
+{/* fejleszt – GOLD alapú, nem XP */}
 app.post("/api/blacksmith/upgrade", (req, res) => {
   const { playerId, itemId } = req.body;
-  if (!playerId || !itemId) return res.status(400).json({ success:false, error: "Hiányzó paraméter" });
+  if (!playerId || !itemId) {
+    return res
+      .status(400)
+      .json({ success: false, error: "Hiányzó paraméter" });
+  }
 
   // költség-multiplikátor: összhangban a frontenddel (250)
   const MULT = 250;
@@ -405,81 +522,121 @@ app.post("/api/blacksmith/upgrade", (req, res) => {
   pool.getConnection((err, conn) => {
     if (err) {
       console.error("Conn error:", err);
-      return res.status(500).json({ success:false, error: "DB connection error" });
+      return res
+        .status(500)
+        .json({ success: false, error: "DB connection error" });
     }
 
     conn.beginTransaction(async (err) => {
       if (err) {
         conn.release();
         console.error("TX begin error:", err);
-        return res.status(500).json({ success:false, error: "DB transaction error" });
+        return res
+          .status(500)
+          .json({ success: false, error: "DB transaction error" });
       }
 
       try {
-        // 1) lekérjük a játékos XP-jét (zárás miatt FOR UPDATE - MySQL esetén)
+        // 1) játékos GOLD lekérése (lockolva)
         const [playerRows] = await new Promise((resolve, reject) =>
-          conn.query("SELECT xp FROM players WHERE id = ? FOR UPDATE", [playerId], (e, r) => e ? reject(e) : resolve([r]))
+          conn.query(
+            "SELECT gold FROM players WHERE id = ? FOR UPDATE",
+            [playerId],
+            (e, r) => (e ? reject(e) : resolve([r]))
+          )
         );
-        if (!playerRows || playerRows.length === 0) throw { status:400, message: "Nincs ilyen játékos" };
-        const playerXP = playerRows[0].xp;
+        if (!playerRows || playerRows.length === 0)
+          throw { status: 400, message: "Nincs ilyen játékos" };
+        const playerGold = playerRows[0].gold;
 
-        // 2) lekérjük a birtokol sort (is lock)
+        // 2) birtokol sor lockolva
         const [itemRows] = await new Promise((resolve, reject) =>
           conn.query(
             "SELECT * FROM birtokol WHERE player_id = ? AND item_id = ? FOR UPDATE",
             [playerId, itemId],
-            (e, r) => e ? reject(e) : resolve([r])
+            (e, r) => (e ? reject(e) : resolve([r]))
           )
         );
-        if (!itemRows || itemRows.length === 0) throw { status:400, message: "Nincs ilyen tárgyad" };
+        if (!itemRows || itemRows.length === 0)
+          throw { status: 400, message: "Nincs ilyen tárgyad" };
         const item = itemRows[0];
 
         const cost = (item.upgrade_level + 1) * MULT;
-        if (playerXP < cost) throw { status:400, message: "Nincs elég XP" };
 
-        // 3) levonjuk az XP-t
+        // 3) elég gold?
+        if (playerGold < cost)
+          throw { status: 400, message: "Nincs elég arany" };
+
+        // 4) levonjuk az aranyat
         await new Promise((resolve, reject) =>
-          conn.query("UPDATE players SET xp = xp - ? WHERE id = ?", [cost, playerId], (e, r) => e ? reject(e) : resolve(r))
+          conn.query(
+            "UPDATE players SET gold = gold - ? WHERE id = ?",
+            [cost, playerId],
+            (e, r) => (e ? reject(e) : resolve(r))
+          )
         );
 
-        // 4) növeljük az upgrade_level-t (itt WHERE id = item.id ha birtokol.id azonosító)
-        // ha a birtokol tábla primer kulcsa 'id', használjuk azt; ha nincs, használjuk player_id+item_id
-        const whereClause = item.id ? "WHERE id = ?" : "WHERE player_id = ? AND item_id = ?";
+        // 5) növeljük az upgrade_level-t
+        const whereClause = item.id
+          ? "WHERE id = ?"
+          : "WHERE player_id = ? AND item_id = ?";
         const whereParams = item.id ? [item.id] : [playerId, itemId];
 
         await new Promise((resolve, reject) =>
           conn.query(
             `UPDATE birtokol SET upgrade_level = upgrade_level + 1 ${whereClause}`,
             whereParams,
-            (e, r) => e ? reject(e) : resolve(r)
+            (e, r) => (e ? reject(e) : resolve(r))
           )
         );
 
-        // 5) lekérjük az új upgrade szintet és a maradék XP-t a válaszba
+        // 6) új upgrade szint + maradék GOLD vissza
         const [newItemRows] = await new Promise((resolve, reject) =>
-          conn.query("SELECT upgrade_level FROM birtokol WHERE player_id = ? AND item_id = ?", [playerId, itemId], (e, r) => e ? reject(e) : resolve([r]))
+          conn.query(
+            "SELECT upgrade_level FROM birtokol WHERE player_id = ? AND item_id = ?",
+            [playerId, itemId],
+            (e, r) => (e ? reject(e) : resolve([r]))
+          )
         );
-        const newUpgradeLevel = newItemRows && newItemRows[0] ? newItemRows[0].upgrade_level : item.upgrade_level + 1;
+        const newUpgradeLevel =
+          newItemRows && newItemRows[0]
+            ? newItemRows[0].upgrade_level
+            : item.upgrade_level + 1;
 
         const [newPlayerRows] = await new Promise((resolve, reject) =>
-          conn.query("SELECT xp FROM players WHERE id = ?", [playerId], (e, r) => e ? reject(e) : resolve([r]))
+          conn.query(
+            "SELECT gold FROM players WHERE id = ?",
+            [playerId],
+            (e, r) => (e ? reject(e) : resolve([r]))
+          )
         );
-        const newXP = newPlayerRows && newPlayerRows[0] ? newPlayerRows[0].xp : playerXP - cost;
+        const newGold =
+          newPlayerRows && newPlayerRows[0]
+            ? newPlayerRows[0].gold
+            : playerGold - cost;
 
-        await new Promise((resolve, reject) => conn.commit(err2 => err2 ? reject(err2) : resolve()));
+        await new Promise((resolve, reject) =>
+          conn.commit((err2) => (err2 ? reject(err2) : resolve()))
+        );
 
         conn.release();
         return res.json({
           success: true,
           message: "Sikeres fejlesztés",
           newUpgradeLevel,
-          newXP
+          newGold,
         });
       } catch (e) {
         conn.rollback(() => conn.release());
         console.error("Upgrade error:", e);
-        if (e && e.status) return res.status(e.status).json({ success:false, error: e.message });
-        return res.status(500).json({ success:false, error: "Szerverhiba a fejlesztés közben" });
+        if (e && e.status)
+          return res
+            .status(e.status)
+            .json({ success: false, error: e.message });
+        return res.status(500).json({
+          success: false,
+          error: "Szerverhiba a fejlesztés közben",
+        });
       }
     }); // beginTransaction
   }); // getConnection
@@ -642,13 +799,21 @@ app.post("/api/quests/claim", (req, res) => {
 
   console.log(">>> CLAIM request:", { playerId, questId });
 
-  // 1. jutalom lekérdezés
+  // 1. reward + player alapadat egyben
   pool.query(
     `
-    SELECT qm.reward_xp, qm.reward_gold 
+    SELECT 
+      qm.reward_xp, 
+      qm.reward_gold,
+      p.level AS player_level,
+      p.xp    AS player_xp,
+      p.unspentStatPoints
     FROM quests_master qm
     JOIN player_quests pq ON pq.quest_id = qm.id
-    WHERE pq.player_id = ? AND qm.id = ? AND pq.status = 'completed'
+    JOIN players p        ON p.id = pq.player_id
+    WHERE pq.player_id = ? 
+      AND qm.id = ? 
+      AND pq.status = 'completed'
     `,
     [playerId, questId],
     (err, results) => {
@@ -661,28 +826,45 @@ app.post("/api/quests/claim", (req, res) => {
         return res.status(400).json({ error: "Nem claimelhető" });
       }
 
-      const { reward_xp, reward_gold } = results[0];
-      console.log(
-        `>>> CLAIM: reward_xp=${reward_xp}, reward_gold=${reward_gold}`
-      );
+      const row = results[0];
+      const reward_xp = row.reward_xp || 0;
+      const reward_gold = row.reward_gold || 0;
 
-      // 2. reward hozzáadása playerhez
+      let level = row.player_level ?? 1;
+      let xp    = row.player_xp   ?? 0;
+      let unspent = row.unspentStatPoints ?? 0;
+
+      // 🔥 2. XP hozzáadása + szintlépés kiszámítása BACKENDEN
+      xp += reward_xp;
+      let levelsGained = 0;
+
+      while (xp >= xpToNextLevel(level)) {
+        xp -= xpToNextLevel(level);
+        level += 1;
+        levelsGained += 1;
+      }
+
+      const addedStatPoints = levelsGained * 3;
+
+      // 3. player frissítése: xp, level, gold, statpontok
       pool.query(
         `
         UPDATE players
-        SET xp = xp + ?, gold = gold + ?
+        SET 
+          xp = ?, 
+          level = ?, 
+          gold = gold + ?, 
+          unspentStatPoints = unspentStatPoints + ?
         WHERE id = ?
         `,
-        [reward_xp, reward_gold, playerId],
+        [xp, level, reward_gold, addedStatPoints, playerId],
         (err2) => {
           if (err2) {
             console.error("XP/Gold update error:", err2);
-            return res
-              .status(500)
-              .json({ error: "XP/Gold update error" });
+            return res.status(500).json({ error: "XP/Gold update error" });
           }
 
-          // 3. quest státusz "claimed"
+          // 4. quest státusz "claimed"
           pool.query(
             `
             UPDATE player_quests
@@ -700,7 +882,7 @@ app.post("/api/quests/claim", (req, res) => {
 
               console.log(">>> CLAIM: quest státusz -> claimed");
 
-              // 4. Következő ALAP quest aktiválása (class_required IS NULL)
+              // 5. Következő ALAP quest aktiválása (class_required IS NULL)
               pool.query(
                 `
                 SELECT qm.id
@@ -756,7 +938,7 @@ app.post("/api/quests/claim", (req, res) => {
                     );
                   };
 
-                  // 5. Class quest feloldás, ha mind az 5 alap quest CLAIMED
+                  // 6. Class quest feloldás logika (marad, ahogy volt)
                   activateNextQuest(() => {
                     pool.query(
                       `
@@ -788,9 +970,14 @@ app.post("/api/quests/claim", (req, res) => {
                         );
 
                         if (claimedCount < 5) {
-                          // még nincs kész mind az 5 alap quest
                           return res.json({
                             message: "Küldetés claimelve!",
+                            level,
+                            xp,
+                            levelsGained,
+                            addedStatPoints,
+                            reward_gold,
+                            reward_xp,
                           });
                         }
 
@@ -815,6 +1002,12 @@ app.post("/api/quests/claim", (req, res) => {
                               return res.json({
                                 message:
                                   "Küldetés claimelve, de a class quest feloldása közben hiba történt.",
+                                level,
+                                xp,
+                                levelsGained,
+                                addedStatPoints,
+                                reward_gold,
+                                reward_xp,
                               });
                             }
 
@@ -825,6 +1018,12 @@ app.post("/api/quests/claim", (req, res) => {
                             return res.json({
                               message:
                                 "Küldetés claimelve, következő quest / class quest frissítve!",
+                              level,
+                              xp,
+                              levelsGained,
+                              addedStatPoints,
+                              reward_gold,
+                              reward_xp,
                             });
                           }
                         );
@@ -840,8 +1039,6 @@ app.post("/api/quests/claim", (req, res) => {
     }
   );
 });
-
-
 app.listen(port, () => {
   console.log(`Backend fut a ${port} porton`);
 });

@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from "react";
 import "./HPPopup.css";
 
-export default function HPPopup({ value, onDone }) {
+export default function HPPopup({ value, isCrit = false, onDone }) {
   const [visible, setVisible] = useState(true);
 
   useEffect(() => {
@@ -15,10 +15,15 @@ export default function HPPopup({ value, onDone }) {
 
   if (!visible) return null;
 
+  const cls =
+    value < 0
+      ? isCrit
+        ? "hp-popup damage crit"
+        : "hp-popup damage"
+      : "hp-popup heal";
+
   return (
-    <div
-      className={`hp-popup ${value < 0 ? "damage" : "heal"}`}
-    >
+    <div className={cls}>
       {value > 0 ? `+${value}` : value}
     </div>
   );
