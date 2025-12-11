@@ -148,7 +148,7 @@ export default function CombatView({
   const [hand, setHand] = useState([]);
 
   // animációk
-  const [hpPopups, setHPPopups] = useState([]); // {id, value, target}
+  const [hpPopups, setHPPopups] = useState([]); // {id, value, target, isCrit}
   const [playerDamaged, setPlayerDamaged] = useState(false);
   const [playerHealed, setPlayerHealed] = useState(false);
   const [enemyDamaged, setEnemyDamaged] = useState(false);
@@ -202,30 +202,31 @@ export default function CombatView({
   };
 
   function pushLog(msg) {
-  setLog((prev) => {
-    const last = prev[prev.length - 1];
+    setLog((prev) => {
+      const last = prev[prev.length - 1];
 
-    // ❌ Ha ugyanaz az üzenet jönne be újra egymás után, nem rakjuk be
-    if (last === msg) return prev;
+      // ❌ Ha ugyanaz az üzenet jönne be újra egymás után, nem rakjuk be
+      if (last === msg) return prev;
 
-    return [...prev, msg];
-  });
-}
-useEffect(() => {
-  if (logEndRef.current) {
-    logEndRef.current.scrollIntoView({ behavior: "smooth" });
+      return [...prev, msg];
+    });
   }
-}, [log]);
+
+  useEffect(() => {
+    if (logEndRef.current) {
+      logEndRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [log]);
 
   function enemyImage(name) {
     if (!name) return "";
     return `/ui/enemies/${name.toLowerCase().replace(/ /g, "-")}.png`;
   }
 
-  // 🔹 HP popup helper – csak targetet kap
-  function addHPPopup(value, target) {
+  // 🔹 HP popup helper – target + crit flag
+  function addHPPopup(value, target, isCrit = false) {
     const id = Date.now() + Math.random();
-    setHPPopups((prev) => [...prev, { id, value, target }]);
+    setHPPopups((prev) => [...prev, { id, value, target, isCrit }]);
 
     if (value < 0) {
       if (target === "player") {
@@ -421,7 +422,7 @@ useEffect(() => {
     initBattle();
   }, [level, boss, pathType, enemies, player, classKey]);
 
-  // KÁRTYA KIJÁTSZÁSA – (logika ugyanaz, csak addHPPopup targettel)
+  // KÁRTYA KIJÁTSZÁSA
   function playCard(card) {
     if (battleOver || turn !== "player" || !enemy) return;
 
@@ -431,6 +432,7 @@ useEffect(() => {
     const playerStrength = player?.strength ?? 0;
     const playerIntellect = player?.intellect ?? 0;
     const playerDefense = player?.defense ?? 0;
+    const playerLevel = player?.level ?? 1;
     const playerAgi = playerStrength;
 
     if (card.type === "attack") {
@@ -503,16 +505,23 @@ useEffect(() => {
         });
       }
 
+      // 🧮 STAT + SZINT alapú sebzés bónusz
       if (classKey === "warrior") {
-        const bonus = Math.floor(playerStrength * 0.35);
+        const bonus =
+          Math.floor(playerStrength * 0.35) +
+          Math.floor(playerLevel * 0.3);
         baseMin += bonus;
         baseMax += bonus;
       } else if (classKey === "mage") {
-        const bonus = Math.floor(playerIntellect * 0.5);
+        const bonus =
+          Math.floor(playerIntellect * 0.25) +
+          Math.floor(playerLevel * 0.25);
         baseMin += bonus;
         baseMax += bonus;
       } else if (classKey === "archer") {
-        const bonus = Math.floor(playerAgi * 0.3);
+        const bonus =
+          Math.floor(playerAgi * 0.3) +
+          Math.floor(playerLevel * 0.35);
         baseMin += bonus;
         baseMax += bonus;
       }
@@ -520,77 +529,114 @@ useEffect(() => {
       if (baseMin < 1) baseMin = 1;
       if (baseMax < baseMin) baseMax = baseMin;
 
+      // 🎯 CRIT ESÉLY + SZORZÓ
+      let critChance = 0;
+      let critMultiplier = 1;
+
+      if (classKey === "warrior") {
+        // harcos: ritkább, de nagy szorzó
+        critChance = Math.min(
+          60,
+          15 + playerStrength * 0.8 + playerLevel * 1.0
+        );
+        critMultiplier = 2.25;
+      } else if (classKey === "mage") {
+        // mágus: közepes crit, alacsonyabb szorzó
+        critChance = Math.min(
+          65,
+          12 + playerIntellect * 0.7 + playerLevel * 0.8
+        );
+        critMultiplier = 1.5;
+      } else if (classKey === "archer") {
+        // íjász: sok crit, nagy szorzó
+        critChance = Math.min(
+          70,
+          18 + playerAgi * 0.9 + playerLevel * 1.2
+        );
+        critMultiplier = 2.5;
+      }
+
       const hits = card.hits || 1;
-      const dmgRolls = [];
+      const dmgRolls = []; // { amount, isCrit }
 
       for (let i = 0; i < hits; i++) {
-        const roll =
+        let roll =
           Math.floor(Math.random() * (baseMax - baseMin + 1)) + baseMin;
-        dmgRolls.push(roll);
-      }
 
-      if (classKey === "archer") {
-        const critChance = Math.min(50, playerAgi * 1.5);
-        for (let i = 0; i < dmgRolls.length; i++) {
-          if (Math.random() * 100 < critChance) {
-            dmgRolls[i] = Math.floor(dmgRolls[i] * 2.0);
-            pushLog("💥 Kritikus találat!");
-          }
+        let isCrit = false;
+        if (Math.random() * 100 < critChance) {
+          isCrit = true;
+          roll = Math.floor(roll * critMultiplier);
         }
+
+        dmgRolls.push({ amount: roll, isCrit });
       }
 
-      let finalRolls = [...dmgRolls];
+      // 🔮 execute / buffok / vulnerability mind az amount-ra megy
+      let finalRolls = dmgRolls.map((r) => ({ ...r }));
 
-      if (card.executeBelowPercent) {
-        const hpPercent = enemy?.maxHp
-          ? Math.floor((enemyHP / enemy.maxHp) * 100)
-          : 100;
+      if (card.executeBelowPercent && enemy?.maxHp) {
+        const hpPercent = Math.floor((enemyHP / enemy.maxHp) * 100);
         if (hpPercent <= card.executeBelowPercent) {
-          finalRolls = finalRolls.map((d) => d * 2);
+          finalRolls = finalRolls.map((r) => ({
+            ...r,
+            amount: r.amount * 2,
+          }));
           pushLog("☠️ Crushing Blow – kivégzés!");
         }
       }
 
       if (playerDamageBuff && playerDamageBuff.multiplier) {
-        finalRolls = finalRolls.map((d) =>
-          Math.floor(d * playerDamageBuff.multiplier)
-        );
+        finalRolls = finalRolls.map((r) => ({
+          ...r,
+          amount: Math.floor(r.amount * playerDamageBuff.multiplier),
+        }));
         pushLog("🩸 A Rallying Shout erősíti a támadásod!");
 
-        const remaining =
-          (playerDamageBuff.remainingAttacks ?? 1) - 1;
+        const remaining = (playerDamageBuff.remainingAttacks ?? 1) - 1;
         if (remaining <= 0) {
           setPlayerDamageBuff(null);
         } else {
           setPlayerDamageBuff((prev) =>
-            prev
-              ? { ...prev, remainingAttacks: remaining }
-              : null
+            prev ? { ...prev, remainingAttacks: remaining } : null
           );
         }
       }
 
       if (enemyVulnerability && enemyVulnerability.multiplier) {
-        finalRolls = finalRolls.map((d) =>
-          Math.floor(d * enemyVulnerability.multiplier)
-        );
+        finalRolls = finalRolls.map((r) => ({
+          ...r,
+          amount: Math.floor(
+            r.amount * enemyVulnerability.multiplier
+          ),
+        }));
         pushLog(
           `🔮 A korábbi Arcane Surge miatt ${enemy.name} több sebzést szenved el!`
         );
       }
 
-      finalRolls.forEach((dmg, index) => {
+      // 💥 SEBZÉS ALKALMAZÁSA + CRIT POPUP
+      finalRolls.forEach((roll, index) => {
         setTimeout(() => {
+          const dmg = roll.amount;
+
           setEnemyHP((prev) => {
             const newHP = Math.max(0, prev - dmg);
-            addHPPopup(-dmg, "enemy");
-            pushLog(`${card.name} → ${enemy.name} kap ${dmg} sebzést.`);
+            addHPPopup(-dmg, "enemy", roll.isCrit);
+            pushLog(
+              `${card.name} → ${enemy.name} kap ${dmg} sebzést${
+                roll.isCrit ? " (KRITIKUS!)" : ""
+              }.`
+            );
             return newHP;
           });
 
           if (card.drain && card.heal) {
             setPlayerHP((prev) => {
-              const newHP = Math.min(prev + card.heal, maxHPFromPlayer);
+              const newHP = Math.min(
+                prev + card.heal,
+                maxHPFromPlayer
+              );
               addHPPopup(+card.heal, "player");
               pushLog(`🧛 Drain Life gyógyít: +${card.heal} HP.`);
               return newHP;
@@ -599,7 +645,11 @@ useEffect(() => {
         }, index * 220);
       });
 
-      if (card.poison && card.poison.damagePerTurn > 0 && card.poison.turns > 0) {
+      if (
+        card.poison &&
+        card.poison.damagePerTurn > 0 &&
+        card.poison.turns > 0
+      ) {
         const dpt = card.poison.damagePerTurn;
         const turns = card.poison.turns;
         setEnemyPoison({
@@ -637,7 +687,10 @@ useEffect(() => {
       }
 
       if (card.burn && card.burn.percent && card.burn.turns) {
-        const totalHit = finalRolls.reduce((a, b) => a + b, 0);
+        const totalHit = finalRolls.reduce(
+          (a, b) => a + b.amount,
+          0
+        );
         const burnPerTurn = Math.max(
           1,
           Math.floor((totalHit * card.burn.percent) / 100)
@@ -667,7 +720,10 @@ useEffect(() => {
         );
       }
 
-      if (card.vulnerabilityDebuff && card.vulnerabilityDebuff.multiplier) {
+      if (
+        card.vulnerabilityDebuff &&
+        card.vulnerabilityDebuff.multiplier
+      ) {
         const mult = card.vulnerabilityDebuff.multiplier ?? 1.15;
         const turns = card.vulnerabilityDebuff.turns ?? 3;
         setEnemyVulnerability({
@@ -768,44 +824,46 @@ useEffect(() => {
       setBattleOver(true);
     }
   }, [playerHP, enemyHP, enemy]);
-// 🏆 GYŐZELEM UTÁN AZONNAL SZÁMOLJUK A JUTALMAT
-useEffect(() => {
-  if (!enemy) return;
-  if (!player) return;
 
-  const victory = enemyHP <= 0 && playerHP > 0;
-  if (!victory) return;
+  // 🏆 GYŐZELEM UTÁN AZONNAL SZÁMOLJUK A JUTALMAT (csak kijelzéshez)
+  useEffect(() => {
+    if (!enemy) return;
+    if (!player) return;
 
-  // ha már van reward, ne számoljuk újra
-  if (lastRewards) return;
+    const victory = enemyHP <= 0 && playerHP > 0;
+    if (!victory) return;
 
-  const { xpGain, goldGain } = rollRewards();
+    // ha már van reward, ne számoljuk újra
+    if (lastRewards) return;
 
-  const oldLevel = player.level ?? 1;
-  let newXP = (player.xp ?? 0) + xpGain;
-  let newLevel = oldLevel;
-  let levelsGained = 0;
+    const { xpGain, goldGain } = rollRewards();
 
-  while (newXP >= xpToNextLevel(newLevel)) {
-    newXP -= xpToNextLevel(newLevel);
-    newLevel += 1;
-    levelsGained += 1;
-  }
+    const oldLevel = player.level ?? 1;
+    let newXP = (player.xp ?? 0) + xpGain;
+    let newLevel = oldLevel;
+    let levelsGained = 0;
 
-  const addedStatPoints = levelsGained * 3;
+    while (newXP >= xpToNextLevel(newLevel)) {
+      newXP -= xpToNextLevel(newLevel);
+      newLevel += 1;
+      levelsGained += 1;
+    }
 
-  setLastRewards({
-    xpGain,
-    goldGain,
-    levelsGained,
-    addedStatPoints,
-    newXP,
-    newLevel,
-  });
+    const addedStatPoints = levelsGained * 3;
 
-  pushLog(`🏆 Győzelem! +${goldGain} arany, +${xpGain} XP.`);
-}, [enemy, enemyHP, playerHP, player, lastRewards]);
-  // ENEMY KÖR – (logika változatlan, csak addHPPopup targettel)
+    setLastRewards({
+      xpGain,
+      goldGain,
+      levelsGained,
+      addedStatPoints,
+      newXP,
+      newLevel,
+    });
+
+    pushLog(`🏆 Győzelem! +${goldGain} arany, +${xpGain} XP.`);
+  }, [enemy, enemyHP, playerHP, player, lastRewards]);
+
+  // ENEMY KÖR
   useEffect(() => {
     if (!enemy || battleOver || turn !== "enemy") return;
 
@@ -827,9 +885,7 @@ useEffect(() => {
           setEnemyBurn(null);
         } else {
           setEnemyBurn((prev) =>
-            prev
-              ? { ...prev, remainingTurns: remaining }
-              : null
+            prev ? { ...prev, remainingTurns: remaining } : null
           );
         }
 
@@ -857,9 +913,7 @@ useEffect(() => {
           setEnemyPoison(null);
         } else {
           setEnemyPoison((prev) =>
-            prev
-              ? { ...prev, remainingTurns: remaining }
-              : null
+            prev ? { ...prev, remainingTurns: remaining } : null
           );
         }
 
@@ -888,9 +942,7 @@ useEffect(() => {
           setEnemyBleed(null);
         } else {
           setEnemyBleed((prev) =>
-            prev
-              ? { ...prev, remainingTurns: remaining }
-              : null
+            prev ? { ...prev, remainingTurns: remaining } : null
           );
         }
 
@@ -972,8 +1024,6 @@ useEffect(() => {
     enemyStun,
     enemyVulnerability,
   ]);
-
-  // REWARD & handleContinue – marad ugyanaz (nem írom újra végig, de ha kell, elküldöm azt a blokkot is)
 
   function rollRewards() {
     if (!enemy || !enemy.rewards) {
@@ -1076,14 +1126,10 @@ useEffect(() => {
     <div className="fixed inset-0 text-white overflow-hidden">
       {/* háttér full screen */}
       <div className="absolute inset-0 -z-10">
-        <img
-          src={bg}
-          alt="bg"
-          className="w-full h-full object-cover"
-        />
+        <img src={bg} alt="bg" className="w-full h-full object-cover" />
       </div>
 
-      {/* 1920x1080 UI canvas, skálázva */}
+      {/* 1920x1080 UI skálázva */}
       <div className="absolute inset-0 flex items-center justify-center">
         <div
           className="relative"
@@ -1112,6 +1158,7 @@ useEffect(() => {
                   <HPPopup
                     key={p.id}
                     value={p.value}
+                    isCrit={p.isCrit}
                     onDone={() =>
                       setHPPopups((prev) =>
                         prev.filter((pp) => pp.id !== p.id)
@@ -1139,6 +1186,7 @@ useEffect(() => {
                   <HPPopup
                     key={p.id}
                     value={p.value}
+                    isCrit={p.isCrit}
                     onDone={() =>
                       setHPPopups((prev) =>
                         prev.filter((pp) => pp.id !== p.id)
@@ -1149,31 +1197,34 @@ useEffect(() => {
             </div>
           </div>
 
-        {/* ✅ COMBAT LOG – AUTO SCROLL-AL */}
-        <div
-          className="absolute top-[62%] left-1/2 
+          {/* ✅ COMBAT LOG – AUTO SCROLL-AL */}
+          <div
+            className="absolute top-[62%] left-1/2 
           -translate-x-1/2 
           w-3/4 max-w-2xl 
           bg-black/50 rounded p-4 
           h-48 overflow-y-auto 
           font-mono text-sm z-10"
-        >
-          {log.map((l, i) => (
-            <div key={i} className="mb-1">{l}</div>
-          ))}
+          >
+            {log.map((l, i) => (
+              <div key={i} className="mb-1">
+                {l}
+              </div>
+            ))}
 
-          {/* ✅ EZ KELL A LEGALJÁRA AZ AUTO-SCROLLHOZ */}
-          <div ref={logEndRef} />
-        </div>
+            {/* ✅ EZ KELL A LEGALJÁRA AZ AUTO-SCROLLHOZ */}
+            <div ref={logEndRef} />
+          </div>
 
           {/* KÁRTYÁK */}
           {!battleOver && turn === "player" && (
-           <div
+            <div
               className="absolute left-1/2 -translate-x-1/2 flex gap-4 z-50"
-              style={{ bottom: "-80px" }}   // ⬅️ EZ MOZGATJA LEJJEBB
+              style={{ bottom: "-80px" }} // ⬅️ EZ MOZGATJA LEJJEBB
             >
               {hand.map((card, i) => {
-                const rs = rarityStyle[card.rarity] ?? rarityStyle.common;
+                const rs =
+                  rarityStyle[card.rarity] ?? rarityStyle.common;
                 const imgSrc = card.image;
 
                 return (
@@ -1195,8 +1246,11 @@ useEffect(() => {
 
                       {card.type === "attack" && (
                         <div>
-                          Damage: {card.dmg?.[0] ?? "?"}–{card.dmg?.[1] ?? "?"}
-                          {card.hits && card.hits > 1 ? ` x${card.hits}` : ""}
+                          Damage: {card.dmg?.[0] ?? "?"}–
+                          {card.dmg?.[1] ?? "?"}
+                          {card.hits && card.hits > 1
+                            ? ` x${card.hits}`
+                            : ""}
                         </div>
                       )}
 
@@ -1208,11 +1262,11 @@ useEffect(() => {
                           {card.damageBuff && " + DMG buff"}
                         </div>
                       )}
-                                  </div>
-                    </button>
-                  );
-                })}
-</div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
           )}
 
           {/* VÉGEREDMÉNY */}
@@ -1244,7 +1298,9 @@ useEffect(() => {
           <AbilityEffectLayer
             effects={abilityEffects}
             onEffectDone={(id) =>
-              setAbilityEffects((prev) => prev.filter((fx) => fx.id !== id))
+              setAbilityEffects((prev) =>
+                prev.filter((fx) => fx.id !== id)
+              )
             }
           />
         </div>

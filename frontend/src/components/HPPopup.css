@@ -19,14 +19,20 @@
   color: red;
   text-shadow: 1px 1px 3px black;
   font-family: "Jersey 10", sans-serif;
-  font-size: 50px;
+  font-size: 80px;
+}
+
+.hp-popup.damage.crit {
+  color: #ffd700;               /* aranysárga */
+  text-shadow: 0 0 10px #ffd700, 1px 1px 4px black;
+  font-size: 90px;              /* kicsit nagyobb mint sima sebzés */
 }
 
 .hp-popup.heal {
   color: lime;
   text-shadow: 1px 1px 3px black;
   font-family: "Jersey 10", sans-serif;
-  font-size: 50px;
+  font-size: 80px;
 }
 
 @keyframes floatUp {
