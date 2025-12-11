@@ -7,11 +7,11 @@ import InvModal from "./Inv.jsx";
 import QuestBoardModal from "./QuestBoardModal.jsx";
 import { usePlayer } from "../context/PlayerContext.jsx";
 import toltocsik from "../assets/icons/toltocsik.png";
+import LoadingScreen from "./LoadingScreen.jsx";
 import "./Hub.css";
 
-export default function Hub({ onGoCombat }) {
+export default function Hub({ onGoAdventure }) {
   const { player, setPlayer } = usePlayer();
-  const [adventureTimer, setAdventureTimer] = useState(0);
   const [isAdventuring, setIsAdventuring] = useState(false);
 
   const [showShop, setShowShop] = useState(false);
@@ -39,24 +39,9 @@ export default function Hub({ onGoCombat }) {
     };
   }, []);
 
-  // Kaland indítása
   const startAdventure = () => {
     if (isAdventuring) return;
-    setIsAdventuring(true);
-    setAdventureTimer(5);
-
-    const interval = setInterval(() => {
-      setAdventureTimer((prev) => {
-        if (prev <= 1) {
-          clearInterval(interval);
-          setIsAdventuring(false);
-
-          onGoCombat && onGoCombat();
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
+    setIsAdventuring(true); // ezzel jelenik meg a LoadingScreen
   };
 
   const openModal = (type) => {
@@ -68,11 +53,11 @@ export default function Hub({ onGoCombat }) {
   };
 
   const CLASS_STRING = {
-  6: "warrior",
-  7: "mage",
-  8: "archer",
-};
-  // Játékos mozgatása
+    6: "warrior",
+    7: "mage",
+    8: "archer",
+  };
+
   const moveTo = (x, y, type) => {
     if (Math.abs(playerPos.x - x) < 1 && Math.abs(playerPos.y - y) < 1) {
       openModal(type);
@@ -96,7 +81,6 @@ export default function Hub({ onGoCombat }) {
     targetRef.current = null;
   };
 
-  // Harcból visszatérés – full heal
   function handleCombatEnd(finalHP, victory) {
     console.log("Combat ended. Victory:", victory, "HP:", finalHP);
 
@@ -140,77 +124,44 @@ export default function Hub({ onGoCombat }) {
         </div>
       </div>
 
-      {/* Kaland */}
+      {/* Interakciós zónák */}
       <div
         className="absolute cursor-pointer group"
-        style={{
-          left: "38%",
-          bottom: "15%",
-          width: "440px",
-          height: "500px",
-        }}
+        style={{ left: "38%", bottom: "15%", width: "440px", height: "500px" }}
         onClick={() => moveTo(50, 80, "adventure")}
       >
         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition"></div>
       </div>
-
-      {/* Kovács */}
       <div
         className="absolute cursor-pointer group"
-        style={{
-          left: "5%",
-          bottom: "10%",
-          width: "600px",
-          height: "350px",
-        }}
+        style={{ left: "5%", bottom: "10%", width: "600px", height: "350px" }}
         onClick={() => moveTo(30, 85, "blacksmith")}
       >
         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition"></div>
       </div>
-
-      {/* Bolt */}
       <div
         className="absolute cursor-pointer group"
-        style={{
-          right: "20%",
-          bottom: "10%",
-          width: "330px",
-          height: "450px",
-        }}
+        style={{ right: "20%", bottom: "10%", width: "330px", height: "450px" }}
         onClick={() => moveTo(65, 80, "shop")}
       >
         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition"></div>
       </div>
-
-      {/* Inventory / Deck */}
       <div
         className="absolute cursor-pointer group"
-        style={{
-          right: "5%",
-          bottom: "10%",
-          width: "280px",
-          height: "250px",
-        }}
+        style={{ right: "5%", bottom: "10%", width: "280px", height: "250px" }}
         onClick={() => moveTo(85, 85, "inv")}
       >
         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition"></div>
       </div>
-
-      {/* Quest Board interakciós zóna */}
       <div
         className="absolute cursor-pointer group"
-        style={{
-          right: "40%",
-          top: "10%",
-          width: "320px",
-          height: "220px",
-        }}
+        style={{ right: "40%", top: "10%", width: "320px", height: "220px" }}
         onClick={() => moveTo(50, 80, "quest")}
       >
         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition"></div>
       </div>
-        
-      {/* Játékos sprite */}
+
+      {/* Player sprite */}
       <img
         src="./src/assets/pics/TESZT.PNG"
         alt="player"
@@ -222,54 +173,30 @@ export default function Hub({ onGoCombat }) {
           top: `${playerPos.y}%`,
           transform: "translate(-50%, -50%)",
           width: "5%",
-         
         }}
       />
 
       {/* MODÁLOK */}
       {showShop && <ShopModal onClose={() => handleClose(setShowShop)} />}
-      {showBlacksmith && (
-        <BlacksmithModal onClose={() => handleClose(setShowBlacksmith)} />
-      )}
-      
+      {showBlacksmith && <BlacksmithModal onClose={() => handleClose(setShowBlacksmith)} />}
       {showInv && <InvModal onClose={() => handleClose(setShowInv)} />}
       {showQuestBoard && player && (
-  <QuestBoardModal
-    playerId={player.id}
-    playerClassId={CLASS_STRING[player.class_id]} // <-- STRING!
-    onClose={() => handleClose(setShowQuestBoard)}
-  />
-)}
-
-      {/* Utazás számláló */}
-      {isAdventuring && (
-        <div className="absolute bottom-[32%] left-0 right-0 text-center">
-          <div className="inline-block bg-black/70 px-4 py-2 rounded shadow-lg">
-            {language === "hu"
-              ? `Utazás... (${adventureTimer})`
-              : `Travelling... (${adventureTimer})`}
-          </div>
-        </div>
+        <QuestBoardModal
+          playerId={player.id}
+          playerClassId={CLASS_STRING[player.class_id]}
+          onClose={() => handleClose(setShowQuestBoard)}
+        />
       )}
-      {/* TÖLTŐCSÍK – csak akkor látszik, ha épp kalandozik */}
-{isAdventuring && (
-  <div className="loaderBox">
 
-    {/* KERET (PNG) */}
-    <img src={toltocsik} className="loaderFrame" alt="loading frame" />
-
-    {/* A PIROS KITÖLTŐ CSÍK */}
-    <div className="loaderFill" />
-  </div>
-)}
-
-
-
-
-
-
-
+      {/* LoadingScreen – csak kalandozáskor */}
+      {isAdventuring && (
+        <LoadingScreen
+          onDone={() => {
+            setIsAdventuring(false);
+            onGoAdventure && onGoAdventure();
+          }}
+        />
+      )}
     </div>
-    
   );
 }

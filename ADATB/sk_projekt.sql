@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Gép: 127.0.0.1
--- Létrehozás ideje: 2025. Nov 24. 10:51
+-- Létrehozás ideje: 2025. Dec 11. 13:32
 -- Kiszolgáló verziója: 10.4.28-MariaDB
 -- PHP verzió: 8.2.4
 
@@ -51,17 +51,39 @@ CREATE TABLE `birtokol` (
   `id` int(11) NOT NULL,
   `player_id` int(11) NOT NULL,
   `item_id` int(11) NOT NULL,
-  `quantity` int(11) DEFAULT 1
+  `quantity` int(11) DEFAULT 1,
+  `upgrade_level` int(11) DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_hungarian_ci;
 
 --
 -- A tábla adatainak kiíratása `birtokol`
 --
 
-INSERT INTO `birtokol` (`id`, `player_id`, `item_id`, `quantity`) VALUES
-(7, 2, 3, 1),
-(8, 2, 5, 1),
-(9, 2, 6, 3);
+INSERT INTO `birtokol` (`id`, `player_id`, `item_id`, `quantity`, `upgrade_level`) VALUES
+(10, 19, 4, 1, 0),
+(11, 19, 3, 1, 0),
+(12, 19, 3, 1, 0),
+(13, 19, 3, 1, 0),
+(14, 19, 4, 1, 0),
+(15, 19, 4, 1, 0),
+(16, 19, 5, 1, 6),
+(17, 19, 5, 1, 0),
+(18, 19, 6, 1, 0),
+(19, 19, 6, 1, 0),
+(20, 19, 5, 1, 0),
+(21, 19, 5, 1, 0),
+(22, 19, 3, 1, 0),
+(23, 19, 3, 1, 0),
+(24, 19, 5, 1, 0),
+(25, 19, 4, 1, 0),
+(26, 19, 3, 1, 0),
+(27, 24, 3, 1, 0),
+(28, 24, 4, 1, 0),
+(29, 24, 5, 1, 0),
+(30, 24, 6, 1, 0),
+(31, 24, 3, 1, 0),
+(32, 25, 3, 1, 0),
+(33, 25, 4, 1, 0);
 
 -- --------------------------------------------------------
 
@@ -108,18 +130,19 @@ CREATE TABLE `items` (
   `bonus_strength` int(11) DEFAULT 0,
   `bonus_intellect` int(11) DEFAULT 0,
   `bonus_defense` int(11) DEFAULT 0,
-  `bonus_hp` int(11) DEFAULT 0
+  `bonus_hp` int(11) DEFAULT 0,
+  `prize` int(11) DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_hungarian_ci;
 
 --
 -- A tábla adatainak kiíratása `items`
 --
 
-INSERT INTO `items` (`id`, `name`, `type`, `min_dmg`, `max_dmg`, `intellect_bonus`, `defense_bonus`, `hp_bonus`, `rarity`, `bonus_strength`, `bonus_intellect`, `bonus_defense`, `bonus_hp`) VALUES
-(3, 'Vas Kard', 'weapon', 3, 5, 0, 0, 0, 'common', 2, 0, 0, 0),
-(4, 'Varázspálca', 'weapon', 1, 4, 0, 0, 0, 'rare', 0, 3, 0, 0),
-(5, 'Vérteli Páncél', 'armor', 0, 0, 0, 0, 0, 'common', 0, 0, 3, 0),
-(6, 'Gyógyital', 'potion', 0, 0, 0, 0, 0, 'common', 0, 0, 0, 20);
+INSERT INTO `items` (`id`, `name`, `type`, `min_dmg`, `max_dmg`, `intellect_bonus`, `defense_bonus`, `hp_bonus`, `rarity`, `bonus_strength`, `bonus_intellect`, `bonus_defense`, `bonus_hp`, `prize`) VALUES
+(3, 'Vas Kard', 'weapon', 3, 5, 0, 0, 0, 'common', 2, 0, 0, 0, 0),
+(4, 'Varázspálca', 'weapon', 1, 4, 0, 0, 0, 'rare', 0, 3, 0, 0, 0),
+(5, 'Vérteli Páncél', 'armor', 0, 0, 0, 0, 0, 'common', 0, 0, 3, 0, 0),
+(6, 'Gyógyital', 'potion', 0, 0, 0, 0, 0, 'common', 0, 0, 0, 20, 0);
 
 -- --------------------------------------------------------
 
@@ -178,19 +201,14 @@ CREATE TABLE `players` (
 --
 
 INSERT INTO `players` (`id`, `username`, `email`, `password_hash`, `class_id`, `level`, `xp`, `gold`, `hp`, `max_hp`, `strength`, `intellect`, `defense`, `created_at`, `unspentStatPoints`) VALUES
-(2, 'TesztJátékos', 'teszt@pelda.com', 'hashedpassword123', 6, 1, 0, 100, 50, 50, 5, 0, 3, '2025-11-11 10:47:22', 0),
-(3, 'asd', 'asd@gmail.com', 'asd', 7, NULL, NULL, 100, NULL, NULL, NULL, NULL, NULL, '2025-11-13 09:51:41', 0),
-(4, 'asd2', 'asd2@gmail.com', 'asd', NULL, 1, 0, 0, 50, 50, 5, 5, 2, '2025-11-13 12:20:40', 0),
-(5, 'tesztteszt', 'teszt@teszt.com', 'asd', NULL, 1, 0, 0, 50, 50, 5, 5, 2, '2025-11-17 11:35:24', 0),
-(6, 'jozsitestmage', 'hunormeg@alexot.hu', '123', 7, 1, 0, 100, 30, 30, 0, 5, 1, '2025-11-20 12:23:41', 0),
-(7, 'TesztPlayer', 'teszt@example.com', 'teszt123', NULL, 1, 1000, 0, 50, 50, 5, 5, 2, '2025-11-20 12:40:32', 0),
-(8, 'asd342', 'asd435@gmail.com', '123', 6, 1, 0, 100, 50, 50, 5, 0, 3, '2025-11-21 08:43:49', 0),
-(9, 'teszt123', 'tesztelek@gmail.com', '123', 6, 11, 67, 157, 200, 245, 26, 0, 3, '2025-11-21 10:16:21', 0),
-(10, 'teszt321', 'teszt321@gmail.com', '123', 7, 2, 2, 22, 60, 60, 5, 6, 2, '2025-11-21 13:56:08', 0),
-(11, 'varzslo', 'asddsds@gmail.com', '123', 7, 1, 0, 100, 30, 30, 0, 5, 1, '2025-11-24 09:33:12', 0),
-(12, 'varazs1', 'sadwwdw@gmail.com', '123', 7, 1, 0, 100, 30, 30, 0, 5, 1, '2025-11-24 09:58:29', 0),
-(13, 'varazs123', '123123@gmail.com', '123', 7, 1, 0, 100, 30, 30, 0, 5, 1, '2025-11-24 10:05:07', 0),
-(14, 'war123', 'war@gmail.com', '123', NULL, 1, 0, 0, 50, 50, 5, 5, 2, '2025-11-24 10:44:55', 0);
+(18, 'tesztfasz123', 'teszt@gmail.com', '123', 7, 8, 219, 817, 700, 700, 100, 118, 2, '2025-11-24 11:20:25', 0),
+(19, 'teszt321', '321@gg.com', '123', 6, 100, 94765, 100030, 50, 50, 5, 0, 3, '2025-11-24 14:13:14', 0),
+(20, 'teszt123123', 'mgm@gmail.com', '123', 7, 7, 41, 262, 100, 100, 5, 13, 2, '2025-12-02 10:38:22', 0),
+(21, 'puszi123', 'pusz@gmail.com', '123', 6, 5, 97, 194, 100, 100, 7, 5, 2, '2025-12-02 12:57:16', 0),
+(22, '123123', 'asdqw@gmail.com', '123', 8, 1, 0, 100, 40, 40, 3, 2, 2, '2025-12-02 13:45:37', 0),
+(23, 'alesz123', 'alesz@gmail.com', '123', 6, 1, 0, 100, 50, 50, 5, 0, 3, '2025-12-02 13:49:54', 0),
+(24, 'Hunor', 'ceges@gamil.kum', 'fgh', 8, 1, 0, 100, 40, 40, 3, 2, 2, '2025-12-05 08:22:15', 0),
+(25, 'asd', 'asd@gmail.com', 'asd', 7, 51, 33, 10020, 120, 120, 0, 20, 1, '2025-12-09 09:10:58', 0);
 
 -- --------------------------------------------------------
 
@@ -211,35 +229,54 @@ CREATE TABLE `player_quests` (
 --
 
 INSERT INTO `player_quests` (`id`, `player_id`, `quest_id`, `progress`, `status`) VALUES
-(1, 11, 1, 1, 'in_progress'),
-(2, 11, 2, 0, 'locked'),
-(3, 11, 3, 0, 'locked'),
-(4, 11, 4, 0, 'locked'),
-(5, 11, 5, 0, 'locked'),
-(8, 12, 1, 0, 'in_progress'),
-(9, 12, 2, 0, 'locked'),
-(10, 12, 3, 0, 'locked'),
-(11, 12, 4, 0, 'locked'),
-(12, 12, 5, 0, 'locked'),
-(23, 13, 1, 0, 'in_progress'),
-(24, 13, 2, 0, 'locked'),
-(25, 13, 3, 0, 'locked'),
-(26, 13, 4, 0, 'locked'),
-(27, 13, 5, 0, 'locked'),
-(38, 2, 9, 0, 'locked'),
-(39, 8, 9, 0, 'locked'),
-(40, 9, 9, 0, 'locked'),
-(41, 3, 10, 0, 'locked'),
-(42, 6, 10, 0, 'locked'),
-(43, 10, 10, 0, 'locked'),
-(44, 11, 10, 0, 'locked'),
-(45, 12, 10, 0, 'locked'),
-(46, 13, 10, 0, 'locked'),
-(53, 14, 1, 0, 'in_progress'),
-(54, 14, 2, 0, 'locked'),
-(55, 14, 3, 0, 'locked'),
-(56, 14, 4, 0, 'locked'),
-(57, 14, 5, 0, 'locked');
+(85, 18, 1, 3, 'claimed'),
+(86, 18, 2, 7, 'claimed'),
+(87, 18, 3, 3, 'claimed'),
+(88, 18, 4, 1, 'claimed'),
+(89, 18, 5, 5, 'claimed'),
+(92, 18, 10, 0, 'locked'),
+(93, 19, 1, 3, 'claimed'),
+(94, 19, 2, 0, 'in_progress'),
+(95, 19, 3, 0, 'locked'),
+(96, 19, 4, 0, 'locked'),
+(97, 19, 5, 0, 'locked'),
+(98, 19, 9, 0, 'locked'),
+(99, 20, 1, 3, 'completed'),
+(100, 20, 2, 0, 'locked'),
+(101, 20, 3, 0, 'locked'),
+(102, 20, 4, 0, 'locked'),
+(103, 20, 5, 0, 'locked'),
+(106, 20, 10, 0, 'locked'),
+(107, 21, 1, 3, 'completed'),
+(108, 21, 2, 0, 'locked'),
+(109, 21, 3, 0, 'locked'),
+(110, 21, 4, 0, 'locked'),
+(111, 21, 5, 0, 'locked'),
+(114, 21, 9, 0, 'locked'),
+(115, 22, 1, 1, 'in_progress'),
+(116, 22, 2, 0, 'locked'),
+(117, 22, 3, 0, 'locked'),
+(118, 22, 4, 0, 'locked'),
+(119, 22, 5, 0, 'locked'),
+(122, 22, 11, 0, 'locked'),
+(123, 23, 1, 2, 'in_progress'),
+(124, 23, 2, 0, 'locked'),
+(125, 23, 3, 0, 'locked'),
+(126, 23, 4, 0, 'locked'),
+(127, 23, 5, 0, 'locked'),
+(130, 23, 9, 0, 'locked'),
+(131, 24, 1, 1, 'in_progress'),
+(132, 24, 2, 0, 'locked'),
+(133, 24, 3, 0, 'locked'),
+(134, 24, 4, 0, 'locked'),
+(135, 24, 5, 0, 'locked'),
+(138, 24, 11, 0, 'locked'),
+(139, 25, 1, 3, 'completed'),
+(140, 25, 2, 0, 'locked'),
+(141, 25, 3, 0, 'locked'),
+(142, 25, 4, 0, 'locked'),
+(143, 25, 5, 0, 'locked'),
+(146, 25, 10, 0, 'locked');
 
 -- --------------------------------------------------------
 
@@ -268,9 +305,9 @@ INSERT INTO `quests_master` (`id`, `title`, `description`, `task_type`, `target_
 (3, 'Apró győzelmek', 'Nyerj meg 3 csatát.', 'custom', 3, 40, 60, NULL),
 (4, 'Első találkozás a boss-szal', 'Győzz le egy bosst.', 'boss', 1, 80, 120, NULL),
 (5, 'Tapasztalt harcos', 'Nyerj meg 5 csatát.', 'custom', 5, 100, 150, NULL),
-(9, 'Trial of the Mountain King', 'Végezd el a Harcosok próbáját és győzd le a Mountain King-et.', 'boss', 1, 300, 400, '6'),
-(10, 'Rite of the Arcane Lord', 'A mágusok végső tesztje: győzd le az Arcane Abomination-t.', 'boss', 1, 300, 400, '7'),
-(11, 'Hunt of the Forest Spirit', 'Az íjászok nagyvadja: öld meg a Forest Spirit Beast-et.', 'boss', 1, 300, 400, '8');
+(9, 'Trial of the Mountain King', 'Végezd el a Harcosok próbáját és győzd le a Mountain King-et.', 'boss', 1, 300, 400, 'warrior'),
+(10, 'Rite of the Arcane Lord', 'A mágusok végső tesztje: győzd le az Arcane Abomination-t.', 'boss', 1, 300, 400, 'mage'),
+(11, 'Hunt of the Forest Spirit', 'Az íjászok nagyvadja: öld meg a Forest Spirit Beast-et.', 'boss', 1, 300, 400, 'archer');
 
 -- --------------------------------------------------------
 
@@ -289,12 +326,42 @@ CREATE TABLE `statistics` (
   `total_damage_taken` int(11) DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_hungarian_ci;
 
+-- --------------------------------------------------------
+
 --
--- A tábla adatainak kiíratása `statistics`
+-- Tábla szerkezet ehhez a táblához `tips`
 --
 
-INSERT INTO `statistics` (`id`, `player_id`, `enemies_defeated`, `bosses_defeated`, `battles_played`, `battles_won`, `total_damage`, `total_damage_taken`) VALUES
-(2, 2, 10, 2, 15, 12, 500, 300);
+CREATE TABLE `tips` (
+  `id` int(11) NOT NULL,
+  `text` varchar(255) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_hungarian_ci;
+
+--
+-- A tábla adatainak kiíratása `tips`
+--
+
+INSERT INTO `tips` (`id`, `text`) VALUES
+(1, 'Minden út veszélyt rejt, készülj fel!'),
+(2, 'A nyugalom néha többet ér, mint a kard.'),
+(3, 'A kíváncsiság gyakran bajba sodor.'),
+(4, 'Figyeld az ellenfél ritmusát, abból tanulsz.'),
+(5, 'A pihenés legalább olyan fontos, mint a harc.'),
+(6, 'Mindig ellenőrizd a felszerelésed harc előtt.'),
+(7, 'Használj különböző képességeket a legjobb kombináció érdekében.'),
+(8, 'Figyelj a környezetre – egyes helyszínek előnyt adnak.'),
+(9, 'Ne hagyd ki a mellékküldetéseket, sok hasznos tárgyat adnak.'),
+(10, 'A pihenőknél mindig gyógyítsd a csapatod.'),
+(11, 'Olvass tippeket a városokban található NPC-ktől.'),
+(12, 'Kísérletezz a fegyverek és varázslatok kombinációjával.'),
+(13, 'Ments gyakran, így elkerülheted a bosszantó visszatöltéseket.'),
+(14, 'Használj elemi gyengeségeket a hatékonyabb harc érdekében.'),
+(15, 'Nézd meg a térképet, hogy ne tévedj el.'),
+(16, 'Gyűjts mindent, ami mozdítható – később jól jöhet.'),
+(17, 'Figyeld a karakterek állapotát – a fáradtság hátráltat.'),
+(18, 'Használj gyors utazást, hogy időt spórolj.'),
+(19, 'Olvasd el a quest leírásokat, gyakran adnak titkos tippeket.'),
+(20, 'Próbálj ki minden lehetőséget a párbeszédekben – rejtett jutalom lehet.');
 
 --
 -- Indexek a kiírt táblákhoz
@@ -371,6 +438,12 @@ ALTER TABLE `statistics`
   ADD UNIQUE KEY `player_id` (`player_id`);
 
 --
+-- A tábla indexei `tips`
+--
+ALTER TABLE `tips`
+  ADD PRIMARY KEY (`id`);
+
+--
 -- A kiírt táblák AUTO_INCREMENT értéke
 --
 
@@ -384,7 +457,7 @@ ALTER TABLE `achievements`
 -- AUTO_INCREMENT a táblához `birtokol`
 --
 ALTER TABLE `birtokol`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=34;
 
 --
 -- AUTO_INCREMENT a táblához `classes`
@@ -408,13 +481,13 @@ ALTER TABLE `paths`
 -- AUTO_INCREMENT a táblához `players`
 --
 ALTER TABLE `players`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=15;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=26;
 
 --
 -- AUTO_INCREMENT a táblához `player_quests`
 --
 ALTER TABLE `player_quests`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=60;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=147;
 
 --
 -- AUTO_INCREMENT a táblához `quests_master`
@@ -427,6 +500,12 @@ ALTER TABLE `quests_master`
 --
 ALTER TABLE `statistics`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+
+--
+-- AUTO_INCREMENT a táblához `tips`
+--
+ALTER TABLE `tips`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=21;
 
 --
 -- Megkötések a kiírt táblákhoz

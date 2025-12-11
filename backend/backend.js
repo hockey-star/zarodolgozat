@@ -841,6 +841,20 @@ app.post("/api/quests/claim", (req, res) => {
   );
 });
 
+// Végpont a tippek RAKTÁBAN történő véletlenszerű lekéréséhez
+app.get("/api/tips", (req, res) => {
+  pool.query("SELECT text FROM tips ORDER BY RAND()", (err, rows) => {
+    if (err) {
+      console.error("Hiba a tippek lekérésekor:", err);
+      return res.status(500).json({ error: "Hiba a tippek lekérésekor" });
+    }
+
+    res.json({ tips: rows.map(r => r.text) });
+  });
+});
+
+
+
 
 app.listen(port, () => {
   console.log(`Backend fut a ${port} porton`);

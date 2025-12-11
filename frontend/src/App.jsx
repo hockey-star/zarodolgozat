@@ -13,6 +13,8 @@ import RestCampfire from "./components/RestCampfire.jsx";
 
 import TransitionOverlay from "./components/TransitionOverlay.jsx";
 import combatIntroVideo from "./assets/transitions/combat-intro.webm";
+import LoadingScreen from "./components/LoadingScreen.jsx";
+
 
 import {
   defaultEnemies,
@@ -20,6 +22,7 @@ import {
 } from "./components/enemyData.js";
 
 const FINAL_BOSS_LEVEL = 16;
+
 
 function AppInner() {
   const [screen, setScreen] = useState("login");
@@ -30,6 +33,9 @@ function AppInner() {
   const [showTransition, setShowTransition] = useState(false);
 
   const { setPlayer } = usePlayer();
+function handleGoAdventure() {
+  setScreen("pathChoice");
+}
 
   async function handleLogin(username) {
     try {
@@ -145,10 +151,15 @@ function AppInner() {
       {screen === "trailer" && <Trailer onEnd={() => goto("hub")} />}
 
       {screen === "hub" && (
-        <Hub
-          onGoCombat={() => setScreen("pathChoice")}
-        />
+        <Hub onGoAdventure={handleGoAdventure} />
+
+        )}
+
+      {screen === "loading" && (
+        <LoadingScreen onDone={() => setScreen("pathChoice")} />
       )}
+
+
 
       {screen === "adventure" && (
         <AdventureHandler onAdventureComplete={() => setScreen("pathChoice")} />
