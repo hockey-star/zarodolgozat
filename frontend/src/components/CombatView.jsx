@@ -514,7 +514,7 @@ export default function CombatView({
         baseMax += bonus;
       } else if (classKey === "mage") {
         const bonus =
-          Math.floor(playerIntellect * 0.5) +
+          Math.floor(playerIntellect * 0.25) +
           Math.floor(playerLevel * 0.25);
         baseMin += bonus;
         baseMax += bonus;
@@ -546,7 +546,7 @@ export default function CombatView({
           65,
           12 + playerIntellect * 0.7 + playerLevel * 0.8
         );
-        critMultiplier = 2.0;
+        critMultiplier = 1.5;
       } else if (classKey === "archer") {
         // íjász: sok crit, nagy szorzó
         critChance = Math.min(
@@ -1129,7 +1129,7 @@ export default function CombatView({
         <img src={bg} alt="bg" className="w-full h-full object-cover" />
       </div>
 
-      {/* 1920x1080 UI canvas, skálázva */}
+      {/* 1920x1080 UI skálázva */}
       <div className="absolute inset-0 flex items-center justify-center">
         <div
           className="relative"
