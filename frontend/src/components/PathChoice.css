@@ -5,23 +5,135 @@ html, body {
   height: 100%;
 }
 
+/* ===== FŐ CONTAINER ===== */
 .path-choice-bg {
-  image-rendering: pixelated;
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
 }
 
-.pixelosvenyvalaszt{
+/* ===== HÁTTÉR RÉTEGEK ===== */
+.path-bg {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  transition:
+    opacity 0.4s ease,
+    filter 0.4s ease,
+    transform 0.4s ease;
+}
+
+/* ===== KONTRASZT + MÉRET PULZÁLÁS ===== */
+@keyframes bgPulse {
+  0% {
+    transform: scale(1.03);
+    filter: grayscale(100%) contrast(110%) blur(4px);
+  }
+  50% {
+    transform: scale(1.06);
+    filter: grayscale(100%) contrast(130%) blur(4px);
+  }
+  100% {
+    transform: scale(1.03);
+    filter: grayscale(100%) contrast(110%) blur(4px);
+  }
+}
+
+/* BLUROS, FEKETE-FEHÉR ALAP */
+.path-bg.base {
+  z-index: 1;
+  animation: bgPulse 4s ease-in-out infinite;
+}
+
+/* ===== ÉLES OVERLAYEK (BAL / JOBB) ===== */
+.path-bg.left,
+.path-bg.right {
+  z-index: 2;
+  opacity: 0;
+  transform: scale(1.03);
+  transition:
+    opacity 0.4s ease,
+    transform 0.4s ease;
+}
+
+.path-bg.left {
+  clip-path: inset(0 50% 0 0);
+}
+
+.path-bg.right {
+  clip-path: inset(0 0 0 50%);
+}
+
+.path-bg.active {
+  opacity: 1;
+}
+
+/* ===== HOVER LOGIKA ===== */
+/* Amelyik oldal aktív → visszamegy normál méretre */
+.path-bg.left.active,
+.path-bg.right.active {
+  transform: scale(1);
+}
+
+/* Hoverkor CSAK AZ AKTÍV OLDAL áll meg */
+.path-choice-sides:hover ~ .path-bg.base {
+  /* base marad pulzálva → SEMMIT nem csinálunk vele */
+}
+
+/* ===== FELIRAT ===== */
+.pixelosvenyvalaszt {
   font-family: "Jersey 10", sans-serif;
   text-transform: uppercase;
   font-size: 80px;
   font-weight: 400;
   letter-spacing: 3px;
   text-shadow: 0 0 5px #000000cc;
-  margin-top: 200px;
 }
 
+.path-title {
+  position: absolute;
+  top: 60px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+  color: white;
+  user-select: none;
+}
+
+/* ===== KATTINTHATÓ OLDALAK ===== */
+.path-choice-sides {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  z-index: 10;
+}
+
+.side {
+  width: 50%;
+  height: 100%;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+/* ===== IKON ===== */
+.icon {
+  width: 140px;
+  height: 140px;
+  transition: transform 0.25s ease;
+}
+
+.side:hover .icon {
+  transform: scale(1.1);
+}
+
+/* ===== TOOLTIP ===== */
 .tooltip {
   position: absolute;
-  top: 40%;
+  top: 45%;
   left: 50%;
   transform: translate(-50%, -50%);
   background: rgba(0,0,0,0.85);

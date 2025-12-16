@@ -1,5 +1,5 @@
 // frontend/src/components/PathChoice.jsx
-import React, { useState, useMemo } from "react";
+import React, { useState, useEffect } from "react";
 import "./PathChoice.css";
 
 import fightIcon from "../assets/icons/fight.png";
@@ -13,13 +13,19 @@ export default function PathChoice({ onChoose, level = 1 }) {
   // ✅ TELJES ESEMÉNY POOL
   const EVENTS = ["fight", "elite", "rest", "mystery"];
 
-  // ✅ Véletlenszerűen kiválasztunk 2 KÜLÖNBÖZŐ-t
-  const [leftOption, rightOption] = useMemo(() => {
-    const shuffled = [...EVENTS].sort(() => Math.random() - 0.5);
-    return [shuffled[0], shuffled[1]];
-  }, [level]); // ⬅️ szintlépéskor újrarandomol
+  // ✅ opciók STATE-ben (stabil, nem re-rollol random render miatt)
+  const [leftOption, setLeftOption] = useState("fight");
+  const [rightOption, setRightOption] = useState("mystery");
 
-  // ✅ Ikonok (rest ideiglenesen mystery)
+  // ✅ csak akkor randomol újra, amikor a level változik
+  useEffect(() => {
+    const shuffled = [...EVENTS].sort(() => Math.random() - 0.5);
+    setLeftOption(shuffled[0]);
+    setRightOption(shuffled[1]);
+    setHoverTooltip(null);
+  }, [level]);
+
+  // ✅ Ikonok
   const icons = {
     fight: fightIcon,
     elite: eliteIcon,
@@ -40,64 +46,60 @@ export default function PathChoice({ onChoose, level = 1 }) {
   }
 
   return (
-    <div
-      className="path-choice-bg absolute inset-0 flex items-center justify-center"
-      style={{
-        backgroundImage: `url(${bg1})`,
-        backgroundSize: "cover",
-        backgroundPosition: "center",
-      }}
-    >
-      <div className="absolute inset-0 bg-black/20"></div>
+    <div className="path-choice-bg">
+      {/* ===== ALAP BLUROS FEKETE-FEHÉR HÁTTÉR ===== */}
+      <div className="path-bg base" style={{ backgroundImage: `url(${bg1})` }} />
 
-      {/* ✅ FELIRAT – FINAL BOSS 16 */}
-      <h2 className="absolute top-5 left-1/2 -translate-x-1/2 text-4xl font-bold text-white z-10 select-none pixelosvenyvalaszt">
+      {/* ===== BAL OLDAL ÉLES OVERLAY ===== */}
+      <div
+        className={`path-bg left ${hoverTooltip === leftOption ? "active" : ""}`}
+        style={{ backgroundImage: `url(${bg1})` }}
+      />
+
+      {/* ===== JOBB OLDAL ÉLES OVERLAY ===== */}
+      <div
+        className={`path-bg right ${hoverTooltip === rightOption ? "active" : ""}`}
+        style={{ backgroundImage: `url(${bg1})` }}
+      />
+
+      {/* ===== FELIRAT ===== */}
+      <h2 className="pixelosvenyvalaszt path-title">
         {level === 16
           ? "A végső csata közeleg..."
-          : `Válassz egy ösvényt (${level}/16)` }
+          : `Válassz egy ösvényt (${level}/16)`}
       </h2>
 
-      <div className="absolute inset-0 flex">
-        {/* ✅ BAL OLDAL */}
+      {/* ===== KATTINTHATÓ TERÜLETEK ===== */}
+      <div className="path-choice-sides">
+        {/* BAL */}
         <div
-          className="w-1/2 h-full relative flex items-center justify-center cursor-pointer hover:bg-white/10 transition-colors duration-200"
+          className="side"
           onClick={() => handleClick(leftOption)}
           onMouseEnter={() => setHoverTooltip(leftOption)}
           onMouseLeave={() => setHoverTooltip(null)}
         >
-          <img
-            src={icons[leftOption]}
-            alt={leftOption}
-            className="w-32 h-32"
-          />
+          <img src={icons[leftOption]} alt={leftOption} className="icon" />
 
           {hoverTooltip === leftOption && (
-            <div className="tooltip">
-              {tooltipText[leftOption]}
-            </div>
+            <div className="tooltip">{tooltipText[leftOption]}</div>
           )}
         </div>
 
-        {/* ✅ JOBB OLDAL */}
+        {/* JOBB */}
         <div
-          className="w-1/2 h-full relative flex items-center justify-center cursor-pointer hover:bg-white/10 transition-colors duration-200"
+          className="side"
           onClick={() => handleClick(rightOption)}
           onMouseEnter={() => setHoverTooltip(rightOption)}
           onMouseLeave={() => setHoverTooltip(null)}
         >
-          <img
-            src={icons[rightOption]}
-            alt={rightOption}
-            className="w-32 h-32"
-          />
+          <img src={icons[rightOption]} alt={rightOption} className="icon" />
 
           {hoverTooltip === rightOption && (
-            <div className="tooltip">
-              {tooltipText[rightOption]}
-            </div>
+            <div className="tooltip">{tooltipText[rightOption]}</div>
           )}
         </div>
       </div>
     </div>
   );
 }
+

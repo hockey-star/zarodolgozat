@@ -20,7 +20,6 @@ export function PlayerProvider({ children }) {
       let statPoints = prev.statPoints ?? 0;
       let xpNeeded = xpForLevel(level);
 
-      // Szintlépés ciklus (ha sok XP jön egyszerre)
       while (xp >= xpNeeded) {
         xp -= xpNeeded;
         level += 1;
@@ -38,35 +37,45 @@ export function PlayerProvider({ children }) {
   }
 
   function addGold(amount) {
-    setPlayer((prev) =>
-      !prev ? prev : { ...prev, gold: prev.gold + amount }
-    );
+    setPlayer((prev) => (!prev ? prev : { ...prev, gold: prev.gold + amount }));
   }
 
-  // Stat növelés (STR / INT / DEF / HP)
-function increaseStat(stat) {
-  setPlayer((prev) => {
-    if (!prev) return prev;
-    if ((prev.unspentStatPoints || 0) <= 0) return prev;
+  function increaseStat(stat) {
+    setPlayer((prev) => {
+      if (!prev) return prev;
+      if ((prev.unspentStatPoints || 0) <= 0) return prev;
 
-    let update = {};
+      let update = {};
 
-    if (stat === "strength") update.strength = prev.strength + 1;
-    if (stat === "intellect") update.intellect = prev.intellect + 1;
-    if (stat === "defense") update.defense = prev.defense + 1;
+      if (stat === "strength") update.strength = prev.strength + 1;
+      if (stat === "intellect") update.intellect = prev.intellect + 1;
+      if (stat === "defense") update.defense = prev.defense + 1;
 
-    if (stat === "hp") {
-      update.max_hp = prev.max_hp + 5;
-      update.hp = prev.max_hp + 5; // full heal
-    }
+      if (stat === "hp") {
+        update.max_hp = prev.max_hp + 5;
+        update.hp = prev.max_hp + 5; // full heal
+      }
 
-    return {
-      ...prev,
-      ...update,
-      unspentStatPoints: prev.unspentStatPoints - 1,
-    };
-  });
-}
+      return {
+        ...prev,
+        ...update,
+        unspentStatPoints: prev.unspentStatPoints - 1,
+      };
+    });
+  }
+
+  // ✅ MAGE MANA GLOBAL (nem fog resetelődni új CombatView-nál)
+  const MAGE_MANA_MAX = 8;
+  const [mageMana, setMageMana] = useState(0);
+
+  function gainMageMana(amount = 1) {
+    setMageMana((prev) => Math.min(MAGE_MANA_MAX, prev + amount));
+  }
+
+  function spendAllMageMana() {
+    setMageMana(0);
+  }
+
   return (
     <PlayerContext.Provider
       value={{
@@ -76,6 +85,13 @@ function increaseStat(stat) {
         addGold,
         increaseStat,
         xpForLevel,
+
+        // ✅ mana API
+        mageMana,
+        setMageMana,
+        gainMageMana,
+        spendAllMageMana,
+        MAGE_MANA_MAX,
       }}
     >
       {children}
