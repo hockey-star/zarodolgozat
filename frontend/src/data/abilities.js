@@ -180,26 +180,65 @@ export const ALL_ABILITIES = [
   // =====================
   // ARCHER – RARE
   // =====================
+  // =====================
+// ARCHER – PET (TEMP IMG)
+// =====================
+{
+  id: "archer_pet_taunt",
+  classKey: "archer",
+  name: "Pet Taunt",
+  type: "defend",
+  dmg: null,
+  heal: null,
+  rarity: "rare",
+  image: "/cards/rare/warrior_shield_wall.png", // ✅ TEMP KÉP
+  petTauntTurns: 2, // ✅ 2 körig a petet üti
+},
+{
+  id: "archer_mend_pet",
+  classKey: "archer",
+  name: "Mend Pet",
+  type: "heal",
+  dmg: null,
+  heal: 0, // (ha akarsz player heal-t is, emeld pl 8-ra)
+  rarity: "rare",
+  image: "/cards/rare/warrior_rallying_shout.png", // ✅ TEMP KÉP
+  petHeal: 18, // ✅ pet gyógyítás
+},
+{
+  id: "archer_pet_command",
+  classKey: "archer",
+  name: "Pet Command",
+  type: "attack",
+  dmg: [1,2], // hunter “kicsi hit”
+  heal: null,
+  rarity: "epic",
+  image: "/cards/epic/warrior_battle_cry.png", // ✅ TEMP KÉP
+  petBiteBonus: 10, // ✅ Pet Bite bónusz (ha majd a CombatView-ben használod)
+},
+
   {
     id: "archer_aimed_shot",
     classKey: "archer",
     name: "Aimed Shot",
     type: "attack",
-    dmg: [7, 12],
+    dmg: [10, 15],
     heal: null,
     rarity: "rare",
     image: "/cards/rare/archer_aimed_shot.png",
   },
   {
-    id: "archer_evasion",
-    classKey: "archer",
-    name: "Evasion",
-    type: "defend",
-    dmg: null,
-    heal: null,
-    rarity: "rare",
-    image: "/cards/rare/archer_evasion.png",
-  },
+  id: "archer_evasion",
+  classKey: "archer",
+  name: "Evasion",
+  type: "defend",
+  dmg: null,
+  heal: null,
+  rarity: "rare",
+  image: "/cards/rare/archer_evasion.png",
+
+  evasionTurns: 1, // ✅ ÚJ: 1 enemy attack elől kitérsz
+},
   {
     id: "archer_poison_arrow",
     classKey: "archer",
@@ -216,16 +255,18 @@ export const ALL_ABILITIES = [
       turns: 3,
     },
   },
-  {
-    id: "archer_snare_trap",
-    classKey: "archer",
-    name: "Snare Trap",
-    type: "defend",
-    dmg: null,
-    heal: null,
-    rarity: "rare",
-    image: "/cards/rare/archer_snare_trap.png",
-  },
+ {
+  id: "archer_snare_trap",
+  classKey: "archer",
+  name: "Snare Trap",
+  type: "defend",
+  dmg: null,
+  heal: null,
+  rarity: "rare",
+  image: "/cards/rare/archer_snare_trap.png",
+
+  stunTurns: 2, // ✅ ÚJ: 2 kör stun
+},
 
   // =====================
   // WARRIOR – EPIC
@@ -332,16 +373,18 @@ export const ALL_ABILITIES = [
   // =====================
   // ARCHER – EPIC
   // =====================
-  {
-    id: "archer_camouflage",
-    classKey: "archer",
-    name: "Camouflage",
-    type: "defend",
-    dmg: null,
-    heal: null,
-    rarity: "epic",
-    image: "/cards/epic/archer_camouflage.png",
-  },
+ {
+  id: "archer_camouflage",
+  classKey: "archer",
+  name: "Camouflage",
+  type: "defend",
+  dmg: null,
+  heal: null,
+  rarity: "epic",
+  image: "/cards/epic/archer_camouflage.png",
+
+  evasionTurns: 2, // ✅ ÚJ: 2 enemy attack elől kitérsz
+},
   {
     id: "archer_healing_herbs",
     classKey: "archer",
@@ -353,25 +396,35 @@ export const ALL_ABILITIES = [
     image: "/cards/epic/archer_healing_herbs.png",
   },
   {
-    id: "archer_multi_shot",
-    classKey: "archer",
-    name: "Multi Shot",
-    type: "attack",
-    dmg: [10, 16],
-    heal: null,
-    rarity: "epic",
-    image: "/cards/epic/archer_multi_shot.png",
-  },
+  id: "archer_multi_shot",
+  classKey: "archer",
+  name: "Multi Shot",
+  type: "attack",
+  dmg: [4, 7],     // ✅ kisebb
+  heal: null,
+  rarity: "epic",
+  image: "/cards/epic/archer_multi_shot.png",
+  hits: 3,         // ✅ 3 találat
+},
   {
-    id: "archer_piercing_volley",
-    classKey: "archer",
-    name: "Piercing Volley",
-    type: "attack",
-    dmg: [9, 15],
-    heal: null,
-    rarity: "epic",
-    image: "/cards/epic/archer_piercing_volley.png",
+  id: "archer_piercing_volley",
+  classKey: "archer",
+  name: "Piercing Volley",
+  type: "attack",
+  dmg: [9, 15],
+  heal: null,
+  rarity: "epic",
+  image: "/cards/epic/archer_piercing_volley.png",
+
+  hits: 2,        // opcionális (ha akarod a “többször átszúr” érzést)
+  bleed: {
+    basePercent: 10,
+    bonusPerStack: 5,
+    maxPercent: 35,
+    turns: 2,
   },
+  bleedStacks: 2, // ✅ ÚJ: 2x rakja fel a bleed-et egyből
+},
 
   // =====================
   // LEGENDARY
@@ -400,15 +453,16 @@ export const ALL_ABILITIES = [
   hits: 3,        // 🔥 4 villámcsapás egymás után
   },
   {
-    id: "archer_rapid_fire",
-    classKey: "archer",
-    name: "Rapid Fire",
-    type: "attack",
-    dmg: [16, 24],
-    heal: null,
-    rarity: "legendary",
-    image: "/cards/legendary/archer_rapid_fire.png",
-  },
+  id: "archer_rapid_fire",
+  classKey: "archer",
+  name: "Rapid Fire",
+  type: "attack",
+  dmg: [3, 6],    // ✅ kicsi
+  heal: null,
+  rarity: "legendary",
+  image: "/cards/legendary/archer_rapid_fire.png",
+  hits: 5,        // ✅ 5 találat
+},
 ];
 
 // Gyors lookup
@@ -456,16 +510,16 @@ export function buildDefaultDeckForClass(classKey) {
 
   if (classKey === "archer") {
     return [
-      "archer_quick_shot",
-      "archer_quick_shot",
-      "archer_aimed_shot",
-      "archer_poison_arrow",
-      "archer_evasion",
-      "archer_snare_trap",
-      "archer_multi_shot",
-      "archer_piercing_volley",
-      "archer_camouflage",
-      "archer_healing_herbs",
+    "archer_quick_shot",
+    "archer_quick_shot",
+    "archer_aimed_shot",
+    "archer_poison_arrow",
+    "archer_evasion",
+    "archer_pet_taunt",     // ✅ új
+    "archer_mend_pet",      // ✅ új
+    "archer_snare_trap",
+    "archer_multi_shot",
+    "archer_pet_command",   // ✅ új
     ];
   }
 
