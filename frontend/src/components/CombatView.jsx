@@ -1495,70 +1495,84 @@ export default function CombatView({
               </button>
             </div>
           )}
+          
+{/* 🐺 PET FRAME + HP BAR */}
+{classKey === "archer" && petMaxHP > 0 && (
+  <div
+    className="absolute z-[80] pointer-events-none"
+    style={{
+      ...PET_UI.wrapperStyle,
+      width: `${PET_SIZE}px`,
+    }}
+  >
+    <div className="relative" style={{ width: `${PET_SIZE}px` }}>
+      {/* PET POPUPOK */}
+      {hpPopups
+        .filter((p) => p.target === "pet")
+        .map((p) => (
+          <HPPopup
+            key={p.id}
+            value={p.value}
+            isCrit={p.isCrit}
+            variant="pet"
+            onDone={() =>
+              setHPPopups((prev) => prev.filter((pp) => pp.id !== p.id))
+            }
+          />
+        ))}
 
-          {/* 🐺 PET FRAME + HP BAR */}
-          {classKey === "archer" && petMaxHP > 0 && (
-            <div
-              className="absolute z-[80] pointer-events-none"
-              style={{
-                ...PET_UI.wrapperStyle,
-                width: `${PET_SIZE}px`,
-              }}
-            >
-              <div className="relative" style={{ width: `${PET_SIZE}px` }}>
-                {hpPopups
-                  .filter((p) => p.target === "pet")
-                  .map((p) => (
-                    <HPPopup
-                      key={p.id}
-                      value={p.value}
-                      isCrit={p.isCrit}
-                      variant="pet"
-                      onDone={() =>
-                        setHPPopups((prev) =>
-                          prev.filter((pp) => pp.id !== p.id)
-                        )
-                      }
-                    />
-                  ))}
+      {/* ✅ KÉP DOBOZ */}
+      <div
+        className="rounded-xl bg-black/50"
+        style={{
+          width: `${PET_SIZE}px`,
+          height: `${PET_SIZE}px`,
+          overflow: "hidden",
+          opacity: petHP <= 0 ? 0.45 : 1,
+          boxShadow: "0 0 14px rgba(0,0,0,0.7)",
+        }}
+      >
+        <img
+          src="/ui/player/player.png"
+          alt="pet"
+          className="w-full h-full object-cover"
+        />
+      </div>
 
-                <div
-                  className="rounded-xl bg-black/50"
-                  style={{
-                    width: `${PET_SIZE}px`,
-                    height: `${PET_SIZE}px`,
-                    overflow: "hidden",
-                    opacity: petHP <= 0 ? 0.45 : 1,
-                    boxShadow: "0 0 14px rgba(0,0,0,0.7)",
-                  }}
-                >
-                  <img
-                    src="/ui/player/player.png"
-                    alt="pet"
-                    className="w-full h-full object-cover"
-                  />
-                </div>
+      {/* ✅ HP BAR + SZÁM RAJTA */}
+      <div
+        className="relative mt-2 rounded-full overflow-hidden"
+        style={{
+          height: "14px",
+          width: `${PET_SIZE}px`,
+          background: "rgba(0,0,0,0.6)",
+        }}
+      >
+        {/* PIROS CSÍK */}
+        <div
+          style={{
+            height: "100%",
+            width: `${petMaxHP > 0 ? (petHP / petMaxHP) * 100 : 0}%`,
+            background: "red",
+            transition: "width 200ms",
+          }}
+        />
 
-                <div
-                  className="mt-2 rounded-full overflow-hidden"
-                  style={{
-                    height: "10px",
-                    width: `${PET_SIZE}px`,
-                    background: "rgba(0,0,0,0.6)",
-                  }}
-                >
-                  <div
-                    style={{
-                      height: "100%",
-                      width: `${(petHP / petMaxHP) * 100}%`,
-                      background: "red",
-                      transition: "width 200ms",
-                    }}
-                  />
-                </div>
-              </div>
-            </div>
-          )}
+        {/* ✅ HP SZÁM A CSÍKON */}
+        <div
+          className="absolute inset-0 flex items-center justify-center font-mono text-xs"
+          style={{
+            color: "white",
+            textShadow: "1px 1px 3px rgba(0,0,0,0.9)",
+            pointerEvents: "none",
+          }}
+        >
+          {petHP}/{petMaxHP}
+        </div>
+      </div>
+    </div>
+  </div>
+)}
 
           {/* PLAYER FRAME */}
           <div className="absolute top-24 left-[20%] -translate-x-1/2 z-10">

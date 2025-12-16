@@ -210,11 +210,11 @@ export const ALL_ABILITIES = [
   classKey: "archer",
   name: "Pet Command",
   type: "attack",
-  dmg: [2, 4], // hunter “kicsi hit”
+  dmg: [1,2], // hunter “kicsi hit”
   heal: null,
   rarity: "epic",
   image: "/cards/epic/warrior_battle_cry.png", // ✅ TEMP KÉP
-  petBiteBonus: 4, // ✅ Pet Bite bónusz (ha majd a CombatView-ben használod)
+  petBiteBonus: 10, // ✅ Pet Bite bónusz (ha majd a CombatView-ben használod)
 },
 
   {
