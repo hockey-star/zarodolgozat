@@ -99,6 +99,7 @@ html, body {
   z-index: 10;
   color: white;
   user-select: none;
+  font-size: 60px;
 }
 
 /* ===== KATTINTHATÓ OLDALAK ===== */
@@ -152,4 +153,51 @@ html, body {
 @keyframes fadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
+}
+
+/* ===== INTRO ===== */
+.intro-container {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+  background: black; /* teljes fekete háttér */
+  animation: scaleDownLinear 0.9s linear forwards; /* robotikus scale down az egész container */
+}
+
+@keyframes scaleDownLinear {
+  from { transform: scale(1); }
+  to { transform: scale(0.9); }
+}
+
+/* Minden szó külön class-szal */
+.intro-word {
+  color: white;
+  font-family: "Jersey 10", sans-serif;
+  text-transform: uppercase;
+  font-size: 80px;
+  font-weight: 400;
+  letter-spacing: 3px;
+  text-shadow: 0 0 0px #ffffffaa;
+  opacity: 1;
+  animation: glowFlash 0.15s linear forwards;
+}
+
+.intro-word-0 { /* külön állítás lehetőség */ }
+.intro-word-1 { }
+.intro-word-2 { }
+
+/* gyors glow flash minden szóra */
+@keyframes glowFlash {
+  0% {
+    text-shadow: 0 0 30px #ffffffff, 0 0 60px #ffffffcc, 0 0 90px #ffffffaa;
+  }
+  50% {
+    text-shadow: 0 0 10px #ffffffcc, 0 0 20px #ffffff99, 0 0 30px #ffffff77;
+  }
+  100% {
+    text-shadow: 0 0 0px #ffffff00, 0 0 0px #ffffff00, 0 0 0px #ffffff00;
+  }
 }

@@ -35,6 +35,21 @@
   font-size: 80px;
 }
 
+.hp-popup.pet-hit {
+  left: 65%;              /* ← állítsd (55-75% között jó) */
+}
+
+.hp-popup.damage.pet-hit {
+  color: white;
+  text-shadow: 0 0 10px rgba(255,255,255,0.35), 1px 1px 3px black;
+}
+
+/* ha pet-hit crit is lehet (opcionális) */
+.hp-popup.damage.crit.pet-hit {
+  color: #ffffff;
+  text-shadow: 0 0 14px rgba(255,255,255,0.65), 0 0 6px rgba(255,255,255,0.35), 1px 1px 4px black;
+}
+
 @keyframes floatUp {
   0% { transform: translateX(-50%) translateY(0); opacity: 1; }
   100% { transform: translateX(-50%) translateY(-40px); opacity: 0; }
