@@ -1,0 +1,12 @@
+.skip {
+     color: #fef9c2;
+     background-color: #460809;
+     padding: 15px 40px 15px 40px;
+     margin: 10px;
+     text-align: center;
+     font-size: 20px;
+     font-family: "Jersey 10", sans-serif;
+     border: 0;
+     box-shadow: 0px 5px black, 0px -5px black, 5px 0px black, -5px 0px black, 0px 10px #00000038, 5px 5px #00000038, -5px 5px #00000038, inset 0px 5px #ffffff36;
+     cursor: pointer;
+}
