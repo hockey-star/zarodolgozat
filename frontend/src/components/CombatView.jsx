@@ -201,12 +201,12 @@ const SMART_BIAS = {
   },
 
   archer: {
-    HEAL_THRESHOLD: 0.45,
+    HEAL_THRESHOLD: 0.70,
     PANIC_HP: 0.40,
     DEFEND_AFTER_TURNS: 3,
 
-    PANIC_DEFENSIVE_CHANCE: 0.55,
-    PANIC_STUN_CHANCE: 0.55,
+    PANIC_DEFENSIVE_CHANCE: 0.60,
+    PANIC_STUN_CHANCE: 0.40,
 
     MAX_HEAL_IN_HAND: 1,
     MAX_HEAL_IN_HAND_LOWHP: 2,
@@ -982,6 +982,15 @@ export default function CombatView({
         });
 
         setHand(initialHand);
+        // ✅ initial draw anim levétele MINDEN lapról
+        trackTimeout(
+          setTimeout(() => {
+            if (battleOverRef.current) return;
+            setHand((prev) =>
+              prev.map((c) => (c ? { ...c, _anim: null } : c))
+            );
+          }, SMART_DRAW.DRAW_ANIM_MS)
+        );
         handRef.current = initialHand;
       } catch (err) {
         console.error("Enemy init error:", err);
@@ -2068,22 +2077,21 @@ export default function CombatView({
                     : "";
 
                 // ✅ hover csak player turnben, és csak ha nem animál
-                const allowHoverScale = turn === "player" && !card._played && !card._anim;
-
+                const allowHoverScale = turn === "player" && !card._played;
                 return (
                   <button
                     key={card._instanceId}
                     onClick={() => playCardAt(slotIndex)}
                     disabled={turn !== "player" || card._played}
                     className={[
-                      "relative w-40 h-60 rounded-xl overflow-hidden border-4",
-                      rs.border,
-                      rs.glow,
-                      "transform transition-transform duration-200",
-                      allowHoverScale ? "hover:scale-125" : "",
-                      turn !== "player" || card._played ? "pointer-events-none opacity-90" : "",
-                      animClass,
-                    ].join(" ")}
+                    "relative w-40 h-60 rounded-xl overflow-hidden border-4",
+                    rs.border,
+                    rs.glow,
+                    "transform transition-transform duration-200",
+                    allowHoverScale ? "hover:scale-125" : "",
+                    card._played ? "pointer-events-none opacity-90" : (turn !== "player" ? "opacity-90" : ""),
+                    animClass,
+                  ].join(" ")}
                   >
                     <img
                       src={imgSrc}
