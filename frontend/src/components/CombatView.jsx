@@ -156,17 +156,67 @@ function enemyImage(name) {
 }
 
 /* =========================================================
-   ✅ SMART DRAW (STABIL KÉZ + 1 SLOT CSERE)
+   ✅ SMART DRAW (STABIL KÉZ + SLOT CSERE ENEMY TURN UTÁN)
+   - Player kijátszik: csak play anim, NEM húz azonnal
+   - Enemy kör vége: pending slot(ok) feltöltése draw animmal
    ========================================================= */
 
 const SMART_DRAW = {
   HAND_SIZE: 4,
   RECENT_BLOCK: 6,
   MAX_SAME_IN_HAND: 2,
-  MAX_HEAL_IN_HAND: 1, // hp<=30%: 2
-  PLAY_ANIM_MS: 180,
-  DRAW_ANIM_MS: 220,
+  PLAY_ANIM_MS: 320, // css cardPlay-hoz igazítsd (ha akarod)
+  DRAW_ANIM_MS: 320, // css cardDraw-hoz igazítsd
 };
+
+/* =========================================================
+   ✅ SMART BIAS – KASZTONKÉNTI HÚZÁSI PREFERENCIÁK
+   ========================================================= */
+
+const SMART_BIAS = {
+  warrior: {
+    HEAL_THRESHOLD: 0.65,
+    PANIC_HP: 0.35,
+    DEFEND_AFTER_TURNS: 3,
+
+    PANIC_DEFENSIVE_CHANCE: 0.7,
+    PANIC_STUN_CHANCE: 0.3,
+
+    MAX_HEAL_IN_HAND: 1,
+    MAX_HEAL_IN_HAND_LOWHP: 2,
+    LOWHP_FOR_2HEAL: 0.3,
+  },
+
+  mage: {
+    HEAL_THRESHOLD: 0.72,
+    PANIC_HP: 0.45,
+    DEFEND_AFTER_TURNS: 3,
+
+    PANIC_DEFENSIVE_CHANCE: 0.55,
+    PANIC_STUN_CHANCE: 0.25,
+
+    MAX_HEAL_IN_HAND: 1,
+    MAX_HEAL_IN_HAND_LOWHP: 2,
+    LOWHP_FOR_2HEAL: 0.3,
+  },
+
+  archer: {
+    HEAL_THRESHOLD: 0.45,
+    PANIC_HP: 0.40,
+    DEFEND_AFTER_TURNS: 3,
+
+    PANIC_DEFENSIVE_CHANCE: 0.55,
+    PANIC_STUN_CHANCE: 0.55,
+
+    MAX_HEAL_IN_HAND: 1,
+    MAX_HEAL_IN_HAND_LOWHP: 2,
+    LOWHP_FOR_2HEAL: 0.3,
+  },
+};
+
+function getBias(classKey) {
+  return SMART_BIAS[classKey] || SMART_BIAS.warrior;
+}
 
 function uid() {
   return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -254,28 +304,108 @@ function pickCardSmart({ pool, wantType, handSoFar, recentIds, maxSameInHand }) 
   return pickRandomFrom(eligible);
 }
 
-/**
- * 1 lap húzása okosan (slot refill)
- * - HP alacsony: prefer heal
- * - ha rég nem volt defend: prefer defend
- * - különben prefer attack
- */
-function drawSmartOne({ pool, hpRatio, turnsSinceHeal, turnsSinceDefend, recentIds, handSoFar }) {
+function isStunCard(c) {
+  return (c?.stunTurns || 0) > 0;
+}
+
+function isDefensiveCard(c) {
+  return (
+    c?.type === "defend" ||
+    (c?.evasionTurns || 0) > 0 ||
+    (c?.petTauntTurns || 0) > 0 ||
+    c?.abilityId === "mage_mana_shield" ||
+    isStunCard(c)
+  );
+}
+
+function pickDefensiveSmart({ pool, handSoFar, recentIds, stunChance = 0 }) {
+  const defensivePool = pool.filter(isDefensiveCard);
+  if (!defensivePool.length) return null;
+
+  const stunPool = defensivePool.filter(isStunCard);
+  const preferStun =
+    stunPool.length > 0 && Math.random() < Math.max(0, Math.min(1, stunChance));
+
+  const chosenPool = preferStun ? stunPool : defensivePool;
+
+  return pickCardSmart({
+    pool: chosenPool,
+    wantType: null,
+    handSoFar,
+    recentIds,
+    maxSameInHand: SMART_DRAW.MAX_SAME_IN_HAND,
+  });
+}
+
+function drawSmartOne({
+  pool,
+  hpRatio,
+  turnsSinceHeal,
+  turnsSinceDefend,
+  recentIds,
+  handSoFar,
+  classKey,
+}) {
+  const bias = getBias(classKey);
+
   const canHeal = hasType(pool, "heal");
   const canDef = hasType(pool, "defend");
   const canAtk = hasType(pool, "attack");
 
+  const isPanic = hpRatio <= bias.PANIC_HP;
+
   let preferred = null;
 
-  if (hpRatio <= 0.7 && canHeal) preferred = "heal";
-  else if (turnsSinceDefend >= 3 && canDef) preferred = "defend";
-  else if (canAtk) preferred = "attack";
-  else preferred = null;
+  const healNeed = hpRatio <= bias.HEAL_THRESHOLD;
+const healChance = isPanic
+  ? 0.55                 // pánikban azért legyen több heal
+  : healNeed
+  ? 0.35                 // low hp-n csak eséllyel heal
+  : 0.0;
 
-  const maxHealInHand = hpRatio <= 0.3 ? 2 : SMART_DRAW.MAX_HEAL_IN_HAND;
+const defensiveChance = isPanic ? bias.PANIC_DEFENSIVE_CHANCE : 0.12; // alatta is kis esély
+
+if (isPanic && Math.random() < defensiveChance) {
+  preferred = "defensive";
+} else if (canHeal && Math.random() < healChance) {
+  preferred = "heal";
+} else if (turnsSinceDefend >= bias.DEFEND_AFTER_TURNS && canDef && Math.random() < 0.45) {
+  preferred = "defend";
+} else if (canAtk) {
+  preferred = "attack";
+}
+
+  // Heal limit a kézben
+  const maxHealInHand =
+    hpRatio <= bias.LOWHP_FOR_2HEAL
+      ? bias.MAX_HEAL_IN_HAND_LOWHP
+      : bias.MAX_HEAL_IN_HAND;
+
   if (preferred === "heal") {
-    const healCount = handSoFar.filter((c) => c && !c._played && c.type === "heal").length;
+    const healCount = handSoFar.filter(
+      (c) => c && !c._played && c.type === "heal"
+    ).length;
+
     if (healCount >= maxHealInHand) preferred = null;
+  }
+
+  // Defensive -> stun eséllyel
+  if (preferred === "defensive") {
+    return (
+      pickDefensiveSmart({
+        pool,
+        handSoFar,
+        recentIds,
+        stunChance: bias.PANIC_STUN_CHANCE,
+      }) ||
+      pickCardSmart({
+        pool,
+        wantType: null,
+        handSoFar,
+        recentIds,
+        maxSameInHand: SMART_DRAW.MAX_SAME_IN_HAND,
+      })
+    );
   }
 
   return (
@@ -305,7 +435,7 @@ function makeCardInstance(baseCard, anim = null) {
   };
 }
 
-function createInitialHand({ pool, hpRatio, recentIds }) {
+function createInitialHand({ pool, hpRatio, recentIds, classKey }) {
   const hand = Array.from({ length: SMART_DRAW.HAND_SIZE }, () => null);
   let turnsSinceHeal = 0;
   let turnsSinceDefend = 0;
@@ -318,6 +448,7 @@ function createInitialHand({ pool, hpRatio, recentIds }) {
       turnsSinceDefend,
       recentIds,
       handSoFar: hand.filter(Boolean),
+      classKey,
     });
 
     if (picked) {
@@ -331,6 +462,69 @@ function createInitialHand({ pool, hpRatio, recentIds }) {
   }
 
   return hand;
+}
+
+/* =========================================================
+   ✅ SIMPLE FADE OVERLAY (videó nélkül)
+   ========================================================= */
+function FadeOverlay({
+  isOpen,
+  onMid,
+  onDone,
+  inMs = 220,
+  holdMs = 120,
+  outMs = 260,
+  maxOpacity = 1,
+}) {
+  const [phase, setPhase] = useState("idle"); // idle | in | hold | out
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    setPhase("in");
+
+    const t1 = setTimeout(() => setPhase("hold"), inMs);
+    const t2 = setTimeout(() => {
+      onMid?.();
+      setPhase("out");
+    }, inMs + holdMs);
+    const t3 = setTimeout(() => {
+      onDone?.();
+      setPhase("idle");
+    }, inMs + holdMs + outMs);
+
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+      clearTimeout(t3);
+    };
+  }, [isOpen, inMs, holdMs, outMs, onMid, onDone]);
+
+  if (!isOpen && phase === "idle") return null;
+
+  const opacity =
+    phase === "in"
+      ? maxOpacity
+      : phase === "hold"
+      ? maxOpacity
+      : phase === "out"
+      ? 0
+      : 0;
+
+  const duration = phase === "in" ? inMs : phase === "out" ? outMs : 0;
+
+  return (
+    <div
+      className="fixed inset-0"
+      style={{
+        zIndex: 9999,
+        background: "black",
+        opacity,
+        transition: duration ? `opacity ${duration}ms ease` : "none",
+        pointerEvents: "none",
+      }}
+    />
+  );
 }
 
 /* ========================================================= */
@@ -352,6 +546,17 @@ export default function CombatView({
     spendAllMageMana,
     MAGE_MANA_MAX: CTX_MAGE_MANA_MAX,
   } = usePlayer() || {};
+
+  // ✅ timeout tracking (villanás / stale timeout ellen)
+  const timersRef = useRef([]);
+  const trackTimeout = (id) => {
+    timersRef.current.push(id);
+    return id;
+  };
+  const clearAllTimers = () => {
+    timersRef.current.forEach((id) => clearTimeout(id));
+    timersRef.current = [];
+  };
 
   const [uiScale, setUiScale] = useState(1);
 
@@ -392,6 +597,21 @@ export default function CombatView({
   const [battleOver, setBattleOver] = useState(false);
   const [defending, setDefending] = useState(false);
 
+  // ✅ battleOver ref (stale timeoutok ellen)
+  const battleOverRef = useRef(false);
+  useEffect(() => {
+    battleOverRef.current = battleOver;
+  }, [battleOver]);
+
+  const endBattle = () => {
+    if (battleOverRef.current) return;
+    battleOverRef.current = true;
+    setBattleOver(true);
+    setArcanePickerOpen(false);
+    setTurn("end");
+    clearAllTimers();
+  };
+
   const [arcanePickerOpen, setArcanePickerOpen] = useState(false);
 
   const [petHP, setPetHP] = useState(0);
@@ -404,6 +624,45 @@ export default function CombatView({
   const [recentlyPlayedIds, setRecentlyPlayedIds] = useState([]);
   const [turnsSinceHeal, setTurnsSinceHeal] = useState(0);
   const [turnsSinceDefend, setTurnsSinceDefend] = useState(0);
+
+  // ✅ pending replace: melyik slotba kell majd húzni enemy turn után
+  const [pendingReplaces, setPendingReplaces] = useState([
+    null,
+    null,
+    null,
+    null,
+  ]);
+
+  // ✅ refs: enemy turnben NINCS stale state
+  const handRef = useRef(hand);
+  useEffect(() => {
+    handRef.current = hand;
+  }, [hand]);
+
+  const recentlyRef = useRef(recentlyPlayedIds);
+  useEffect(() => {
+    recentlyRef.current = recentlyPlayedIds;
+  }, [recentlyPlayedIds]);
+
+  const turnsHealRef = useRef(turnsSinceHeal);
+  useEffect(() => {
+    turnsHealRef.current = turnsSinceHeal;
+  }, [turnsSinceHeal]);
+
+  const turnsDefRef = useRef(turnsSinceDefend);
+  useEffect(() => {
+    turnsDefRef.current = turnsSinceDefend;
+  }, [turnsSinceDefend]);
+
+  const playerHPRef = useRef(playerHP);
+  useEffect(() => {
+    playerHPRef.current = playerHP;
+  }, [playerHP]);
+
+  const pendingRef = useRef(pendingReplaces);
+  useEffect(() => {
+    pendingRef.current = pendingReplaces;
+  }, [pendingReplaces]);
 
   const [hpPopups, setHPPopups] = useState([]);
   const [playerDamaged, setPlayerDamaged] = useState(false);
@@ -473,18 +732,26 @@ export default function CombatView({
     if (value < 0) {
       if (target === "player") {
         setPlayerDamaged(true);
-        setTimeout(() => setPlayerDamaged(false), 300);
+        trackTimeout(setTimeout(() => setPlayerDamaged(false), 300));
       } else if (target === "enemy") {
         setEnemyDamaged(true);
-        setTimeout(() => setEnemyDamaged(false), 300);
+        trackTimeout(setTimeout(() => setEnemyDamaged(false), 300));
       }
     } else {
       if (target === "player") {
         setPlayerHealed(true);
-        setTimeout(() => setPlayerHealed(false), 400);
+        trackTimeout(setTimeout(() => setPlayerHealed(false), 400));
       }
     }
   }
+
+  // ✅ unmount cleanup
+  useEffect(() => {
+    return () => {
+      clearAllTimers();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // deck init a playerben
   useEffect(() => {
@@ -494,12 +761,108 @@ export default function CombatView({
     setPlayer((prev) => ({ ...prev, deck: baseDeck }));
   }, [player, setPlayer, classKey]);
 
+  // ✅ pending húzás "motor" – enemy turn végén fut
+  function resolvePendingReplaces() {
+    if (battleOverRef.current) return;
+
+    const pending = pendingRef.current;
+    if (!pending || !pending.some(Boolean)) return;
+
+    const hpRatio =
+      maxHPFromPlayer > 0 ? playerHPRef.current / maxHPFromPlayer : 1;
+
+    // lokális "working" state, hogy ne legyen 4 külön setState káosz
+    let workingHand = [...handRef.current];
+    let workingRecent = [...recentlyRef.current];
+
+    let nextTurnsHeal = turnsHealRef.current;
+    let nextTurnsDef = turnsDefRef.current;
+
+    pending.forEach((justPlayedCard, slotIndex) => {
+      if (!justPlayedCard) return;
+
+      const nextRecent = [justPlayedCard.abilityId, ...workingRecent].slice(
+        0,
+        SMART_DRAW.RECENT_BLOCK
+      );
+
+      const handWithoutPlayed = workingHand
+        .map((c, i) => (i === slotIndex ? null : c))
+        .filter(Boolean);
+
+      const nextPicked = drawSmartOne({
+        pool: combatPool,
+        hpRatio,
+        turnsSinceHeal: nextTurnsHeal,
+        turnsSinceDefend: nextTurnsDef,
+        recentIds: nextRecent,
+        handSoFar: handWithoutPlayed,
+        classKey,
+      });
+
+      // turnsSince (lokálisan)
+      if (nextPicked?.type === "heal") nextTurnsHeal = 0;
+      else nextTurnsHeal += 1;
+
+      if (nextPicked?.type === "defend") nextTurnsDef = 0;
+      else nextTurnsDef += 1;
+
+      const nextCard = nextPicked ? makeCardInstance(nextPicked, "draw") : null;
+
+      workingHand[slotIndex] = nextCard;
+      workingRecent = nextRecent;
+
+      // draw anim levétele (a konkrét sloton)
+      if (nextCard) {
+        trackTimeout(
+          setTimeout(() => {
+            if (battleOverRef.current) return;
+            setHand((prev) => {
+              const copy = [...prev];
+              const c = copy[slotIndex];
+              if (c && c._instanceId === nextCard._instanceId) {
+                copy[slotIndex] = { ...c, _anim: null };
+              }
+              return copy;
+            });
+          }, SMART_DRAW.DRAW_ANIM_MS)
+        );
+      }
+    });
+
+    // ✅ egyszer frissítünk mindent
+    setHand(workingHand);
+    setRecentlyPlayedIds(workingRecent);
+    setTurnsSinceHeal(nextTurnsHeal);
+    setTurnsSinceDefend(nextTurnsDef);
+
+    // refeket is frissítjük azonnal (ne várjuk meg a useEffect-et)
+    handRef.current = workingHand;
+    recentlyRef.current = workingRecent;
+    turnsHealRef.current = nextTurnsHeal;
+    turnsDefRef.current = nextTurnsDef;
+
+    // ✅ pending ürítés
+    const empty = [null, null, null, null];
+    setPendingReplaces(empty);
+    pendingRef.current = empty;
+  }
+
+  // ✅ enemy turn vége -> húz + visszaadja a player kört
+  function finishEnemyTurnToPlayer() {
+    resolvePendingReplaces();
+    setDefending(false);
+    setTurn("player");
+  }
+
   // init battle
   useEffect(() => {
     if (!player) return;
 
     async function initBattle() {
       try {
+        clearAllTimers();
+
         let isElite = !boss && pathType === "elite";
         let allowedNames = Array.isArray(enemies) ? enemies : [];
 
@@ -556,6 +919,8 @@ export default function CombatView({
 
         setEnemy(e);
         setEnemyHP(e.maxHp);
+
+        battleOverRef.current = false;
         setBattleOver(false);
         setTurn("player");
         setDefending(false);
@@ -593,18 +958,31 @@ export default function CombatView({
         setCombatPool(pool);
 
         setRecentlyPlayedIds([]);
-        setTurnsSinceHeal(0);
-        setTurnsSinceDefend(0);
+        recentlyRef.current = [];
 
-        const hpRatio = maxHPFromPlayer > 0 ? playerHP / maxHPFromPlayer : 1;
+        setTurnsSinceHeal(0);
+        turnsHealRef.current = 0;
+
+        setTurnsSinceDefend(0);
+        turnsDefRef.current = 0;
+
+        // pending reset
+        const empty = [null, null, null, null];
+        setPendingReplaces(empty);
+        pendingRef.current = empty;
+
+        const hpRatio =
+          maxHPFromPlayer > 0 ? playerHPRef.current / maxHPFromPlayer : 1;
 
         const initialHand = createInitialHand({
           pool,
           hpRatio,
           recentIds: [],
+          classKey,
         });
 
         setHand(initialHand);
+        handRef.current = initialHand;
       } catch (err) {
         console.error("Enemy init error:", err);
       }
@@ -616,7 +994,8 @@ export default function CombatView({
 
   // ===== ARCANE =====
   function castArcane(choice) {
-    if (battleOver || turn !== "player" || !enemy) return;
+    if (battleOverRef.current) return;
+    if (turn !== "player" || !enemy) return;
     if (classKey !== "mage") return;
     if (mageMana < CTX_MAGE_MANA_MAX) return;
 
@@ -636,7 +1015,8 @@ export default function CombatView({
       setEnemyHP((prev) => {
         const newHP = Math.max(0, prev - dmg);
         addHPPopup(-dmg, "enemy");
-        pushLog(`🔮 ${choice.name}: ${dmg} sebzés (30%).`);
+        pushLog(`🔮 ${choice.name}: ${dmg} sebzés.`);
+        if (newHP <= 0) endBattle();
         return newHP;
       });
     }
@@ -672,18 +1052,21 @@ export default function CombatView({
         const newHP = Math.max(0, prev - dmg);
         addHPPopup(-dmg, "enemy", true);
         pushLog(`☄️ ${choice.name}: ${dmg} brutális sebzés!`);
+        if (newHP <= 0) endBattle();
         return newHP;
       });
     }
 
     gainMageMana(1);
-    setTurn("enemy");
+
+    // arcane után is enemy turn jön
+    trackTimeout(setTimeout(() => setTurn("enemy"), SMART_DRAW.PLAY_ANIM_MS));
   }
 
   // ===== PET BITE =====
   function tryPetBite(extraBonus = 0) {
     if (classKey !== "archer") return;
-    if (!enemy || battleOver) return;
+    if (!enemy || battleOverRef.current) return;
     if (petHP <= 0) return;
     if (Math.random() > PET_CFG.BITE_CHANCE) return;
 
@@ -700,74 +1083,21 @@ export default function CombatView({
       const newHP = Math.max(0, prev - bite);
       addHPPopup(-bite, "enemy", false, "pet-hit");
       pushLog(`🐺 Pet Bite: ${bite} sebzés!`);
+      if (newHP <= 0) endBattle();
       return newHP;
     });
   }
 
-  // ===== SMART REFILL: csak a kijátszott slot cseréje =====
-  function replaceCardInSlot(slotIndex, justPlayedCard) {
-    const hpRatio = maxHPFromPlayer > 0 ? playerHP / maxHPFromPlayer : 1;
-
-    // a "nextRecent" legyen már az új lista (ne a state-re várjunk)
-    const nextRecent = [justPlayedCard.abilityId, ...recentlyPlayedIds].slice(
-      0,
-      SMART_DRAW.RECENT_BLOCK
-    );
-
-    const handWithoutPlayed = hand
-      .map((c, i) => (i === slotIndex ? null : c))
-      .filter(Boolean);
-
-    const nextPicked = drawSmartOne({
-      pool: combatPool,
-      hpRatio,
-      turnsSinceHeal,
-      turnsSinceDefend,
-      recentIds: nextRecent,
-      handSoFar: handWithoutPlayed,
-    });
-
-    // számlálók: csak finoman (ha jött heal/defend akkor reset)
-    if (nextPicked?.type === "heal") setTurnsSinceHeal(0);
-    else setTurnsSinceHeal((p) => p + 1);
-
-    if (nextPicked?.type === "defend") setTurnsSinceDefend(0);
-    else setTurnsSinceDefend((p) => p + 1);
-
-    const nextCard = nextPicked ? makeCardInstance(nextPicked, "draw") : null;
-
-    setHand((prev) => {
-      const copy = [...prev];
-      copy[slotIndex] = nextCard;
-      return copy;
-    });
-
-    setRecentlyPlayedIds(nextRecent);
-
-    // draw anim flag törlése később (különben nem gond, de szebb)
-    if (nextCard) {
-      setTimeout(() => {
-        setHand((prev) => {
-          const copy = [...prev];
-          const c = copy[slotIndex];
-          if (c && c._instanceId === nextCard._instanceId) {
-            copy[slotIndex] = { ...c, _anim: null };
-          }
-          return copy;
-        });
-      }, SMART_DRAW.DRAW_ANIM_MS);
-    }
-  }
-
   // ===== PLAY CARD (slot index-szel) =====
   function playCardAt(slotIndex) {
-    const card = hand?.[slotIndex];
+    const card = handRef.current?.[slotIndex];
     if (!card) return;
     if (card._played) return;
 
-    if (battleOver || turn !== "player" || !enemy) return;
+    if (battleOverRef.current) return;
+    if (turn !== "player" || !enemy) return;
 
-    // 1) anim: jelöld played-re, így eltűnik szépen
+    // ✅ megjelöljük played-re (csak ez animál)
     setHand((prev) => {
       const copy = [...prev];
       const c = copy[slotIndex];
@@ -776,19 +1106,22 @@ export default function CombatView({
       return copy;
     });
 
-    // 2) a tényleges hatást azonnal lefuttatjuk (nem kell megvárni az animot)
     applyCardEffects(card);
 
-    // 3) slot csere kis késleltetéssel (hogy a play anim lefusson)
-    setTimeout(() => {
-      replaceCardInSlot(slotIndex, card);
-    }, SMART_DRAW.PLAY_ANIM_MS);
+    // ✅ pending-be eltesszük, hogy ENEMY TURN VÉGÉN húzzuk vissza
+    setPendingReplaces((prev) => {
+      const copy = [...prev];
+      copy[slotIndex] = card;
+      return copy;
+    });
 
-    // 4) kör vége
+    // ✅ enemy turn jön
     setTurn("enemy");
   }
 
   function applyCardEffects(card) {
+    if (battleOverRef.current) return;
+
     const playerStrength = player?.strength ?? 0;
     const playerIntellect = player?.intellect ?? 0;
     const playerLevel = player?.level ?? 1;
@@ -799,6 +1132,7 @@ export default function CombatView({
       let baseMin = card.dmg?.[0] ?? 4;
       let baseMax = card.dmg?.[1] ?? 8;
 
+      // VFX
       if (card.abilityId === "mage_arcane_missiles") {
         spawnAbilityEffect({ src: arcaneMissilesFx, target: "enemy", width: "1000px", height: "1000px" });
       }
@@ -824,6 +1158,7 @@ export default function CombatView({
         spawnAbilityEffect({ src: drainLifeFx, target: "enemy", width: "1600px", height: "700px" });
       }
 
+      // kaszt scaling
       if (classKey === "warrior") {
         const bonus = Math.floor(playerStrength * 0.35) + Math.floor(playerLevel * 0.3);
         baseMin += bonus;
@@ -841,6 +1176,7 @@ export default function CombatView({
       if (baseMin < 1) baseMin = 1;
       if (baseMax < baseMin) baseMax = baseMin;
 
+      // crit
       let critChance = 0;
       let critMultiplier = 1;
 
@@ -871,21 +1207,22 @@ export default function CombatView({
 
       let finalRolls = dmgRolls.map((r) => ({ ...r }));
 
+      // warrior rage out
       if (classKey === "warrior") {
-        const rage01 = getWarriorRage01(playerHP, maxHPFromPlayer);
+        const rage01 = getWarriorRage01(playerHPRef.current, maxHPFromPlayer);
         const outMult = warriorDamageOutMult(rage01);
-
         if (outMult > 1.001) {
           finalRolls = finalRolls.map((r) => ({
             ...r,
             amount: Math.floor(r.amount * outMult),
           }));
           pushLog(
-            `🩸 Berserker Rage: +${Math.round((outMult - 1) * 100)}% sebzés (${playerHP}/${maxHPFromPlayer} HP).`
+            `🩸 Berserker Rage: +${Math.round((outMult - 1) * 100)}% sebzés (${playerHPRef.current}/${maxHPFromPlayer} HP).`
           );
         }
       }
 
+      // execute
       if (card.executeBelowPercent && enemy?.maxHp) {
         const hpPercent = Math.floor((enemyHP / enemy.maxHp) * 100);
         if (hpPercent <= card.executeBelowPercent) {
@@ -894,6 +1231,7 @@ export default function CombatView({
         }
       }
 
+      // dmg buff
       if (playerDamageBuff && playerDamageBuff.multiplier) {
         finalRolls = finalRolls.map((r) => ({
           ...r,
@@ -910,6 +1248,7 @@ export default function CombatView({
         }
       }
 
+      // vulnerability
       if (enemyVulnerability && enemyVulnerability.multiplier) {
         finalRolls = finalRolls.map((r) => ({
           ...r,
@@ -918,30 +1257,37 @@ export default function CombatView({
         pushLog(`🔮 A korábbi Arcane Surge miatt ${enemy.name} több sebzést szenved el!`);
       }
 
+      // apply hits (delay)
       finalRolls.forEach((roll, index) => {
-        setTimeout(() => {
-          const dmg = roll.amount;
+        trackTimeout(
+          setTimeout(() => {
+            if (battleOverRef.current) return;
+            const dmg = roll.amount;
 
-          setEnemyHP((prev) => {
-            const newHP = Math.max(0, prev - dmg);
-            addHPPopup(-dmg, "enemy", roll.isCrit);
-            pushLog(
-              `${card.name} → ${enemy.name} kap ${dmg} sebzést${roll.isCrit ? " (KRITIKUS!)" : ""}.`
-            );
-            return newHP;
-          });
-
-          if (card.drain && card.heal) {
-            setPlayerHP((prev) => {
-              const newHP = Math.min(prev + card.heal, maxHPFromPlayer);
-              addHPPopup(+card.heal, "player");
-              pushLog(`🧛 Drain Life gyógyít: +${card.heal} HP.`);
+            setEnemyHP((prev) => {
+              const newHP = Math.max(0, prev - dmg);
+              addHPPopup(-dmg, "enemy", roll.isCrit);
+              pushLog(
+                `${card.name} → ${enemy.name} kap ${dmg} sebzést${roll.isCrit ? " (KRITIKUS!)" : ""}.`
+              );
+              if (newHP <= 0) endBattle();
               return newHP;
             });
-          }
-        }, index * 220);
+
+            // drain
+            if (card.drain && card.heal) {
+              setPlayerHP((prev) => {
+                const newHP = Math.min(prev + card.heal, maxHPFromPlayer);
+                addHPPopup(+card.heal, "player");
+                pushLog(`🧛 Drain Life gyógyít: +${card.heal} HP.`);
+                return newHP;
+              });
+            }
+          }, index * 220)
+        );
       });
 
+      // poison
       if (card.poison && card.poison.damagePerTurn > 0 && card.poison.turns > 0) {
         setEnemyPoison({
           damagePerTurn: card.poison.damagePerTurn,
@@ -952,12 +1298,16 @@ export default function CombatView({
         );
       }
 
+      // bleed
       if (card.bleed) {
         const stacks = Math.max(1, card.bleedStacks || 1);
         for (let s = 0; s < stacks; s++) {
           setEnemyBleed((prev) => {
             if (!prev)
-              return { percent: card.bleed.basePercent, remainingTurns: card.bleed.turns };
+              return {
+                percent: card.bleed.basePercent,
+                remainingTurns: card.bleed.turns,
+              };
             const nextPercent = Math.min(
               card.bleed.maxPercent,
               prev.percent + card.bleed.bonusPerStack
@@ -968,6 +1318,7 @@ export default function CombatView({
         pushLog(`🩸 Vérzés! (${stacks} stack) ${enemy.name} minden körben sebződik.`);
       }
 
+      // burn
       if (card.burn && card.burn.percent && card.burn.turns) {
         const totalHit = finalRolls.reduce((a, b) => a + b.amount, 0);
         const burnPerTurn = Math.max(1, Math.floor((totalHit * card.burn.percent) / 100));
@@ -975,12 +1326,14 @@ export default function CombatView({
         pushLog(`🔥 ${enemy.name} égni kezd: ${burnPerTurn} sebzés ${card.burn.turns} körön át.`);
       }
 
+      // stun
       if (card.stunTurns && card.stunTurns > 0) {
         spawnAbilityEffect({ src: stunFx, target: "enemy_stun", width: "500px", height: "500px" });
         setEnemyStun((prev) => prev + card.stunTurns);
         pushLog(`❄️ ${enemy.name} elkábult, kihagyja a következő körét!`);
       }
 
+      // vulnerability debuff
       if (card.vulnerabilityDebuff && card.vulnerabilityDebuff.multiplier) {
         const mult = card.vulnerabilityDebuff.multiplier ?? 1.15;
         const turns = card.vulnerabilityDebuff.turns ?? 3;
@@ -1016,7 +1369,12 @@ export default function CombatView({
       }
 
       if (card.stunTurns && card.stunTurns > 0) {
-        spawnAbilityEffect({ src: stunFx, target: "enemy_stun", width: "1000px", height: "1500px" });
+        spawnAbilityEffect({
+          src: stunFx,
+          target: "enemy_stun",
+          width: "1000px",
+          height: "1500px",
+        });
         setEnemyStun((prev) => prev + card.stunTurns);
         pushLog(`⚔️ Parry! ${enemy.name} elkábul, kihagyja a körét!`);
       }
@@ -1074,13 +1432,13 @@ export default function CombatView({
     }
   }
 
-  // battle over
+  // battle over watcher (biztos)
   useEffect(() => {
     if (!enemy) return;
     if (playerHP <= 0 || enemyHP <= 0) {
-      setBattleOver(true);
-      setArcanePickerOpen(false);
+      endBattle();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [playerHP, enemyHP, enemy]);
 
   // reward preview
@@ -1119,11 +1477,14 @@ export default function CombatView({
     pushLog(`🏆 Győzelem! +${goldGain} arany, +${xpGain} XP.`);
   }, [enemy, enemyHP, playerHP, player, lastRewards]);
 
-  // enemy turn (ugyanaz mint nálad)
+  // enemy turn
   useEffect(() => {
     if (!enemy || battleOver || turn !== "enemy") return;
 
     const t = setTimeout(() => {
+      if (battleOverRef.current) return;
+
+      // --- DOT-ok ---
       if (enemyBurn && enemyHP > 0) {
         const burnDmg = enemyBurn.damagePerTurn ?? 0;
         const newHP = Math.max(0, enemyHP - burnDmg);
@@ -1139,8 +1500,7 @@ export default function CombatView({
         else setEnemyBurn((prev) => (prev ? { ...prev, remainingTurns: remaining } : null));
 
         if (newHP <= 0) {
-          setDefending(false);
-          setTurn("player");
+          endBattle();
           return;
         }
       }
@@ -1160,8 +1520,7 @@ export default function CombatView({
         else setEnemyPoison((prev) => (prev ? { ...prev, remainingTurns: remaining } : null));
 
         if (newHP <= 0) {
-          setDefending(false);
-          setTurn("player");
+          endBattle();
           return;
         }
       }
@@ -1179,38 +1538,42 @@ export default function CombatView({
         else setEnemyBleed((prev) => (prev ? { ...prev, remainingTurns: remaining } : null));
 
         if (newHP <= 0) {
-          setDefending(false);
-          setTurn("player");
+          endBattle();
           return;
         }
       }
 
+      // stun -> enemy kihagyja -> player visszakapja a kört + húzás
       if (enemyStun > 0 && enemyHP > 0) {
         pushLog(`❄️ ${enemy.name} elkábulva marad, kihagyja a körét!`);
         setEnemyStun((prev) => Math.max(0, prev - 1));
-        setDefending(false);
-        setTurn("player");
 
+        // vulnerability tick
         if (enemyVulnerability && enemyVulnerability.remainingTurns != null) {
           const remaining = enemyVulnerability.remainingTurns - 1;
           if (remaining <= 0) {
             setEnemyVulnerability(null);
             pushLog("🔮 Az Arcane Surge hatása elmúlt.");
           } else {
-            setEnemyVulnerability((prev) => (prev ? { ...prev, remainingTurns: remaining } : null));
+            setEnemyVulnerability((prev) =>
+              prev ? { ...prev, remainingTurns: remaining } : null
+            );
           }
         }
+
+        finishEnemyTurnToPlayer();
         return;
       }
 
+      // evasion -> enemy mellé üt -> player vissza + húzás
       if (playerEvasionTurns > 0 && enemyHP > 0) {
         pushLog(`💨 Kitértél! ${enemy.name} mellé üt.`);
         setPlayerEvasionTurns((prev) => Math.max(0, prev - 1));
-        setDefending(false);
-        setTurn("player");
+        finishEnemyTurnToPlayer();
         return;
       }
 
+      // base dmg
       const [minDmg, maxDmg] = enemy.dmg;
       let dmg = Math.floor(Math.random() * (maxDmg - minDmg + 1)) + minDmg;
 
@@ -1223,7 +1586,7 @@ export default function CombatView({
       let final = finalBase;
 
       if (classKey === "warrior") {
-        const rage01 = getWarriorRage01(playerHP, maxHPFromPlayer);
+        const rage01 = getWarriorRage01(playerHPRef.current, maxHPFromPlayer);
         final = Math.floor(final * warriorDamageInMult(rage01));
       }
 
@@ -1241,9 +1604,7 @@ export default function CombatView({
         setPetHP((prev) => {
           const newHP = Math.max(0, prev - final);
           addHPPopup(-final, "pet");
-          pushLog(
-            `💥 ${enemy.name} a petet üti (${final} sebzés). (Pet: ${newHP}/${petMaxHP})`
-          );
+          pushLog(`💥 ${enemy.name} a petet üti (${final} sebzés). (Pet: ${newHP}/${petMaxHP})`);
           return newHP;
         });
         setPetTauntTurns((prev) => Math.max(0, prev - 1));
@@ -1256,17 +1617,27 @@ export default function CombatView({
         pushLog(`💥 ${enemy.name} támad (${final} sebzés).`);
       }
 
+      // vulnerability tick
       if (enemyVulnerability && enemyVulnerability.remainingTurns != null) {
         const remaining = enemyVulnerability.remainingTurns - 1;
         if (remaining <= 0) {
           setEnemyVulnerability(null);
           pushLog("🔮 Az Arcane Surge hatása elmúlt.");
         } else {
-          setEnemyVulnerability((prev) => (prev ? { ...prev, remainingTurns: remaining } : null));
+          setEnemyVulnerability((prev) =>
+            prev ? { ...prev, remainingTurns: remaining } : null
+          );
         }
       }
 
-      setTurn("player");
+      // ha player meghalt
+      if (playerHPRef.current - final <= 0) {
+        endBattle();
+        return;
+      }
+
+      // ✅ enemy kör vége -> pending húzás + player turn
+      finishEnemyTurnToPlayer();
     }, boss ? 1400 : 900);
 
     return () => clearTimeout(t);
@@ -1283,7 +1654,6 @@ export default function CombatView({
     enemyBleed,
     enemyStun,
     enemyVulnerability,
-    playerHP,
     maxHPFromPlayer,
     classKey,
     petHP,
@@ -1368,6 +1738,10 @@ export default function CombatView({
 
     if (onEnd) onEnd(playerHP, true);
   }
+
+  // ✅ Fade continue (PathChoice-hoz nem nyúlunk)
+  const [fadeOpen, setFadeOpen] = useState(false);
+  const continueLockRef = useRef(false);
 
   if (!player) {
     return (
@@ -1504,7 +1878,9 @@ export default function CombatView({
                       isCrit={p.isCrit}
                       variant="pet"
                       onDone={() =>
-                        setHPPopups((prev) => prev.filter((pp) => pp.id !== p.id))
+                        setHPPopups((prev) =>
+                          prev.filter((pp) => pp.id !== p.id)
+                        )
                       }
                     />
                   ))}
@@ -1560,7 +1936,10 @@ export default function CombatView({
 
           {/* PLAYER */}
           <div className="absolute top-24 left-[20%] -translate-x-1/2 z-10">
-            <div className="relative inline-block rounded-xl overflow-hidden" style={warriorFrameStyle}>
+            <div
+              className="relative inline-block rounded-xl overflow-hidden"
+              style={warriorFrameStyle}
+            >
               <EnemyFrame
                 name={player.username || "Player"}
                 hp={playerHP}
@@ -1579,11 +1958,14 @@ export default function CombatView({
                     isCrit={p.isCrit}
                     variant={p.variant || "default"}
                     onDone={() =>
-                      setHPPopups((prev) => prev.filter((pp) => pp.id !== p.id))
+                      setHPPopups((prev) =>
+                        prev.filter((pp) => pp.id !== p.id)
+                      )
                     }
                   />
                 ))}
 
+              {/* kis pet badge */}
               {classKey === "archer" && petMaxHP > 0 && (
                 <div className="absolute -right-28 bottom-2 w-24" style={{ zIndex: 20 }}>
                   <div className="relative rounded-lg overflow-hidden border border-black/50 bg-black/40">
@@ -1639,7 +2021,9 @@ export default function CombatView({
                     isCrit={p.isCrit}
                     variant={p.variant || "default"}
                     onDone={() =>
-                      setHPPopups((prev) => prev.filter((pp) => pp.id !== p.id))
+                      setHPPopups((prev) =>
+                        prev.filter((pp) => pp.id !== p.id)
+                      )
                     }
                   />
                 ))}
@@ -1647,9 +2031,7 @@ export default function CombatView({
           </div>
 
           {/* LOG */}
-          <div
-            className="absolute top-[62%] left-1/2 -translate-x-1/2 w-3/4 max-w-2xl bg-black/50 rounded p-4 h-48 overflow-y-auto font-mono text-sm z-10"
-          >
+          <div className="absolute top-[62%] left-1/2 -translate-x-1/2 w-3/4 max-w-2xl bg-black/50 rounded p-4 h-48 overflow-y-auto font-mono text-sm z-10">
             {log.map((l, i) => (
               <div key={i} className="mb-1">
                 {l}
@@ -1658,12 +2040,14 @@ export default function CombatView({
             <div ref={logEndRef} />
           </div>
 
-          {/* KÁRTYÁK (FIX 4 SLOT, NEM UGRÁL) */}
-          {!battleOver && turn === "player" && (
-            <div className="absolute left-1/2 -translate-x-1/2 flex gap-4 z-50" style={{ bottom: "-80px" }}>
+          {/* KÁRTYÁK (mindig látszik, enemy turn alatt csak disabled) */}
+          {!battleOver && (
+            <div
+              className="absolute left-1/2 -translate-x-1/2 flex gap-4 z-50"
+              style={{ bottom: "-80px" }}
+            >
               {hand.map((card, slotIndex) => {
                 if (!card) {
-                  // üres slot (biztonsági)
                   return (
                     <div
                       key={`empty-${slotIndex}`}
@@ -1675,20 +2059,29 @@ export default function CombatView({
                 const rs = rarityStyle[card.rarity] ?? rarityStyle.common;
                 const imgSrc = card.image;
 
+                // ✅ anim class: play / draw
                 const animClass =
-                  card._played ? "card-anim-play" : card._anim === "draw" ? "card-anim-draw" : "";
+                  card._played
+                    ? "card-anim-play"
+                    : card._anim === "draw"
+                    ? "card-anim-draw"
+                    : "";
+
+                // ✅ hover csak player turnben, és csak ha nem animál
+                const allowHoverScale = turn === "player" && !card._played && !card._anim;
 
                 return (
                   <button
                     key={card._instanceId}
                     onClick={() => playCardAt(slotIndex)}
-                    disabled={card._played}
+                    disabled={turn !== "player" || card._played}
                     className={[
                       "relative w-40 h-60 rounded-xl overflow-hidden border-4",
                       rs.border,
                       rs.glow,
-                      "transform transition-all duration-200 hover:scale-125",
-                      card._played ? "pointer-events-none opacity-90" : "",
+                      "transform transition-transform duration-200",
+                      allowHoverScale ? "hover:scale-125" : "",
+                      turn !== "player" || card._played ? "pointer-events-none opacity-90" : "",
                       animClass,
                     ].join(" ")}
                   >
@@ -1747,12 +2140,16 @@ export default function CombatView({
                 <div className="mb-2 text-sm text-gray-200">
                   Jutalom: +{lastRewards.goldGain} arany, +{lastRewards.xpGain} XP
                   {lastRewards.levelsGained > 0 &&
-                    ` • +${lastRewards.levelsGained} szint, +${lastRewards.addedStatPoints} stat pont (ágyban kiosztható)`}
+                    ` • +${lastRewards.levelsGained} szint, +${lastRewards.addedStatPoints} stat pont`}
                 </div>
               )}
 
               <button
-                onClick={handleContinue}
+                onClick={() => {
+                  if (continueLockRef.current) return;
+                  continueLockRef.current = true;
+                  setFadeOpen(true);
+                }}
                 className="px-8 py-3 rounded-lg bg-gray-800 hover:bg-gray-700 transition text-lg"
               >
                 Continue
@@ -1768,6 +2165,22 @@ export default function CombatView({
           />
         </div>
       </div>
+
+      {/* ✅ sima fade a Continue előtt */}
+      <FadeOverlay
+        isOpen={fadeOpen}
+        onMid={() => {
+          handleContinue();
+        }}
+        onDone={() => {
+          setFadeOpen(false);
+          continueLockRef.current = false;
+        }}
+        inMs={240}
+        holdMs={140}
+        outMs={280}
+        maxOpacity={1}
+      />
     </div>
   );
 }
