@@ -43,18 +43,17 @@ export default function PathChoice({ onChoose, level = 1 }) {
 
   const introWords = ["VÁLASSZ", "EGY", "ÖSVÉNYT"];
 
-  // gyors szóváltás minden glow-nál
-useEffect(() => {
-  if (!showIntro) return;
-  if (currentWordIdx >= introWords.length) {
-    setTimeout(() => setShowIntro(false), 100); // kis delay után UI
-    return;
-  }
-  const timer = setTimeout(() => {
-    setCurrentWordIdx((idx) => idx + 1);
-  }, 400); // lassabb váltás: 0.4s per szó
-  return () => clearTimeout(timer);
-}, [currentWordIdx, showIntro]);
+  useEffect(() => {
+    if (!showIntro) return;
+    if (currentWordIdx >= introWords.length) {
+      setTimeout(() => setShowIntro(false), 100);
+      return;
+    }
+    const timer = setTimeout(() => {
+      setCurrentWordIdx((idx) => idx + 1);
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [currentWordIdx, showIntro]);
 
   return (
     <div className="path-choice-bg">
@@ -72,7 +71,6 @@ useEffect(() => {
         </div>
       ) : (
         <>
-          {/* ===== ALAP BLUROS FEKETE-FEHÉR HÁTTÉR ===== */}
           <div className="path-bg base" style={{ backgroundImage: `url(${bg1})` }} />
 
           <div
@@ -84,13 +82,12 @@ useEffect(() => {
             style={{ backgroundImage: `url(${bg1})` }}
           />
 
-          {/* ===== FELIRAT ===== */}
           <h2 className="pixelosvenyvalaszt path-title fade-in">
             {`${level}/16`}
           </h2>
 
-          {/* ===== KATTINTHATÓ OLDALAK ===== */}
           <div className="path-choice-sides fade-in">
+            {/* BAL */}
             <div
               className="side"
               onClick={() => handleClick(leftOption)}
@@ -98,11 +95,16 @@ useEffect(() => {
               onMouseLeave={() => setHoverTooltip(null)}
             >
               <img src={icons[leftOption]} alt={leftOption} className="icon" />
+
               {hoverTooltip === leftOption && (
-                <div className="tooltip">{tooltipText[leftOption]}</div>
-              )}
+  <div className="tooltip-wrapper">
+    <div className="tooltip">{tooltipText[leftOption]}</div>
+  </div>
+)}
+
             </div>
 
+            {/* JOBB */}
             <div
               className="side"
               onClick={() => handleClick(rightOption)}
@@ -110,9 +112,13 @@ useEffect(() => {
               onMouseLeave={() => setHoverTooltip(null)}
             >
               <img src={icons[rightOption]} alt={rightOption} className="icon" />
+
               {hoverTooltip === rightOption && (
-                <div className="tooltip">{tooltipText[rightOption]}</div>
-              )}
+  <div className="tooltip-wrapper">
+    <div className="tooltip">{tooltipText[rightOption]}</div>
+  </div>
+)}
+
             </div>
           </div>
         </>

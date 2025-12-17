@@ -131,29 +131,66 @@ html, body {
   transform: scale(1.1);
 }
 
-/* ===== TOOLTIP ===== */
-.tooltip {
+/* ===== TOOLTIP WRAPPER ===== */
+.tooltip-wrapper {
   position: absolute;
-  top: 45%;
+  top: calc(50% + 90px); /* ikon közepe ALATT */
   left: 50%;
-  transform: translate(-50%, -50%);
-  background: rgba(0,0,0,0.85);
-  color: red;
-  font-family: "Jersey 10", sans-serif;
-  font-size: 16px;
-  text-align: center;
-  padding: 8px 12px;
-  border-radius: 8px;
+  transform: translateX(-50%);
   pointer-events: none;
   z-index: 50;
-  white-space: nowrap;
-  animation: fadeIn 0.2s ease-out;
+
+  /* animáció alapállapot */
+  animation: tooltipStretch 0.18s cubic-bezier(0.2, 0, 0.4, 1) forwards;
+  transform-origin: top center;
 }
 
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+/* ===== TOOLTIP ===== */
+.tooltip {
+  padding: 15px 40px;
+  margin: 0;
+  text-align: center;
+  font-size: 20px;
+  font-family: "Jersey 10", sans-serif;
+  border: 0;
+  white-space: nowrap;
+
+
 }
+
+
+/* ===== ANIM: gomb közepéből lefelé kinyúl + glow ===== */
+@keyframes tooltipStretch {
+  0% {
+    opacity: 0;
+    transform: translateX(-50%) scaleX(0.1);
+
+      color: #ffb2b2;
+  }
+
+  20% {
+    transform: translateX(-50%) scaleX(5.05);
+
+      color: #ff5050;
+  }
+
+  70% {
+    opacity: 1;
+    transform: translateX(-50%) scaleX(1.05);
+
+    color: #ec0707;
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateX(-50%) scaleX(1);
+
+    color: #ec0707;
+  }
+}
+
+
+
 
 /* ===== INTRO ===== */
 .intro-container {
