@@ -1899,7 +1899,7 @@ export default function CombatView({
                   style={{
                     width: `${PET_SIZE}px`,
                     height: `${PET_SIZE}px`,
-                    overflow: "hidden",
+                    overflow: "hidden", 
                     opacity: petHP <= 0 ? 0.45 : 1,
                     boxShadow: "0 0 14px rgba(0,0,0,0.7)",
                   }}

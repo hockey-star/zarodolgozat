@@ -457,7 +457,7 @@ export const ALL_ABILITIES = [
   classKey: "archer",
   name: "Rapid Fire",
   type: "attack",
-  dmg: [3, 6],    // ✅ kicsi
+  dmg: [1, 3],    // ✅ kicsi
   heal: null,
   rarity: "legendary",
   image: "/cards/legendary/archer_rapid_fire.png",
