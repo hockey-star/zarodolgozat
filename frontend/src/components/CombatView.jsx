@@ -1905,7 +1905,7 @@ export default function CombatView({
                   }}
                 >
                   <img
-                    src="/ui/player/player.png"
+                    src="/ui/player/pet.png"
                     alt="pet"
                     className="w-full h-full object-cover"
                   />
