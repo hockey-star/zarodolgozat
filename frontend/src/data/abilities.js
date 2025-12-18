@@ -287,7 +287,7 @@ export const ALL_ABILITIES = [
     name: "Last Stand",
     type: "heal",
     dmg: null,
-    heal: 30,
+    heal: 50,
     rarity: "epic",
     image: "/cards/epic/warrior_last_stand.png",
   },
