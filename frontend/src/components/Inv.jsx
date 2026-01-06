@@ -1,3 +1,4 @@
+// frontend/src/components/Inv.jsx
 import React, { useState, useMemo, useEffect } from "react";
 import { usePlayer } from "../context/PlayerContext.jsx";
 import {
@@ -89,7 +90,7 @@ export default function Inv({ onClose }) {
   /* ==============================
      TEMP DECK
      ============================== */
-  const [tempDeck, setTempDeck] = useState(player?.deck || []);
+  
 
   useEffect(() => {
     if (!showInventory || !player?.id) return;
@@ -137,7 +138,7 @@ export default function Inv({ onClose }) {
           // bekapcsoljuk a kiválasztott itemt
           if (it.item_id === itemId) {
             return { ...it, is_equipped: true };
-          }
+    }
           return it;
         })
       );
@@ -303,7 +304,7 @@ function unequipItem(itemId) {
                     </div>
                     <div className="space-y-2">
                       {!selectedItem.is_equipped ? (
-                        <button
+                <button
                           className="w-full py-2 bg-emerald-600 rounded hover:bg-emerald-500"
                           onClick={() => equipItem(selectedItem.item_id)}
                         >
@@ -320,9 +321,9 @@ function unequipItem(itemId) {
                       <button
                         className="w-full py-2 bg-gray-700 rounded hover:bg-gray-600"
                         onClick={() => setSelectedItem(null)}
-                      >
+                >
                   Bezárás
-                      </button>
+                </button>
                     </div>
                   </>
                 ) : (
@@ -496,18 +497,18 @@ function unequipItem(itemId) {
             }}
           >
             {/* AJTÓ / KIJÁRAT */}
-            <div
+          <div
               className={`absolute cursor-pointer group ${
                 anyModalOpen ? "pointer-events-none" : ""
               }`}
               style={{ left: "5%", bottom: "5%", width: "325px", height: "600px" }}
-              onClick={onClose}
+            onClick={onClose}
             >
               <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition"></div>
             </div>
 
             {/* DECK SZEKRÉNY – SPELLBOOK */}
-            <div
+          <div
               className={`absolute cursor-pointer group ${
                 anyModalOpen ? "pointer-events-none" : ""
               }`}
@@ -517,13 +518,13 @@ function unequipItem(itemId) {
                 width: "180px",
                 height: "250px",
               }}
-              onClick={() => setShowDeckEditor(true)}
+            onClick={() => setShowDeckEditor(true)}
             >
               <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition"></div>
             </div>
 
             {/* LÁDA / INVENTORY */}
-            <div
+          <div
               className={`absolute cursor-pointer group ${
                 anyModalOpen ? "pointer-events-none" : ""
               }`}
@@ -533,16 +534,16 @@ function unequipItem(itemId) {
                 width: "400px",
                 height: "300px",
               }}
-              onClick={() => setShowInventory(true)}
+            onClick={() => setShowInventory(true)}
             >
               <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition"></div>
             </div>
 
             {/* ÁGY → STAT MODAL */}
-            <div
+          <div
               className={`absolute cursor-pointer group ${anyModalOpen ? "pointer-events-none" : ""}`}
               style={{ right: "10%", bottom: "5%", width: "650px", height: "350px" }}
-              onClick={() => setShowStats(true)}
+            onClick={() => setShowStats(true)}
             >
               <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition"></div>
             </div>
