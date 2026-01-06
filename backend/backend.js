@@ -36,9 +36,146 @@ function applyXpGain(oldLevel, oldXp, xpGain) {
 
   return { level, xp, levelsGained, addedStatPoints };
 }
+
+app.post("/api/inventory/equip", (req, res) => {
+  const { playerId, itemId } = req.body;
+
+  if (!playerId || !itemId) {
+    return res.status(400).json({ error: "Hiányzó adat" });
+  }
+
+  // lekérjük az item típusát
+  pool.query(
+    "SELECT type FROM items WHERE id = ?",
+    [itemId],
+    (err, itemRes) => {
+      if (err || itemRes.length === 0)
+        return res.status(400).json({ error: "Item nem található" });
+
+      const itemType = itemRes[0].type;
+
+      // 1️⃣ Kikapcsoljuk az azonos típusú itemeket
+      pool.query(
+        `
+        UPDATE birtokol b
+        JOIN items i ON i.id = b.item_id
+        SET b.is_equipped = 0
+        WHERE b.player_id = ?
+          AND i.type = ?
+        `,
+        [playerId, itemType],
+        () => {
+          // 2️⃣ Aktiváljuk a kiválasztott itemet
+          pool.query(
+            `
+            UPDATE birtokol
+            SET is_equipped = 1
+            WHERE player_id = ? AND item_id = ?
+            `,
+            [playerId, itemId],
+            (err2) => {
+              if (err2)
+                return res.status(500).json({ error: "Equip hiba" });
+
+              return res.json({ success: true, message: "Item aktiválva" });
+            }
+          );
+        }
+      );
+    }
+  );
+});
+
+app.post("/api/inventory/unequip", (req, res) => {
+  const { playerId, itemId } = req.body;
+
+  pool.query(
+    `
+    UPDATE birtokol
+    SET is_equipped = 0
+    WHERE player_id = ? AND item_id = ?
+    `,
+    [playerId, itemId],
+    err => {
+      if (err) return res.status(500).json({ error: "Unequip hiba" });
+      res.json({ success: true });
+    }
+  );
+});
+
+app.get("/api/inventory/:playerId", (req, res) => {
+  const playerId = req.params.playerId;
+
+  pool.query(
+    `
+    SELECT 
+      b.item_id,
+      b.is_equipped,
+      i.name,
+      i.type,
+      i.rarity,
+      i.bonus_strength,
+      i.bonus_intellect,
+      i.bonus_defense,
+      i.bonus_hp
+    FROM birtokol b
+    JOIN items i ON i.id = b.item_id
+    WHERE b.player_id = ?
+    `,
+    [playerId],
+    (err, rows) => {
+      if (err) return res.status(500).json({ error: "Inventory hiba" });
+      res.json(rows);
+    }
+  );
+});
+
+app.get("/api/player/:id/full-stats", (req, res) => {
+  const playerId = req.params.id;
+
+  pool.query(
+    `
+    SELECT 
+      p.strength,
+      p.intellect,
+      p.defense,
+      p.hp,
+      p.max_hp,
+
+      IFNULL(SUM(i.bonus_strength),0) AS item_str,
+      IFNULL(SUM(i.bonus_intellect),0) AS item_int,
+      IFNULL(SUM(i.bonus_defense),0) AS item_def,
+      IFNULL(SUM(i.bonus_hp),0) AS item_hp
+
+    FROM players p
+    LEFT JOIN birtokol b ON b.player_id = p.id AND b.is_equipped = 1
+    LEFT JOIN items i ON i.id = b.item_id
+    WHERE p.id = ?
+    `,
+    [playerId],
+    (err, rows) => {
+      if (err || rows.length === 0)
+        return res.status(500).json({ error: "Stat lekérés hiba" });
+
+      const r = rows[0];
+
+      res.json({
+        strength: r.strength + r.item_str,
+        intellect: r.intellect + r.item_int,
+        defense: r.defense + r.item_def,
+        hp: Math.min(r.hp + r.item_hp, r.max_hp + r.item_hp),
+        max_hp: r.max_hp + r.item_hp,
+      });
+    }
+  );
+});
+
+
 /* ---------------------------
    REGISTER
    --------------------------- */
+
+
 app.post("/api/register", (req, res) => {
   const { username, email, password } = req.body || {};
   if (!username || !email || !password) {

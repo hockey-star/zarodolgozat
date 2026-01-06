@@ -8,9 +8,12 @@ import {
   buildDefaultDeckForClass,
 } from "../data/abilities.js";
 import spellbookImg from "../assets/pics/spellbook.png";
+import HAZImg from "../assets/pics/HAZ.jpg";
 import StatModal from "./StatModal.jsx";
 
-// UGYANAZ a helper, mint CombatView-ben
+/* ==============================
+   HELPERS
+   ============================== */
 function resolveCardImageFromAbility(ab) {
   if (!ab) return "";
   if (typeof ab.image === "string" && ab.image.startsWith("/cards/")) {
@@ -23,24 +26,55 @@ function resolveCardImageFromAbility(ab) {
 }
 
 export default function Inv({ onClose }) {
+  const { player, setPlayer } = usePlayer();
+
+  /* ==============================
+     MODAL STATE
+     ============================== */
   const [showInventory, setShowInventory] = useState(false);
   const [showDeckEditor, setShowDeckEditor] = useState(false);
   const [showStats, setShowStats] = useState(false);
-
-  const { player, setPlayer } = usePlayer();
-
   const anyModalOpen = showInventory || showDeckEditor || showStats;
 
+  /* ==============================
+     INVENTORY (ELŐKÉSZÍTVE)
+     ============================== */
+  const [inventoryItems, setInventoryItems] = useState([]);
+  const [selectedItem, setSelectedItem] = useState(null);
+
+  /* ==============================
+     DECK / CLASS
+     ============================== */
   const classKey = useMemo(
     () => getClassKeyFromId(player?.class_id),
     [player?.class_id]
   );
 
-  const abilityPool = useMemo(
-    () => getAbilitiesForClass(classKey),
-    [classKey]
-  );
+  const abilityPool = useMemo(() => getAbilitiesForClass(classKey), [classKey]);
 
+  /* ==============================
+     DECK LIMITS
+     ============================== */
+  const MAX_DECK_SIZE = 30;
+  const MIN_DECK_SIZE = 10;
+  const MAX_PER_RARITY = {
+    common: 4,
+    rare: 3,
+    epic: 2,
+    legendary: 1,
+  };
+
+  const [tempDeck, setTempDeck] = useState(player?.deck || []);
+
+  useEffect(() => {
+    if (Array.isArray(player?.deck)) {
+      setTempDeck([...player.deck]);
+    }
+  }, [player?.deck]);
+
+  /* ==============================
+     ALAP PAKLI
+     ============================== */
   useEffect(() => {
     if (!player || !setPlayer) return;
     if (Array.isArray(player.deck) && player.deck.length > 0) return;
@@ -53,24 +87,97 @@ export default function Inv({ onClose }) {
     }));
   }, [player, setPlayer, classKey]);
 
-  const [tempDeck, setTempDeck] = useState(player?.deck || []);
+  /* ==============================
+     TEMP DECK
+     ============================== */
+  
 
   useEffect(() => {
-    if (Array.isArray(player?.deck)) {
-      setTempDeck([...player.deck]);
+    if (!showInventory || !player?.id) return;
+
+    fetch(`http://localhost:3000/api/inventory/${player.id}`)
+    
+      .then((res) => {
+        if (!res.ok) throw new Error("Inventory fetch error");
+        console.log("Player ID:", player?.id);
+        return res.json();
+      })
+      .then((data) => {
+        setInventoryItems(data);
+        setSelectedItem(null);
+      })
+      .catch((err) => {
+        console.error(err);
+        alert("Nem sikerült betölteni az inventoryt");
+      });
+  }, [showInventory, player?.id]);
+
+  /* ==============================
+     EQUIP / UNEQUIP
+     ============================== */
+  function equipItem(itemId) {
+  fetch("http://localhost:3000/api/inventory/equip", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      playerId: player.id,
+      itemId,
+    }),
+  })
+    .then((res) => {
+      if (!res.ok) throw new Error("Equip failed");
+      return res.json();
+    })
+    .then(() => {
+      setInventoryItems((prev) =>
+        prev.map((it) => {
+          // kikapcsoljuk az azonos típusú itemeket
+          if (it.type === selectedItem.type && it.type !== "potion") {
+            return { ...it, is_equipped: false };
+          }
+          // bekapcsoljuk a kiválasztott itemt
+          if (it.item_id === itemId) {
+            return { ...it, is_equipped: true };
     }
-  }, [player?.deck]);
+          return it;
+        })
+      );
+    })
+    .catch((err) => {
+      console.error(err);
+      alert("Hiba az equip során");
+    });
+}
 
-  const MAX_DECK_SIZE = 30;
-  const MIN_DECK_SIZE = 10;
+function unequipItem(itemId) {
+  fetch("http://localhost:3000/api/inventory/unequip", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      playerId: player.id,
+      itemId,
+    }),
+  })
+    .then((res) => {
+      if (!res.ok) throw new Error("Unequip failed");
+      return res.json();
+    })
+    .then(() => {
+      setInventoryItems((prev) =>
+        prev.map((it) =>
+          it.item_id === itemId ? { ...it, is_equipped: false } : it
+        )
+      );
+    })
+    .catch((err) => {
+      console.error(err);
+      alert("Hiba az unequip során");
+    });
+}
 
-  const MAX_PER_RARITY = {
-    common: 4,
-    rare: 3,
-    epic: 2,
-    legendary: 1,
-  };
-
+  /* ==============================
+     DECK HANDLERS
+     ============================== */
   function handleAddToDeck(abilityId) {
     if (tempDeck.length >= MAX_DECK_SIZE) return;
 
@@ -128,6 +235,9 @@ export default function Inv({ onClose }) {
     [deckCounts]
   );
 
+  /* ==============================
+     RENDER
+     ============================== */
   return (
     <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
       <div
@@ -135,7 +245,7 @@ export default function Inv({ onClose }) {
           width: "1920px",
           height: "1088px",
           background: "black",
-          backgroundImage: `url("./src/assets/pics/HAZ.jpg")`,
+          backgroundImage: `url(${HAZImg})`,
           backgroundSize: "cover",
           backgroundPosition: "center",
           position: "relative",
@@ -143,39 +253,84 @@ export default function Inv({ onClose }) {
       >
         <h2 className="text-center mb-2 text-sm text-white">OTTHON</h2>
 
-        {/* STAT MODAL (ÁGY) */}
+        {/* STAT MODAL */}
         {showStats && <StatModal onClose={() => setShowStats(false)} />}
 
-        {/* INVENTORY MODAL (LÁDA) */}
+        {/* INVENTORY MODAL */}
         {showInventory && (
-          <div className="absolute inset-0 bg-black/80 flex items-center justifycenter p-10 z-40">
-            <div className="bg-gray-900 p-6 rounded-2xl shadow-xl w-3/4 h-3/4 overflow-auto text-white">
-              <h2 className="text-xl font-bold mb-6 text-center">TÁRGYAK</h2>
-
-              <div className="grid grid-cols-4 gap-6">
-                {Array(4)
-                  .fill("")
-                  .map((_, colIndex) => (
-                    <div key={colIndex}>
-                      <div className="grid grid-cols-3 gap-3">
-                        {Array.from({ length: 15 }).map((_, i) => (
-                          <div
-                            key={i}
-                            className="w-full h-20 bg-gray-700 border border-gray-600 hover:bg-gray-600 transition cursor-pointer"
-                          ></div>
-                        ))}
-                      </div>
+          <div className="absolute inset-0 bg-black/80 flex items-center justify-center p-10 z-40">
+            <div className="bg-gray-900 p-6 rounded-2xl shadow-xl w-3/4 h-3/4 text-white flex gap-6">
+              {/* BAL OLDAL – INVENTORY */}
+              <div className="grid grid-cols-4 gap-4 w-2/3 overflow-auto">
+                {inventoryItems.length === 0 && (
+                  <div className="text-gray-400 col-span-4 text-center mt-20">
+                    Az inventory üres
+                  </div>
+                )}
+                {inventoryItems.map((item) => (
+                  <div
+                    key={item.item_id}
+                    onClick={() => setSelectedItem(item)}
+                    className={`relative h-24 border rounded-lg cursor-pointer flex flex-col justify-center items-center text-xs
+                      ${item.is_equipped ? "border-emerald-500 bg-emerald-900/30" : "border-gray-600 bg-gray-800"}
+                      ${selectedItem?.item_id === item.item_id ? "ring-2 ring-yellow-400" : ""}
+                    `}
+                  >
+                    <div className="font-semibold">{item.name}</div>
+                    <div className="uppercase text-[10px] text-gray-300">
+                      {item.type} • {item.rarity}
                     </div>
-                  ))}
+                    {item.is_equipped && (
+                      <div className="absolute top-1 right-2 text-[10px] text-emerald-400">
+                        EQUIPPED
+                      </div>
+                    )}
+                  </div>
+                ))}
               </div>
 
-              <div className="text-center mt-6">
+              {/* JOBB OLDAL – INFO */}
+              <div className="w-1/3 bg-gray-800 rounded-xl p-4 flex flex-col justify-between">
+                {selectedItem ? (
+                  <>
+                    <div>
+                      <h3 className="text-lg font-bold mb-2">{selectedItem.name}</h3>
+                      <div className="text-sm space-y-1">
+                        {selectedItem.bonus_strength > 0 && <div>🗡 Erő: +{selectedItem.bonus_strength}</div>}
+                        {selectedItem.bonus_intellect > 0 && <div>🧠 Intelligencia: +{selectedItem.bonus_intellect}</div>}
+                        {selectedItem.bonus_defense > 0 && <div>🛡 Védelem: +{selectedItem.bonus_defense}</div>}
+                        {selectedItem.bonus_hp > 0 && <div>❤️ Életerő: +{selectedItem.bonus_hp}</div>}
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      {!selectedItem.is_equipped ? (
                 <button
-                  className="px-6 py-2 bg-red-600 hover:bg-red-700 rounded-xl"
-                  onClick={() => setShowInventory(false)}
+                          className="w-full py-2 bg-emerald-600 rounded hover:bg-emerald-500"
+                          onClick={() => equipItem(selectedItem.item_id)}
+                        >
+                          Equip
+                        </button>
+                      ) : (
+                        <button
+                          className="w-full py-2 bg-red-600 rounded hover:bg-red-500"
+                          onClick={() => unequipItem(selectedItem.item_id)}
+                        >
+                          Levétel
+                        </button>
+                      )}
+                      <button
+                        className="w-full py-2 bg-gray-700 rounded hover:bg-gray-600"
+                        onClick={() => setSelectedItem(null)}
                 >
                   Bezárás
                 </button>
+                    </div>
+                  </>
+                ) : (
+                  <div className="text-center text-gray-400 mt-20">
+                    Válassz ki egy tárgyat
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -205,10 +360,10 @@ export default function Inv({ onClose }) {
               {/* KÖNYV + LAYOUT */}
               <div className="relative flex-1 flex items-center justify-center">
                 <img
-                    src={spellbookImg}
-                    alt="Spellbook"
-                    className="w-[85%] h-auto pointer-events-none select-none drop-shadow-[0_0_25px_rgba(0,0,0,0.9)]"
-                  />
+                  src={spellbookImg}
+                  alt="Spellbook"
+                  className="w-[85%] h-auto pointer-events-none select-none drop-shadow-[0_0_25px_rgba(0,0,0,0.9)]"
+                />
 
                 {/* Lapokra osztott tartalom */}
                 <div
@@ -342,18 +497,18 @@ export default function Inv({ onClose }) {
             }}
           >
             {/* AJTÓ / KIJÁRAT */}
-            <div
+          <div
               className={`absolute cursor-pointer group ${
                 anyModalOpen ? "pointer-events-none" : ""
               }`}
               style={{ left: "5%", bottom: "5%", width: "325px", height: "600px" }}
-              onClick={onClose}
+            onClick={onClose}
             >
               <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition"></div>
             </div>
 
             {/* DECK SZEKRÉNY – SPELLBOOK */}
-            <div
+          <div
               className={`absolute cursor-pointer group ${
                 anyModalOpen ? "pointer-events-none" : ""
               }`}
@@ -363,13 +518,13 @@ export default function Inv({ onClose }) {
                 width: "180px",
                 height: "250px",
               }}
-              onClick={() => setShowDeckEditor(true)}
+            onClick={() => setShowDeckEditor(true)}
             >
               <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition"></div>
             </div>
 
             {/* LÁDA / INVENTORY */}
-            <div
+          <div
               className={`absolute cursor-pointer group ${
                 anyModalOpen ? "pointer-events-none" : ""
               }`}
@@ -379,7 +534,16 @@ export default function Inv({ onClose }) {
                 width: "400px",
                 height: "300px",
               }}
-              onClick={() => setShowInventory(true)}
+            onClick={() => setShowInventory(true)}
+            >
+              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition"></div>
+            </div>
+
+            {/* ÁGY → STAT MODAL */}
+          <div
+              className={`absolute cursor-pointer group ${anyModalOpen ? "pointer-events-none" : ""}`}
+              style={{ right: "10%", bottom: "5%", width: "650px", height: "350px" }}
+            onClick={() => setShowStats(true)}
             >
               <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition"></div>
             </div>
