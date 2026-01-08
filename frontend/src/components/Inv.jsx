@@ -175,6 +175,8 @@ function unequipItem(itemId) {
     });
 }
 
+
+
   /* ==============================
      DECK HANDLERS
      ============================== */
@@ -259,9 +261,23 @@ function unequipItem(itemId) {
         {/* INVENTORY MODAL */}
         {showInventory && (
           <div className="absolute inset-0 bg-black/80 flex items-center justify-center p-10 z-40">
-            <div className="bg-gray-900 p-6 rounded-2xl shadow-xl w-3/4 h-3/4 text-white flex gap-6">
+            <div className="bg-gray-900 p-6 rounded-2xl shadow-xl w-3/4 h-3/4 overflow-auto text-white relative flex gap-6">
+            <div className="mt-6 flex justify-center">
+            <button
+            className="absolute top-4 right-4 w-9 h-9 flex items-center justify-center
+                      bg-red-600 hover:bg-red-700 text-white rounded-full text-lg font-bold"
+            onClick={() => {
+              setShowInventory(false);
+              setSelectedItem(null);
+            }}
+            title="Bezárás"
+          >
+            ✕
+          </button>
+          </div>
               {/* BAL OLDAL – INVENTORY */}
               <div className="grid grid-cols-4 gap-4 w-2/3 overflow-auto">
+              
                 {inventoryItems.length === 0 && (
                   <div className="text-gray-400 col-span-4 text-center mt-20">
                     Az inventory üres
@@ -276,6 +292,7 @@ function unequipItem(itemId) {
                       ${selectedItem?.item_id === item.item_id ? "ring-2 ring-yellow-400" : ""}
                     `}
                   >
+                    
                     <div className="font-semibold">{item.name}</div>
                     <div className="uppercase text-[10px] text-gray-300">
                       {item.type} • {item.rarity}
@@ -286,6 +303,7 @@ function unequipItem(itemId) {
                       </div>
                     )}
                   </div>
+                  
                 ))}
               </div>
 
