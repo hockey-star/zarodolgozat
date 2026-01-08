@@ -1,110 +1,112 @@
-import React, { useState, useEffect } from "react";
-
+import React, { useEffect, useState } from "react";
 
 export default function ShopModal({ onClose }) {
   const [playerData, setPlayerData] = useState(null);
   const [items, setItems] = useState([]);
-  const [error, setError] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState(null);
 
   const userId = localStorage.getItem("sk_current_user_id");
 
-  // player adat lekérés
   useEffect(() => {
     if (!userId) return;
     fetch(`http://localhost:3000/api/players/${userId}`)
-      .then((res) => res.json())
-      .then((data) => setPlayerData(data))
-      .catch((err) => console.error("Hiba a player fetch-nél:", err));
-  }, []);
+      .then(r => r.json())
+      .then(setPlayerData);
+  }, [userId]);
 
-  // items lekérés
   useEffect(() => {
-    fetch(`http://localhost:3000/api/items`)
-      .then(res => res.json())
-      .then(items => setItems(items))
-      .catch(e => console.error("Hiba items fetch-nél:", e));
+    fetch("http://localhost:3000/api/items")
+      .then(r => r.json())
+      .then(setItems);
   }, []);
 
   const buy = async (itemId) => {
-    if (!userId) return;
     setBusy(true);
-    setError(null);
-
     try {
-      const res = await fetch(`http://localhost:3000/api/shop/buy`, {
+      const res = await fetch("http://localhost:3000/api/shop/buy", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ playerId: Number(userId), itemId })
       });
-      const data = await res.json();
 
-      if (!res.ok) {
-        setError(data.error || "Sikertelen vásárlás.");
-      } else if (!data.success) {
-        setError(data.message || "A vásárlás nem sikerült.");
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        setError(data.error || "Sikertelen vásárlás");
       } else {
-        // frissítjük a player adatait (gold) és opcionálisan a birtokolt tárgyakat
-        const p = await fetch(`http://localhost:3000/api/players/${userId}`).then(r => r.json());
-        setPlayerData(p);
+        const refreshed = await fetch(
+          `http://localhost:3000/api/players/${userId}`
+        ).then(r => r.json());
+        setPlayerData(refreshed);
       }
-    } catch (e) {
-      console.error(e);
-      setError("Hálózati hiba.");
     } finally {
       setBusy(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50"
-    >
-      <div className="relative bg-gray-900 border border-gray-700 rounded-xl w-[90%] h-[80%] flex shadow-xl p-6 text-white">
-        <button onClick={onClose} className="absolute top-3 right-3 text-gray-400 hover:text-red-400">X</button>
+    <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center">
+      <div
+        className="relative w-[90%] h-[90%] rounded overflow-hidden"
+        style={{
+          backgroundImage: `url("./src/assets/pics/BOLT.jpg")`,
+          backgroundSize: "cover",
+          backgroundPosition: "center"
+        }}
+      >
+        {/* Bezárás */}
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 text-white text-xl z-20"
+        >
+          X
+        </button>
 
-        <div className="flex flex-col w-2/3 pr-4">
-          <div className="flex justify-between bg-black/40 p-2 rounded mb-4 text-sm">
-            <div>Szint: {playerData?.level ?? "-"}</div>
-            <div>XP: {playerData?.xp ?? "-"}</div>
-            <div>Arany: {playerData?.gold ?? "-"}</div>
-          </div>
-
-          {error && <div className="text-red-400 mb-2">{error}</div>}
-
-          <div className="overflow-y-auto flex-1 bg-black/40 rounded p-3 space-y-3">
-            {items.length === 0 ? (
-              <div className="text-center py-6">Nincsenek elérhető tárgyak.</div>
-            ) : (
-              items.map((item) => (
-                <div key={item.id} className="flex justify-between items-center border border-gray-700 bg-gray-800/60 p-3 rounded hover:bg-gray-700 transition">
-                  <div>
-                    <div className="font-medium">{item.name} {item.rarity ? `(${item.rarity})` : ""}</div>
-                    <div className="text-xs text-gray-300">DMG: {item.min_dmg} - {item.max_dmg}</div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="text-sm">{item.price ?? "-"} ♢</div>
-                    <button
-                      className="bg-green-700 px-3 py-1 rounded hover:bg-green-600 disabled:opacity-50"
-                      onClick={() => buy(item.id)}
-                      disabled={busy}
-                    >
-                      {busy ? "Feldolgozás..." : "Vásárlás"}
-                    </button>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
+        {/* ===== STATS (felső sáv) ===== */}
+        <div className="absolute top-4 left-4 bg-black/60 text-white p-4 rounded w-64 z-20">
+          <div className="font-bold">SZINT: {playerData?.level ?? "-"}</div>
+          <div>XP: {playerData?.xp ?? "-"}</div>
+          <div>ARANY: {playerData?.gold ?? "-"}</div>
         </div>
 
-        <div className="w-1/3 bg-black/40 rounded p-4 border-l border-gray-700">
-          <h2 className="text-lg mb-3">Tárgy:</h2>
-          <div className="flex justify-between">
-            <div>
-              <img src="/public/cards/epic/warrior_mortal_strike.png"/>
+       
+
+        {/* ===== ALSÓ ITEM SÁV ===== */}
+        <div className="absolute bottom-0 left-0 right-0 h-[28%] bg-black/70 p-4 z-20">
+          <div className="h-full overflow-y-auto">
+            <div className="grid grid-cols-9 gap-3">
+              {items.map(item => (
+                <div
+                  key={item.id}
+                  className="bg-black/60 border border-yellow-700 p-2 text-xs text-white flex flex-col justify-between hover:bg-black/80 transition"
+                >
+                  <div className="text-center font-medium truncate">
+                    {item.name}
+                  </div>
+
+                  <div className="text-center text-gray-300">
+                    {item.min_dmg}-{item.max_dmg}
+                  </div>
+
+                  <button
+                    onClick={() => buy(item.id)}
+                    disabled={busy}
+                    className="mt-1 border border-yellow-600 py-1 hover:bg-yellow-800/40 disabled:opacity-50"
+                  >
+                    {item.price} ♢
+                  </button>
+                </div>
+              ))}
             </div>
           </div>
         </div>
+
+        {/* Hiba */}
+        {error && (
+          <div className="absolute bottom-[30%] left-1/2 -translate-x-1/2 bg-red-900/80 text-white px-4 py-2 rounded z-20">
+            {error}
+          </div>
+        )}
       </div>
     </div>
   );
