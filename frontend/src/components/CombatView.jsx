@@ -249,16 +249,16 @@ function enemyImage(name) {
 const SMART_DRAW = {
   HAND_SIZE: 4,
   RECENT_BLOCK: 6,
-  MAX_SAME_IN_HAND: 2,
+  MAX_SAME_IN_HAND: 1,
   PLAY_ANIM_MS: 320,
   DRAW_ANIM_MS: 320,
 };
 
 // ===== ENEMY TURN TIMING (állítható delay-ek) =====
 // Enemy köre ennyi ms múlva indul a player akció után.
-const ENEMY_TURN_DELAY_MS = 650;
+const ENEMY_TURN_DELAY_MS = 850;
 // Basic attack VFX “lendítés” (sebzés ennyi ms múlva történik a VFX indítása után).
-const ENEMY_BASIC_WINDUP_MS = 220;
+const ENEMY_BASIC_WINDUP_MS = 420;
 
 const SMART_BIAS = {
   warrior: { HEAL_THRESHOLD: 0.65, PANIC_HP: 0.35, DEFEND_AFTER_TURNS: 3, PANIC_DEFENSIVE_CHANCE: 0.7, PANIC_STUN_CHANCE: 0.3, MAX_HEAL_IN_HAND: 1, MAX_HEAL_IN_HAND_LOWHP: 2, LOWHP_FOR_2HEAL: 0.3 },
