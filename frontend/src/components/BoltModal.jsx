@@ -49,7 +49,7 @@ export default function ShopModal({ onClose }) {
       <div
         className="relative w-[90%] h-[90%] rounded overflow-hidden"
         style={{
-          backgroundImage: `url("./src/assets/pics/BOLT.jpg")`,
+          backgroundImage: `url("./src/assets/pics/BOLT.gif")`,
           backgroundSize: "cover",
           backgroundPosition: "center"
         }}

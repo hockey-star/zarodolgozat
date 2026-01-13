@@ -4,6 +4,10 @@ const app = express();
 const port = 3000;
 const mysql = require("mysql");
 const cors = require("cors");
+const bcrypt = require("bcrypt");
+const SALT_ROUNDS = 10;
+
+
 
 app.use(express.json());
 app.use(cors());
@@ -174,10 +178,9 @@ app.get("/api/player/:id/full-stats", (req, res) => {
 /* ---------------------------
    REGISTER
    --------------------------- */
-
-
 app.post("/api/register", (req, res) => {
   const { username, email, password } = req.body || {};
+
   if (!username || !email || !password) {
     return res.status(400).json({ error: "Hiányzó adatok!" });
   }
@@ -195,79 +198,115 @@ app.post("/api/register", (req, res) => {
         console.error("DB select error (register):", err);
         return res.status(500).json({ error: "DB hiba" });
       }
+
       if (results.length > 0) {
         return res
           .status(400)
           .json({ error: "Felhasználónév vagy email foglalt" });
       }
 
-      pool.query(
-        "INSERT INTO players (username, email, password_hash) VALUES (?, ?, ?)",
-        [username, email, password],
-        (insErr, insRes) => {
-          if (insErr) {
-            console.error("DB insert error (register):", insErr);
-            return res.status(500).json({ error: "DB hiba (insert)" });
-          }
-
-          const newPlayerId = insRes.insertId;
-
-          // 🔥 KÜLDETÉSEK LÉTREHOZÁSA AZ ÚJ JÁTÉKOSNAK
-          // CSAK az 5 alap, class_required IS NULL quest
-          pool.query(
-            `
-            INSERT INTO player_quests (player_id, quest_id, progress, status)
-            SELECT ?, qm.id, 0,
-              CASE 
-                WHEN qm.id = 1 THEN 'in_progress'  -- első quest azonnal aktív
-                ELSE 'locked'
-              END
-            FROM quests_master qm
-            WHERE qm.class_required IS NULL
-            `,
-            [newPlayerId],
-            (questErr) => {
-              if (questErr) console.error("Quest init error:", questErr);
-              // nem dobunk hibát, ha a quest init elhasal
-            }
-          );
-
-          return res.json({
-            message: "Sikeres regisztráció",
-            userId: newPlayerId,
-            username,
-          });
+      // 🔐 JELSZÓ HASH
+      bcrypt.hash(password, SALT_ROUNDS, (hashErr, hash) => {
+        if (hashErr) {
+          console.error("Bcrypt hash error:", hashErr);
+          return res.status(500).json({ error: "Jelszó hash hiba" });
         }
-      );
+
+        pool.query(
+          "INSERT INTO players (username, email, password_hash) VALUES (?, ?, ?)",
+          [username, email, hash],
+          (insErr, insRes) => {
+            if (insErr) {
+              console.error("DB insert error (register):", insErr);
+              return res.status(500).json({ error: "DB hiba (insert)" });
+            }
+
+            const newPlayerId = insRes.insertId;
+
+            // 🔥 KÜLDETÉSEK LÉTREHOZÁSA AZ ÚJ JÁTÉKOSNAK
+            pool.query(
+              `
+              INSERT INTO player_quests (player_id, quest_id, progress, status)
+              SELECT ?, qm.id, 0,
+                CASE 
+                  WHEN qm.id = 1 THEN 'in_progress'
+                  ELSE 'locked'
+                END
+              FROM quests_master qm
+              WHERE qm.class_required IS NULL
+              `,
+              [newPlayerId],
+              (questErr) => {
+                if (questErr) {
+                  console.error("Quest init error:", questErr);
+                }
+              }
+            );
+
+            return res.json({
+              message: "Sikeres regisztráció",
+              userId: newPlayerId,
+              username,
+            });
+          }
+        );
+      });
     }
   );
 });
+
 
 /* ---------------------------
    LOGIN
    --------------------------- */
 app.post("/api/login", (req, res) => {
   const { identifier, password } = req.body || {};
-  if (!identifier || !password)
+
+  if (!identifier || !password) {
     return res.status(400).json({ error: "Adj meg minden mezőt!" });
+  }
 
   pool.query(
-    "SELECT * FROM players WHERE (username = ? OR email = ?) AND password_hash = ?",
-    [identifier, identifier, password],
+    "SELECT * FROM players WHERE username = ? OR email = ?",
+    [identifier, identifier],
     (err, results) => {
       if (err) {
         console.error("DB login error:", err);
         return res.status(500).json({ error: "DB hiba" });
       }
-      if (results.length === 0)
+
+      if (results.length === 0) {
         return res
           .status(401)
           .json({ error: "Hibás felhasználónév/email vagy jelszó" });
+      }
 
-      return res.json({ message: "Sikeres bejelentkezés", user: results[0] });
+      const user = results[0];
+
+      bcrypt.compare(password, user.password_hash, (bcryptErr, isMatch) => {
+        if (bcryptErr) {
+          console.error("Bcrypt compare error:", bcryptErr);
+          return res.status(500).json({ error: "Jelszó ellenőrzési hiba" });
+        }
+
+        if (!isMatch) {
+          return res
+            .status(401)
+            .json({ error: "Hibás felhasználónév/email vagy jelszó" });
+        }
+
+        // ⚠️ JELSZÓT SOHA NEM KÜLDÜNK VISSZA
+        delete user.password_hash;
+
+        return res.json({
+          message: "Sikeres bejelentkezés",
+          user,
+        });
+      });
     }
   );
 });
+
 
 /* ---------------------------
    GET USER (by username)
