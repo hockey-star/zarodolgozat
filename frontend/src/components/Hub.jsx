@@ -22,6 +22,7 @@ export default function Hub({ onGoAdventure }) {
   /** ZOOM STATE */
   const [zoom, setZoom] = useState(1);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
+  const [isZooming, setIsZooming] = useState(false);
 
   const timeoutRef = useRef(null);
 
@@ -29,12 +30,13 @@ export default function Hub({ onGoAdventure }) {
 
   /** BETÖLTÉSKORI ZOOM */
   useEffect(() => {
-    setZoom(1.5);
+    setZoom(1);
     setTimeout(() => setZoom(1), 100);
   }, []);
 
   /** KAMERA ZOOM EGY PONTRA */
-  const zoomTo = (xPercent, yPercent, zoomLevel = 1.6) => {
+  const zoomTo = (xPercent, yPercent, zoomLevel = 1) => {
+  setIsZooming(true);
   const vw = window.innerWidth;
   const vh = window.innerHeight;
 
@@ -43,8 +45,8 @@ export default function Hub({ onGoAdventure }) {
   const targetY = (yPercent / 100) * vh;
 
   // viewport közepe
-  const centerX = vw / 2;
-  const centerY = vh / 2;
+  const centerX = vw / 1;
+  const centerY = vh / 1;
 
   // eltolás számítása (scale kompenzációval!)
   const x = (centerX - targetX) / zoomLevel;
@@ -61,6 +63,7 @@ export default function Hub({ onGoAdventure }) {
 
   /** MOZGÁS + MODAL */
   const moveTo = (x, y, type) => {
+    setIsZooming(true);
     zoomTo(x, y);
 
     const dx = x - playerPos.x;
@@ -96,11 +99,11 @@ export default function Hub({ onGoAdventure }) {
     <div className="fixed inset-0 overflow-hidden bg-black text-white">
       {/* ZOOMOLHATÓ HUB */}
       <div
-         className={`w-full h-full transition-transform duration-[1200ms] ease-in-out ${
-    isMoving ? "hub-motion" : ""
+          className={`hub-camera transition-transform duration-[1200ms] ease-in-out ${
+    isZooming ? "hub-zooming" : ""
   }`}
         style={{
-          transform: `scale(${zoom}) translate(${offset.x}px, ${offset.y}px)`,
+          transform: `translate(${offset.x}px, ${offset.y}px) scale(${zoom})`,
           transformOrigin: "center center",
           backgroundImage: `url("./src/assets/pics/HUB.png")`,
           backgroundSize: "cover",
