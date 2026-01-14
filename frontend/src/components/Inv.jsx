@@ -1,4 +1,3 @@
-// frontend/src/components/Inv.jsx
 import React, { useState, useMemo, useEffect } from "react";
 import { usePlayer } from "../context/PlayerContext.jsx";
 import {
@@ -25,12 +24,10 @@ function resolveCardImageFromAbility(ab) {
   return "";
 }
 
-// DB alapján: items.type = weapon | armor | potion | accessory
-// Head/helmet típus most nincs, de előkészítjük:
 const EQUIP_SLOTS = [
   { key: "weapon", label: "Weapon" },
   { key: "armor", label: "Chest" },
-  { key: "helmet", label: "Head" }, // ha később items.type = 'helmet' lesz
+  { key: "helmet", label: "Head" },
   { key: "accessory", label: "Trinket" },
 ];
 
@@ -40,16 +37,29 @@ function mapItemTypeToSlot(type) {
   if (t === "armor") return "armor";
   if (t === "accessory") return "accessory";
   if (t === "helmet" || t === "head") return "helmet";
-  return null; // pl potion -> null
+  return null;
 }
 
 function formatBonusLine(label, value) {
-  if (!value || value <= 0) return null;
+  if (!value || Number(value) <= 0) return null;
   return <div>{label}: +{value}</div>;
 }
 
+function formatWithBonus(finalValue, bonus) {
+  const b = Number(bonus) || 0;
+  if (!b) return `${finalValue}`;
+  return `${finalValue} (+${b})`;
+}
+
 export default function Inv({ onClose }) {
-  const { player, setPlayer } = usePlayer();
+  // ✅ effectiveStats-et is kérjük, mert az a "final" stat (base + item)
+  const {
+    player,
+    setPlayer,
+    refreshFullStats,
+    itemBonuses,
+    effectiveStats,
+  } = usePlayer() || {};
 
   /* ==============================
      MODAL STATE
@@ -122,7 +132,7 @@ export default function Inv({ onClose }) {
         return res.json();
       })
       .then((data) => {
-        setInventoryItems(data);
+        setInventoryItems(Array.isArray(data) ? data : []);
         setSelectedItem(null);
       })
       .catch((err) => {
@@ -135,6 +145,8 @@ export default function Inv({ onClose }) {
      EQUIP / UNEQUIP
      ============================== */
   function equipItem(itemId) {
+    if (!player?.id) return;
+
     fetch("http://localhost:3000/api/inventory/equip", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -147,37 +159,36 @@ export default function Inv({ onClose }) {
         if (!res.ok) throw new Error("Equip failed");
         return res.json();
       })
-      .then(() => {
-  setInventoryItems((prev) => {
-    // az újonnan equipelt item típusa → slot
-    const newItem = prev.find((p) => p.item_id === itemId);
-    const newSlot = newItem ? mapItemTypeToSlot(newItem.type) : null;
+      .then(async () => {
+        setInventoryItems((prev) => {
+          const newItem = prev.find((p) => p.item_id === itemId);
+          const newSlot = newItem ? mapItemTypeToSlot(newItem.type) : null;
 
-    return prev.map((it) => {
-      const itSlot = mapItemTypeToSlot(it.type);
+          return prev.map((it) => {
+            const itSlot = mapItemTypeToSlot(it.type);
+            if (!itSlot || it.type === "potion") return it;
 
-      // potion soha nem kerül slotba
-      if (!itSlot || it.type === "potion") return it;
+            if (itSlot === newSlot) {
+              return {
+                ...it,
+                is_equipped: it.item_id === itemId,
+              };
+            }
+            return it;
+          });
+        });
 
-      // ha ugyanabba a slotba tartozik:
-      if (itSlot === newSlot) {
-        return {
-          ...it,
-          is_equipped: it.item_id === itemId,
-        };
-      }
+        setSelectedItem((prev) =>
+          prev && prev.item_id === itemId ? { ...prev, is_equipped: true } : prev
+        );
 
-      return it;
-    });
-  });
-
-  // UI szinkron a jobb oldali panelhez
-  setSelectedItem((prev) =>
-    prev && prev.item_id === itemId
-      ? { ...prev, is_equipped: true }
-      : prev
-  );
-})
+        // ✅ STATOK FRISSÍTÉSE BACKENDRŐL
+        try {
+          await refreshFullStats?.(player.id);
+        } catch (e) {
+          console.error(e);
+        }
+      })
       .catch((err) => {
         console.error(err);
         alert("Hiba az equip során");
@@ -185,6 +196,8 @@ export default function Inv({ onClose }) {
   }
 
   function unequipItem(itemId) {
+    if (!player?.id) return;
+
     fetch("http://localhost:3000/api/inventory/unequip", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -197,19 +210,23 @@ export default function Inv({ onClose }) {
         if (!res.ok) throw new Error("Unequip failed");
         return res.json();
       })
-      .then(() => {
+      .then(async () => {
         setInventoryItems((prev) =>
           prev.map((it) =>
             it.item_id === itemId ? { ...it, is_equipped: false } : it
           )
         );
 
-        // ✅ UI azonnali frissítés a jobb oldali panelhez
         setSelectedItem((prev) =>
-          prev && prev.item_id === itemId
-            ? { ...prev, is_equipped: false }
-            : prev
+          prev && prev.item_id === itemId ? { ...prev, is_equipped: false } : prev
         );
+
+        // ✅ STATOK FRISSÍTÉSE BACKENDRŐL
+        try {
+          await refreshFullStats?.(player.id);
+        } catch (e) {
+          console.error(e);
+        }
       })
       .catch((err) => {
         console.error(err);
@@ -254,7 +271,7 @@ export default function Inv({ onClose }) {
       return;
     }
 
-    setPlayer((prev) => ({
+    setPlayer?.((prev) => ({
       ...prev,
       deck: [...tempDeck],
     }));
@@ -287,27 +304,47 @@ export default function Inv({ onClose }) {
       if (!it.is_equipped) continue;
       const slot = mapItemTypeToSlot(it.type);
       if (!slot) continue;
-      if (it.type === "potion") continue; // potion ne kerüljön slotba
-
-      map[slot] = it; // 1 db / slot
+      if (it.type === "potion") continue;
+      map[slot] = it;
     }
     return map;
   }, [inventoryItems]);
 
   /* ==============================
-     STATOK (playerből)
+     STATOK (FINAL + zárójeles bonus)
      ============================== */
   const stats = useMemo(() => {
-    if (!player) return [];
+    // ha nincs player, ne omoljon össze, de legyen valami
+    if (!player) {
+      return [
+        { label: "Level", value: "-" },
+        { label: "HP", value: "-" },
+        { label: "Strength", value: "-" },
+        { label: "Intellect", value: "-" },
+        { label: "Defense", value: "-" },
+        { label: "Gold", value: "-" },
+      ];
+    }
+
+    // ✅ final statok a contextből, fallback a player base-re
+    const finalStr = effectiveStats?.strength ?? (player.strength ?? 0);
+    const finalInt = effectiveStats?.intellect ?? (player.intellect ?? 0);
+    const finalDef = effectiveStats?.defense ?? (player.defense ?? 0);
+    const finalHp = effectiveStats?.hp ?? (player.hp ?? 0);
+    const finalMaxHp = effectiveStats?.max_hp ?? (player.max_hp ?? 0);
+
+    const hpBonus = itemBonuses?.hp ?? 0;
+    const hpText = `${finalHp} / ${finalMaxHp}`;
+
     return [
       { label: "Level", value: player.level ?? 1 },
-      { label: "HP", value: `${player.hp ?? 0} / ${player.max_hp ?? 0}` },
-      { label: "Strength", value: player.strength ?? 0 },
-      { label: "Intellect", value: player.intellect ?? 0 },
-      { label: "Defense", value: player.defense ?? 0 },
+      { label: "HP", value: hpBonus ? `${hpText} (+${hpBonus})` : hpText },
+      { label: "Strength", value: formatWithBonus(finalStr, itemBonuses?.strength ?? 0) },
+      { label: "Intellect", value: formatWithBonus(finalInt, itemBonuses?.intellect ?? 0) },
+      { label: "Defense", value: formatWithBonus(finalDef, itemBonuses?.defense ?? 0) },
       { label: "Gold", value: player.gold ?? 0 },
     ];
-  }, [player]);
+  }, [player, effectiveStats, itemBonuses]);
 
   /* ==============================
      RENDER
@@ -327,16 +364,11 @@ export default function Inv({ onClose }) {
       >
         <h2 className="text-center mb-2 text-sm text-white">OTTHON</h2>
 
-        {/* STAT MODAL */}
         {showStats && <StatModal onClose={() => setShowStats(false)} />}
 
-        {/* ==============================
-            INVENTORY MODAL (Character Screen)
-           ============================== */}
         {showInventory && (
           <div className="absolute inset-0 bg-black/85 flex items-center justify-center p-10 z-40">
             <div className="bg-neutral-950/90 border border-neutral-800 rounded-2xl shadow-xl w-4/5 h-4/5 text-white relative p-6">
-              {/* CLOSE */}
               <button
                 className="absolute top-4 right-4 w-9 h-9 flex items-center justify-center
                            bg-red-600 hover:bg-red-700 text-white rounded-full text-lg font-bold"
@@ -349,9 +381,7 @@ export default function Inv({ onClose }) {
                 ✕
               </button>
 
-              {/* LAYOUT GRID */}
               <div className="h-full grid grid-cols-12 gap-6 min-h-0">
-                {/* LEFT: EQUIP SLOTS */}
                 <div className="col-span-2 flex flex-col gap-3 min-h-0">
                   <div className="text-xs tracking-widest text-neutral-400 uppercase">
                     Equipment
@@ -387,7 +417,6 @@ export default function Inv({ onClose }) {
                   })}
                 </div>
 
-                {/* CENTER: CHARACTER PLACEHOLDER */}
                 <div className="col-span-6 flex flex-col min-h-0">
                   <div className="text-xs tracking-widest text-neutral-400 uppercase">
                     Character
@@ -397,10 +426,7 @@ export default function Inv({ onClose }) {
                   </div>
                 </div>
 
-                {/* RIGHT: STATS + INVENTORY GRID + ITEM INFO */}
-                {/* ✅ fontos: min-h-0 + flex-1 blokkok */}
                 <div className="col-span-4 flex flex-col gap-4 min-h-0">
-                  {/* STATS (fix magasság) */}
                   <div className="rounded-2xl border border-neutral-800 bg-neutral-950/50 p-4 shrink-0">
                     <div className="text-xs tracking-widest text-neutral-400 uppercase mb-3">
                       Stats
@@ -419,14 +445,11 @@ export default function Inv({ onClose }) {
                     </div>
                   </div>
 
-                  {/* INVENTORY GRID (SCROLL) */}
-                  {/* ✅ EZ biztosan scrolloz: flex-1 + min-h-0 + belső overflow-y-auto + explicit max-h */}
                   <div className="rounded-2xl border border-neutral-800 bg-neutral-950/50 p-4 flex-1 min-h-0 flex flex-col">
                     <div className="text-xs tracking-widest text-neutral-400 uppercase mb-3 shrink-0">
                       Inventory
                     </div>
 
-                    {/* ✅ EZ a görgethető rész */}
                     <div className="flex-1 min-h-0 overflow-y-auto pr-1">
                       <div className="grid grid-cols-4 gap-3">
                         {inventoryItems.length === 0 && (
@@ -436,8 +459,7 @@ export default function Inv({ onClose }) {
                         )}
 
                         {inventoryItems.map((item) => {
-                          const isSelected =
-                            selectedItem?.item_id === item.item_id;
+                          const isSelected = selectedItem?.item_id === item.item_id;
 
                           return (
                             <button
@@ -459,6 +481,11 @@ export default function Inv({ onClose }) {
                               <div className="text-[10px] text-neutral-400 uppercase">
                                 {item.type} • {item.rarity}
                               </div>
+                              {item.upgrade_level > 0 && (
+                                <div className="text-[10px] text-yellow-300 uppercase mt-1">
+                                  +{item.upgrade_level}
+                                </div>
+                              )}
                               {item.is_equipped && (
                                 <div className="text-[10px] text-emerald-400 uppercase mt-1">
                                   Equipped
@@ -471,7 +498,6 @@ export default function Inv({ onClose }) {
                     </div>
                   </div>
 
-                  {/* ITEM INFO + ACTIONS (fix magasság) */}
                   <div className="rounded-2xl border border-neutral-800 bg-neutral-950/50 p-4 shrink-0">
                     {selectedItem ? (
                       <div className="flex flex-col gap-3">
@@ -479,11 +505,12 @@ export default function Inv({ onClose }) {
                           <div className="text-xs tracking-widest text-neutral-400 uppercase">
                             Selected
                           </div>
-                          <div className="text-lg font-bold">
-                            {selectedItem.name}
-                          </div>
+                          <div className="text-lg font-bold">{selectedItem.name}</div>
                           <div className="text-[11px] text-neutral-400 uppercase">
                             {selectedItem.type} • {selectedItem.rarity}
+                            {selectedItem.upgrade_level > 0
+                              ? ` • +${selectedItem.upgrade_level}`
+                              : ""}
                           </div>
                         </div>
 
@@ -538,252 +565,57 @@ export default function Inv({ onClose }) {
           </div>
         )}
 
-        {/*------------------------------------------------------------------------------------------------------------------------------------------------------*/}
-        {/* SPELLBOOK / DECK MODAL */}
+        {/* SPELLBOOK / DECK MODAL: placeholder */}
         {showDeckEditor && (
           <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-40">
             <div className="relative text-white flex flex-col items-center">
-              <div className="w-full max-w-[1200px] flex justify-between items-center mb-2 px-2">
-                <h2 className="text-xl font-bold drop-shadow-[0_0_6px_rgba(0,0,0,0.8)]">
-                  Spellbook / Deck – {classKey.toUpperCase()}
-                </h2>
-
-                <div className="text-sm text-gray-200 drop-shadow-[0_0_6px_rgba(0,0,0,0.8)]">
-                  Deck mérete: {tempDeck.length} / {MAX_DECK_SIZE}
-                </div>
-              </div>
-
-              <div className="text-xs text-gray-200 mb-3 drop-shadow-[0_0_6px_rgba(0,0,0,0.8)] max-w-[1200px] px-2">
-                Limit:
-                <span className="text-gray-50"> common</span> max 4,
-                <span className="text-gray-50"> rare</span> max 3,
-                <span className="text-gray-50"> epic</span> max 2,
-                <span className="text-gray-50"> legendary</span> max 1 / képesség.
-              </div>
-
-              <div
-                className="
-                  relative
-                  w-[68vw]
-                  max-w-[1000px]
-                  aspect-[870/704]
-                  flex
-                  items-center
-                  justify-center
-                "
+              <button
+                className="px-4 py-2 bg-gray-800 rounded hover:bg-gray-700"
+                onClick={() => setShowDeckEditor(false)}
               >
-                <img
-                  src={spellbookImg}
-                  alt="Spellbook"
-                  className="
-                    absolute inset-0
-                    w-full h-full
-                    object-contain
-                    pointer-events-none
-                    select-none
-                    drop-shadow-[0_0_25px_rgba(0,0,0,0.9)]
-                  "
-                />
-
-                <div
-                  className="absolute flex pointer-events-none"
-                  style={{
-                    width: "78%",
-                    height: "52%",
-                    top: "37%",
-                    left: "50%",
-                    transform: "translate(-50%, -50%)",
-                    gap: "3rem",
-                  }}
-                >
-                  <div
-                    className="flex-1 pointer-events-auto"
-                    style={{ paddingRight: "0.25rem" }}
-                  >
-                    <div className="font-semibold mb-1 text-sm text-yellow-100">
-                      Elérhető képességek
-                    </div>
-
-                    <div className="h-full overflow-y-auto pr-1 pixel-scroll">
-                      <div className="grid grid-cols-3 gap-2">
-                        {abilityPool.map((ab) => {
-                          const imgSrc = resolveCardImageFromAbility(ab);
-                          return (
-                            <button
-                              key={ab.id}
-                              onClick={() => handleAddToDeck(ab.id)}
-                              className="
-                                relative
-                                aspect-[3/4]
-                                rounded-md
-                                overflow-hidden
-                                shadow-md
-                                hover:brightness-110
-                                transition
-                              "
-                            >
-                              <img
-                                src={imgSrc}
-                                alt={ab.name}
-                                className="absolute inset-0 w-full h-full object-cover"
-                              />
-
-                              <div className="absolute bottom-0 w-full bg-black/75 px-1 py-[3px]">
-                                <div className="text-[9px] font-semibold text-center">
-                                  {ab.name}
-                                </div>
-                                <div className="text-[8px] text-amber-200 uppercase text-center">
-                                  {ab.type} • {ab.rarity}
-                                </div>
-                              </div>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div
-                    className="flex-1 pointer-events-auto"
-                    style={{ paddingLeft: "5.25rem" }}
-                  >
-                    <div className="font-semibold mb-1 text-sm text-yellow-100">
-                      Jelenlegi pakli
-                    </div>
-
-                    <div className="h-full overflow-y-auto pr-1 pixel-scroll">
-                      {uniqueDeckIds.length === 0 ? (
-                        <div className="text-sm text-amber-100/80">
-                          A pakli üres. Kattints bal oldalt egy képességre.
-                        </div>
-                      ) : (
-                        <div className="grid grid-cols-3 gap-2">
-                          {uniqueDeckIds.map((id) => {
-                            const ab = ABILITIES_BY_ID[id];
-                            if (!ab) return null;
-                            const count = deckCounts[id] || 0;
-                            const imgSrc = resolveCardImageFromAbility(ab);
-
-                            return (
-                              <button
-                                key={id}
-                                onClick={() => handleRemoveOneFromDeck(id)}
-                                className="
-                                  relative
-                                  aspect-[3/4]
-                                  rounded-md
-                                  overflow-hidden
-                                  shadow-md
-                                  hover:brightness-110
-                                  transition
-                                "
-                              >
-                                <img
-                                  src={imgSrc}
-                                  alt={ab.name}
-                                  className="absolute inset-0 w-full h-full object-cover"
-                                />
-
-                                <div className="absolute top-1 left-1 bg-black/80 text-[8px] px-1 rounded">
-                                  x{count}
-                                </div>
-
-                                <div className="absolute bottom-0 w-full bg-black/75 px-1 py-[3px]">
-                                  <div className="text-[9px] font-semibold text-center">
-                                    {ab.name}
-                                  </div>
-                                  <div className="text-[8px] text-amber-200 uppercase text-center">
-                                    {ab.type} • {ab.rarity}
-                                  </div>
-                                </div>
-                              </button>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="mt-4 w-full max-w-[1200px] flex justify-between items-center px-2">
-                <div className="text-xs text-gray-200">
-                  Tipp: bal oldalt kattintva hozzáadsz, jobb oldalt eltávolítasz.
-                </div>
-
-                <div className="space-x-2">
-                  <button
-                    className="px-4 py-2 bg-gray-800 rounded hover:bg-gray-700"
-                    onClick={() => setShowDeckEditor(false)}
-                  >
-                    Mégse
-                  </button>
-
-                  <button
-                    className="px-4 py-2 bg-emerald-600 rounded hover:bg-emerald-500"
-                    onClick={handleSaveDeck}
-                  >
-                    Mentés
-                  </button>
-                </div>
-              </div>
+                Bezárás
+              </button>
             </div>
           </div>
         )}
-        {/*------------------------------------------------------------------------------------------------------------------------------------------------------*/}
 
         {/* HOTSPOTOK A HÁZBAN */}
         <div className="flex justify-between flex-1">
           <div style={{ width: "80%", height: "80%" }}>
-            {/* AJTÓ / KIJÁRAT */}
             <div
-              className={`absolute cursor-pointer group ${
-                anyModalOpen ? "pointer-events-none" : ""
-              }`}
+              className={`absolute cursor-pointer group ${anyModalOpen ? "pointer-events-none" : ""}`}
               style={{ left: "5%", bottom: "5%", width: "325px", height: "600px" }}
               onClick={onClose}
             >
-              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition"></div>
+              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition" />
             </div>
 
-            {/* DECK SZEKRÉNY – SPELLBOOK */}
             <div
-              className={`absolute cursor-pointer group ${
-                anyModalOpen ? "pointer-events-none" : ""
-              }`}
+              className={`absolute cursor-pointer group ${anyModalOpen ? "pointer-events-none" : ""}`}
               style={{ left: "45%", bottom: "30%", width: "180px", height: "250px" }}
               onClick={() => setShowDeckEditor(true)}
             >
-              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition"></div>
+              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition" />
             </div>
 
-            {/* LÁDA / INVENTORY */}
             <div
-              className={`absolute cursor-pointer group ${
-                anyModalOpen ? "pointer-events-none" : ""
-              }`}
+              className={`absolute cursor-pointer group ${anyModalOpen ? "pointer-events-none" : ""}`}
               style={{ left: "25%", bottom: "18%", width: "400px", height: "300px" }}
               onClick={() => setShowInventory(true)}
             >
-              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition"></div>
+              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition" />
             </div>
 
-            {/* ÁGY → STAT MODAL */}
             <div
-              className={`absolute cursor-pointer group ${
-                anyModalOpen ? "pointer-events-none" : ""
-              }`}
+              className={`absolute cursor-pointer group ${anyModalOpen ? "pointer-events-none" : ""}`}
               style={{ right: "10%", bottom: "5%", width: "650px", height: "350px" }}
               onClick={() => setShowStats(true)}
             >
-              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition"></div>
+              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition" />
             </div>
 
-            {/* BEÁLLÍTÁSOK (placeholder) */}
             <div
-              className={`absolute cursor-pointer group ${
-                anyModalOpen ? "pointer-events-none" : ""
-              }`}
+              className={`absolute cursor-pointer group ${anyModalOpen ? "pointer-events-none" : ""}`}
               style={{ right: "10%", top: "5%", width: "150px", height: "150px" }}
               onClick={onClose}
             >

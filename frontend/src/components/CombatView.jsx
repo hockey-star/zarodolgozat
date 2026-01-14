@@ -35,7 +35,6 @@ import warriorAura1 from "../assets/effects/warrior_aura_1.webm";
 import warriorAura2 from "../assets/effects/warrior_aura_2.webm";
 import warriorAura3 from "../assets/effects/warrior_aura_3.webm";
 
-
 import {
   getClassKeyFromId,
   ABILITIES_BY_ID,
@@ -118,9 +117,6 @@ const WARRIOR_RAGE = {
   VIS_MAX_BLUR: 16,
   VIS_RING_PX: 10,
 };
-
-
-
 
 const WARRIOR_RAGE_CFG = {
   STAGES: {
@@ -519,22 +515,36 @@ function FadeOverlay({ isOpen, onMid, onDone, inMs = 220, holdMs = 120, outMs = 
   );
 }
 
+
 export default function CombatView({ level = 1, boss = false, enemies = [], background, pathType = "fight", onEnd }) {
   const {
     player,
     setPlayer,
     mageMana,
     setMageMana,
+    derivedStats,
+    refreshFullStats,
     gainMageMana,
     spendAllMageMana,
     MAGE_MANA_MAX: CTX_MAGE_MANA_MAX,
   } = usePlayer() || {};
 
+  // hp max elsőnek
+  const firstInitRef = useRef(true);
+
   // ✅ ANCHOR REF-ek a VFX-hez
   const combatRootRef = useRef(null);
   const playerAnchorRef = useRef(null);
   const enemyAnchorRef = useRef(null);
-  
+
+  // ✅ VFX tracking + clear all
+  function clearAllVfx() {
+  setAbilityEffects([]);      // ✅ minden effect törlés (loop is!)
+  setActiveAuraId(null);
+  setCurrentAuraSrc(null);
+}
+
+
   // ✅ timeout tracking
   const timersRef = useRef([]);
   const trackTimeout = (id) => {
@@ -561,13 +571,38 @@ export default function CombatView({ level = 1, boss = false, enemies = [], back
     return () => window.removeEventListener("resize", updateScale);
   }, []);
 
-  const initialHPFromPlayer = player?.hp ?? 100;
-  const maxHPFromPlayer = player?.max_hp ?? initialHPFromPlayer;
+  const [turn, setTurn] = useState("player");
+  const initialHPFromPlayer = derivedStats?.hp ?? player?.hp ?? 100;
+  const maxHPFromPlayer = derivedStats?.max_hp ?? player?.max_hp ?? initialHPFromPlayer;
   const [playerHP, setPlayerHP] = useState(initialHPFromPlayer);
 
-  useEffect(() => {
-    if (player?.hp != null) setPlayerHP(player.hp);
-  }, [player?.hp]);
+  // ✅ RUN HP PERSIST (sessionStorage) — B-E megoldás
+  const hpStoreKey = player?.id ? `adventure_hp_${player.id}` : null;
+
+  function readStoredHP() {
+    if (!hpStoreKey) return null;
+    const raw = sessionStorage.getItem(hpStoreKey);
+    const n = raw == null ? null : Number(raw);
+    return Number.isFinite(n) ? n : null;
+  }
+
+  function writeStoredHP(hp) {
+    if (!hpStoreKey) return;
+    sessionStorage.setItem(hpStoreKey, String(hp));
+  }
+
+  function clearStoredHP() {
+    if (!hpStoreKey) return;
+    sessionStorage.removeItem(hpStoreKey);
+  }
+
+  // ❌ FONTOS: ezt kivettük, mert battleOver/end állapotban visszahúzta a HP-t derivedStats.hp-ra (ami nálad max HP)
+  // useEffect(() => {
+  //   if (turn !== "player" && turn !== "enemy") {
+  //     const hp = derivedStats?.hp ?? player?.hp;
+  //     if (hp != null) setPlayerHP(hp);
+  //   }
+  // }, [derivedStats?.hp, player?.hp, turn]);
 
   const classConfig = useMemo(() => {
     if (!player?.class_id) return DEFAULT_CLASS_CONFIG;
@@ -578,7 +613,6 @@ export default function CombatView({ level = 1, boss = false, enemies = [], back
 
   const [enemy, setEnemy] = useState(null);
   const [enemyHP, setEnemyHP] = useState(0);
-  const [turn, setTurn] = useState("player");
   const [battleOver, setBattleOver] = useState(false);
   const [defending, setDefending] = useState(false);
 
@@ -594,6 +628,7 @@ export default function CombatView({ level = 1, boss = false, enemies = [], back
     setBattleOver(true);
     setArcanePickerOpen(false);
     setTurn("end");
+    clearAllVfx(); 
     clearAllTimers();
   };
 
@@ -644,56 +679,55 @@ export default function CombatView({ level = 1, boss = false, enemies = [], back
   const [currentAuraSrc, setCurrentAuraSrc] = useState(null);
   const logEndRef = useRef(null);
 
-  // ✅ DOM-anchored VFX spawn (targetenként offsettel)
   // ✅ DOM-anchored VFX spawn (targetenként offsettel) + loop + RETURN ID
-function spawnAbilityEffect({ src, target = "center", width, height, loop = false }) {
-  const id = Date.now() + Math.random();
+  function spawnAbilityEffect({ src, target = "center", width, height, loop = false }) {
+    const id = Date.now() + Math.random();
 
-  const root = combatRootRef.current;
-  const playerEl = playerAnchorRef.current;
-  const enemyEl = enemyAnchorRef.current;
+    const root = combatRootRef.current;
+    const playerEl = playerAnchorRef.current;
+    const enemyEl = enemyAnchorRef.current;
 
-  let pos = null;
+    let pos = null;
 
-  if (root) {
-    const rootRect = root.getBoundingClientRect();
+    if (root) {
+      const rootRect = root.getBoundingClientRect();
 
-    const centerOf = (el) => {
-      const r = el.getBoundingClientRect();
-      return {
-        x: r.left + r.width / 2 - rootRect.left,
-        y: r.top + r.height / 2 - rootRect.top,
+      const centerOf = (el) => {
+        const r = el.getBoundingClientRect();
+        return {
+          x: r.left + r.width / 2 - rootRect.left,
+          y: r.top + r.height / 2 - rootRect.top,
+        };
       };
-    };
 
-    if (target === "player" || target === "player_shield") {
-      if (playerEl) pos = centerOf(playerEl);
-    } else if (target.startsWith("enemy")) {
-      if (enemyEl) pos = centerOf(enemyEl);
-    } else {
-      pos = { x: rootRect.width / 2, y: rootRect.height / 2 };
+      if (target === "player" || target === "player_shield") {
+        if (playerEl) pos = centerOf(playerEl);
+      } else if (target.startsWith("enemy")) {
+        if (enemyEl) pos = centerOf(enemyEl);
+      } else {
+        pos = { x: rootRect.width / 2, y: rootRect.height / 2 };
+      }
+
+      const OFFSETS = {
+        player: { x: 90, y: 110 },
+        player_shield: { x: 90, y: 90 },
+        enemy: { x: 0, y: 35 },
+        enemy_hit: { x: -2, y: 50 },
+        enemy_aoe: { x: 360, y: 100 },
+        enemy_stun: { x: 350, y: -150 },
+        enemy_shield: { x: 350, y: 90 },
+      };
+
+      const o = OFFSETS[target] || { x: 0, y: 0 };
+      pos = { x: pos.x + o.x, y: pos.y + o.y };
     }
 
-    const OFFSETS = {
-      player: { x: 90, y: 110 },
-      player_shield: { x: 90, y: 90 },
-      enemy: { x: 0, y: 35 },
-      enemy_hit: { x: -2, y: 50 },
-      enemy_aoe: { x: 360, y: 100 },
-      enemy_stun: { x: 350, y: -150 },
-      enemy_shield: { x: 350, y: 90 },
-    };
+    setAbilityEffects((prev) => [...prev, { id, src, target, width, height, pos, loop }]);
 
-    const o = OFFSETS[target] || { x: 0, y: 0 };
-    pos = { x: pos.x + o.x, y: pos.y + o.y };
+    return id; // ✅ ettől fog működni az aura ID
   }
 
-  setAbilityEffects((prev) => [...prev, { id, src, target, width, height, pos, loop }]);
-
-  return id; // ✅ ettől fog működni az aura ID
-}
-
-const [playerDamageBuff, setPlayerDamageBuff] = useState(null);
+  const [playerDamageBuff, setPlayerDamageBuff] = useState(null);
   const [enemyPoison, setEnemyPoison] = useState(null);
   const [enemyBurn, setEnemyBurn] = useState(null);
   const [enemyStun, setEnemyStun] = useState(0);
@@ -793,9 +827,6 @@ const [playerDamageBuff, setPlayerDamageBuff] = useState(null);
     return { used: false, consumesTurn: true };
   }
 
-  
-
-
   useEffect(() => {
     if (logEndRef.current) logEndRef.current.scrollIntoView({ behavior: "smooth" });
   }, [log]);
@@ -824,7 +855,7 @@ const [playerDamageBuff, setPlayerDamageBuff] = useState(null);
     if (!player || !setPlayer) return;
     if (Array.isArray(player.deck) && player.deck.length > 0) return;
     const baseDeck = buildDefaultDeckForClass(classKey);
-    setPlayer((prev) => ({ ...prev, deck: baseDeck }));
+    setPlayer((prev) => ({ ...(prev || {}), deck: baseDeck }));
   }, [player, setPlayer, classKey]);
 
   function resolvePendingReplaces() {
@@ -918,6 +949,21 @@ const [playerDamageBuff, setPlayerDamageBuff] = useState(null);
     if (!player) return;
 
     async function initBattle() {
+      clearAllVfx();
+      // ✅ RUN HP: ha van mentett HP (és >0), onnan indulunk, különben max HP
+      // (mount/unmount esetén sem resetel maxra)
+      if (firstInitRef.current) {
+        const stored = readStoredHP();
+        const startHp =
+          stored != null && stored > 0
+            ? Math.min(stored, maxHPFromPlayer)
+            : maxHPFromPlayer;
+
+        setPlayerHP(startHp);
+        playerHPRef.current = startHp;
+        firstInitRef.current = false;
+      }
+
       try {
         clearAllTimers();
 
@@ -1019,7 +1065,6 @@ const [playerDamageBuff, setPlayerDamageBuff] = useState(null);
         pendingRef.current = empty;
 
         const hpRatio = maxHPFromPlayer > 0 ? playerHPRef.current / maxHPFromPlayer : 1;
-
         const initialHand = createInitialHand({ pool, hpRatio, recentIds: [], classKey });
 
         setHand(initialHand);
@@ -1038,7 +1083,6 @@ const [playerDamageBuff, setPlayerDamageBuff] = useState(null);
     initBattle();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [level, boss, pathType, enemies, player, classKey, maxHPFromPlayer]);
-
 
   useEffect(() => {
     if (classKey !== "warrior" || playerHP <= 0 || battleOver) {
@@ -1075,8 +1119,8 @@ const [playerDamageBuff, setPlayerDamageBuff] = useState(null);
       } else {
         setActiveAuraId(null);
         setCurrentAuraSrc(null);
-        if (currentAuraSrc) { // Ha volt aura, de már nincs, adjunk egy heal effektet
-            spawnAbilityEffect({ src: healFx, target: "player", width: "700px", height: "700px" });
+        if (currentAuraSrc) {
+          spawnAbilityEffect({ src: healFx, target: "player", width: "700px", height: "700px" });
         }
       }
     }
@@ -1092,7 +1136,7 @@ const [playerDamageBuff, setPlayerDamageBuff] = useState(null);
     setArcanePickerOpen(false);
     spendAllMageMana();
 
-    const playerIntellect = player?.intellect ?? 0;
+    const playerIntellect = derivedStats?.intellect ?? player?.intellect ?? 0;
 
     if (choice.kind === "damage_percent") {
       const dmg = Math.max(1, Math.floor((enemy?.maxHp ?? 1) * choice.percent));
@@ -1189,8 +1233,9 @@ const [playerDamageBuff, setPlayerDamageBuff] = useState(null);
   function applyCardEffects(card) {
     if (battleOverRef.current) return;
 
-    const playerStrength = player?.strength ?? 0;
-    const playerIntellect = player?.intellect ?? 0;
+    const playerStrength = derivedStats?.strength ?? player?.strength ?? 0;
+    const playerIntellect = derivedStats?.intellect ?? player?.intellect ?? 0;
+    const playerDefenseNow = derivedStats?.defense ?? player?.defense ?? 0;
     const playerLevel = player?.level ?? 1;
     const playerAgi = playerStrength;
 
@@ -1613,12 +1658,12 @@ const [playerDamageBuff, setPlayerDamageBuff] = useState(null);
       }
 
       // ===== BASIC ATTACK (VFX + állítható delay) =====
-      // Enemy basic attack VFX (warrior slash)
       spawnAbilityEffect({ src: warriorSlashFx, target: "player", width: "1000px", height: "1000px" });
 
-      // A tényleges sebzés egy rövid “windup” után történik, hogy a VFX látszódjon
       trackTimeout(setTimeout(() => {
         if (battleOverRef.current) return;
+
+        const playerDefenseNow = derivedStats?.defense ?? player?.defense ?? 0; // ✅ itt kell
 
         const [minDmg, maxDmg] = enemy.dmg;
         let dmg = Math.floor(Math.random() * (maxDmg - minDmg + 1)) + minDmg;
@@ -1628,7 +1673,7 @@ const [playerDamageBuff, setPlayerDamageBuff] = useState(null);
           setDefending((prev) => Math.max(0, (prev || 1) - 1));
         }
 
-        const finalBase = Math.max(0, dmg - Math.floor((player?.defense ?? 0) / 2));
+        const finalBase = Math.max(0, dmg - Math.floor(playerDefenseNow / 2));
         let final = finalBase;
 
         if (classKey === "warrior") {
@@ -1658,9 +1703,10 @@ const [playerDamageBuff, setPlayerDamageBuff] = useState(null);
           setPlayerHP((prev) => {
             const newHP = Math.max(0, prev - final);
             addHPPopup(-final, "player");
+            pushLog(`💥 ${enemy.name} támad (${final} sebzés).`);
+            if (newHP <= 0) endBattle();
             return newHP;
           });
-          pushLog(`💥 ${enemy.name} támad (${final} sebzés).`);
         }
 
         if (enemyVulnerability && enemyVulnerability.remainingTurns != null) {
@@ -1668,8 +1714,6 @@ const [playerDamageBuff, setPlayerDamageBuff] = useState(null);
           if (remaining <= 0) { setEnemyVulnerability(null); pushLog("🔮 Az Arcane Surge hatása elmúlt."); }
           else setEnemyVulnerability((prev) => (prev ? { ...prev, remainingTurns: remaining } : null));
         }
-
-        if (playerHPRef.current - final <= 0) { endBattle(); return; }
 
         finishEnemyTurnToPlayer();
       }, ENEMY_BASIC_WINDUP_MS));
@@ -1679,7 +1723,7 @@ const [playerDamageBuff, setPlayerDamageBuff] = useState(null);
 
     return () => clearTimeout(t);
   }, [
-    turn, enemy, defending, battleOver, boss, player,
+    turn, enemy, defending, battleOver, boss,
     enemyHP, enemyPoison, enemyBurn, enemyBleed, enemyStun, enemyVulnerability,
     maxHPFromPlayer, classKey, petHP, petMaxHP, petTauntTurns, playerEvasionTurns,
   ]);
@@ -1695,63 +1739,68 @@ const [playerDamageBuff, setPlayerDamageBuff] = useState(null);
   async function handleContinue() {
     const victory = enemyHP <= 0 && playerHP > 0;
 
-    if (!victory) { if (onEnd) onEnd(playerHP, false); return; }
-    if (!player || !setPlayer) { if (onEnd) onEnd(playerHP, true); return; }
+    // ✅ defeat -> töröljük a run HP-t, hogy hubból újra max HP-val induljon
+    if (!victory) {
+      clearStoredHP();
+      clearAllVfx();
+      onEnd?.(playerHP, false);
+      return;
+    }
+
+    // ✅ victory -> mentsük a maradék HP-t, hogy a következő combat innen induljon
+    clearAllVfx(); 
+    writeStoredHP(playerHP);
+
+    if (!player?.id) { onEnd?.(playerHP, true); return; }
 
     const { xpGain, goldGain } = rollRewards();
 
-    const oldLevel = player.level ?? 1;
-    let newXP = (player.xp ?? 0) + xpGain;
-    let newLevel = oldLevel;
-    let levelsGained = 0;
+    // ✅ BACKEND REWARD -> ment + level up + statpont
+    const res = await fetch("http://localhost:3000/api/combat/reward", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        playerId: player.id,
+        xpGain,
+        goldGain,
+        hpAfterBattle: playerHP,
+      }),
+    });
 
-    while (newXP >= xpToNextLevel(newLevel)) {
-      newXP -= xpToNextLevel(newLevel);
-      newLevel += 1;
-      levelsGained += 1;
+    const data = await res.json();
+    if (!res.ok || !data?.success) {
+      console.error("combat/reward failed", data);
+      onEnd?.(playerHP, true);
+      return;
     }
 
-    const addedStatPoints = levelsGained * 3;
+    // backend visszaad updated base player row-t
+    setPlayer(prev => ({ ...(prev || {}), ...(data.player || {}) }));
 
-    setLastRewards({ xpGain, goldGain, levelsGained, addedStatPoints });
-    pushLog(`🏆 Győzelem! +${goldGain} arany, +${xpGain} XP.`);
+    // ✅ frissítsük a derived statokat is (item bónuszok miatt)
+    try { await refreshFullStats(player.id); } catch {}
 
-    setPlayer((prev) => ({
-      ...prev,
-      level: newLevel,
-      xp: newXP,
-      gold: (prev.gold ?? 0) + goldGain,
-      hp: playerHP,
-      max_hp: prev.max_hp,
-      unspentStatPoints: (prev.unspentStatPoints ?? 0) + addedStatPoints,
-    }));
-
+    // quest progress (maradhat ahogy van)
     try {
       const playerId = player.id;
       const taskType = boss ? "boss" : "kill";
-
       await fetch("http://localhost:3000/api/quests/progress", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+        method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ playerId, taskType }),
       });
-
       await fetch("http://localhost:3000/api/quests/progress", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+        method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ playerId, taskType: "custom" }),
       });
-
       await fetch("http://localhost:3000/api/quests/check", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+        method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ playerId }),
       });
     } catch (err) {
       console.error("Quest progress frissítés hiba:", err);
     }
 
-    if (onEnd) onEnd(playerHP, true);
+    onEnd?.(playerHP, true);
   }
 
   const [fadeOpen, setFadeOpen] = useState(false);
@@ -1774,10 +1823,7 @@ const [playerDamageBuff, setPlayerDamageBuff] = useState(null);
   const warriorFrameStyle =
     classKey === "warrior"
       ? {
-          boxShadow: `0 0 ${auraBlur}px rgba(239,68,68,${auraOpacity})`,
-          outline: ringPx > 0 ? `${ringPx}px solid rgba(239,68,68,${auraOpacity})` : "none",
-          outlineOffset: ringPx > 0 ? "2px" : "0px",
-          borderRadius: "12px",
+         
           transition: "box-shadow 120ms linear, outline 120ms linear",
         }
       : undefined;
@@ -1906,22 +1952,21 @@ const [playerDamageBuff, setPlayerDamageBuff] = useState(null);
           )}
 
           {/* PLAYER (anchor ref!) */}
-                    <div
+          <div
             ref={playerAnchorRef}
             className="absolute top-24 left-[20%] -translate-x-1/2 z-10 transition-all duration-500 ease-in-out"
           >
-
             <div className="relative inline-block rounded-xl overflow-hidden" style={warriorFrameStyle}>
               {/* ENRAGE SZÖVEG - Csak ha aktív az aura */}
               {activeAuraId && (
-               <div
-                className="absolute z-[60] whitespace-nowrap pointer-events-none"
-                style={{
-                  top: "-30px",
-                  left: "-1000px",
-                }}
-              >
-                  <span className="text-red-500 font-black text-2xl italic animate-pulse" 
+                <div
+                  className="absolute z-[60] whitespace-nowrap pointer-events-none"
+                  style={{
+                    top: "-30px",
+                    left: "-1000px",
+                  }}
+                >
+                  <span className="text-red-500 font-black text-2xl italic animate-pulse"
                         style={{ textShadow: '2px 2px 0px #000, 0 0 10px rgba(255,0,0,0.8)' }}>
                     💢 ENRAGED
                   </span>
@@ -2101,16 +2146,16 @@ const [playerDamageBuff, setPlayerDamageBuff] = useState(null);
             </div>
           )}
 
-          <AbilityEffectLayer 
-        effects={abilityEffects} 
-        onEffectDone={(id) => {
-            setAbilityEffects((prev) => {
-              const eff = prev.find((e) => e.id === id);
-              if (eff && eff.loop) return prev; // ✅ loopoló aura marad
-              return prev.filter((e) => e.id !== id);
-            });
-          }} 
-      />
+          <AbilityEffectLayer
+            effects={abilityEffects}
+            onEffectDone={(id) => {
+              setAbilityEffects((prev) => {
+                const eff = prev.find((e) => e.id === id);
+                if (eff && eff.loop) return prev; // ✅ loopoló aura marad
+                return prev.filter((e) => e.id !== id);
+              });
+            }}
+          />
         </div>
       </div>
 

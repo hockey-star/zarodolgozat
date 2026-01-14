@@ -115,6 +115,7 @@ app.get("/api/inventory/:playerId", (req, res) => {
     SELECT 
       b.item_id,
       b.is_equipped,
+      b.upgrade_level,
       i.name,
       i.type,
       i.rarity,
@@ -137,43 +138,97 @@ app.get("/api/inventory/:playerId", (req, res) => {
 app.get("/api/player/:id/full-stats", (req, res) => {
   const playerId = req.params.id;
 
+  // Upgrade képlet: baseBonus * (1 + upgrade_level)
+  // upgrade 0 => 1x, upgrade 1 => 2x, upgrade 2 => 3x
   pool.query(
     `
     SELECT 
+      p.id,
+      p.username,
+      p.class_id,
+      p.level,
+      p.xp,
+      p.gold,
+
       p.strength,
       p.intellect,
       p.defense,
       p.hp,
       p.max_hp,
+      p.unspentStatPoints,
 
-      IFNULL(SUM(i.bonus_strength),0) AS item_str,
-      IFNULL(SUM(i.bonus_intellect),0) AS item_int,
-      IFNULL(SUM(i.bonus_defense),0) AS item_def,
-      IFNULL(SUM(i.bonus_hp),0) AS item_hp
+      IFNULL(SUM(i.bonus_strength + CASE WHEN i.bonus_strength > 0 THEN b.upgrade_level * 1 ELSE 0 END),0) AS item_str,
+      IFNULL(SUM(i.bonus_intellect + CASE WHEN i.bonus_intellect > 0 THEN b.upgrade_level * 1 ELSE 0 END),0) AS item_int,
+      IFNULL(SUM(i.bonus_defense + CASE WHEN LOWER(i.type) IN ('armor','helmet','accessory') THEN b.upgrade_level * 2 ELSE 0 END),0) AS item_def,
+      IFNULL(SUM(i.bonus_hp + CASE WHEN LOWER(i.type) IN ('armor','helmet','accessory') THEN b.upgrade_level * 10 ELSE 0 END),0) AS item_hp
 
     FROM players p
-    LEFT JOIN birtokol b ON b.player_id = p.id AND b.is_equipped = 1
-    LEFT JOIN items i ON i.id = b.item_id
+    LEFT JOIN birtokol b 
+      ON b.player_id = p.id AND b.is_equipped = 1
+    LEFT JOIN items i 
+      ON i.id = b.item_id
     WHERE p.id = ?
+    GROUP BY p.id
     `,
     [playerId],
     (err, rows) => {
-      if (err || rows.length === 0)
+      if (err || rows.length === 0) {
+        console.error("full-stats error:", err);
         return res.status(500).json({ error: "Stat lekérés hiba" });
+      }
 
       const r = rows[0];
 
-      res.json({
-        strength: r.strength + r.item_str,
-        intellect: r.intellect + r.item_int,
-        defense: r.defense + r.item_def,
-        hp: Math.min(r.hp + r.item_hp, r.max_hp + r.item_hp),
-        max_hp: r.max_hp + r.item_hp,
+      const base = {
+        strength: r.strength ?? 0,
+        intellect: r.intellect ?? 0,
+        defense: r.defense ?? 0,
+        hp: r.hp ?? 0,
+        max_hp: r.max_hp ?? 0,
+      };
+
+            const bonus = {
+        strength: Number(r.item_str) || 0,
+        intellect: Number(r.item_int) || 0,
+        defense: Number(r.item_def) || 0,
+        hp: Number(r.item_hp) || 0,
+      };
+
+      const final = {
+        strength: base.strength + bonus.strength,
+        intellect: base.intellect + bonus.intellect,
+        defense: base.defense + bonus.defense,
+        max_hp: base.max_hp + bonus.hp,
+        hp: Math.min(base.hp, base.max_hp) + bonus.hp, // vagy: Math.min(base.hp + bonus.hp, base.max_hp + bonus.hp)
+      };
+
+      // HP clamp: ne legyen több mint max_hp
+      final.hp = Math.min(final.hp, final.max_hp);
+
+      return res.json({
+        player: {
+          id: r.id,
+          username: r.username,
+          class_id: r.class_id,
+          level: r.level,
+          xp: r.xp,
+          gold: r.gold,
+          unspentStatPoints: r.unspentStatPoints ?? 0,
+
+          // ✅ final statok (ezeket használd mindenhol)
+          strength: final.strength,
+          intellect: final.intellect,
+          defense: final.defense,
+          hp: final.hp,
+          max_hp: final.max_hp,
+        },
+        base,
+        bonus,
+        final,
       });
     }
   );
 });
-
 
 /* ---------------------------
    REGISTER

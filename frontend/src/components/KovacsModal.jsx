@@ -1,95 +1,166 @@
-import React, { useState, useEffect } from "react";
+// frontend/src/components/BlacksmithModal.jsx
+import React, { useEffect, useMemo, useState } from "react";
+
+function num(v, fallback = 0) {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : fallback;
+}
+
+// Kezeli mindkét elnevezést:
+// bonus_defense / defense_bonus stb.
+function getBonus(item, key) {
+  const a = num(item?.[`bonus_${key}`], null);
+  if (a !== null) return a;
+  const b = num(item?.[`${key}_bonus`], null);
+  if (b !== null) return b;
+  return 0;
+}
+
+function getDmg(item) {
+  return {
+    min: num(item?.min_dmg, 0),
+    max: num(item?.max_dmg, 0),
+  };
+}
+
+// 🔧 Upgrade scaling (ezt állítsd ha máshogy akarod):
+// - Weapon: dmg nő
+// - Armor/Helmet/Accessory: def/hp/int/str nő
+function previewUpgraded(item) {
+  if (!item) return null;
+
+  const lvl = num(item.upgrade_level, 0);
+  const nextLvl = lvl + 1;
+
+  const { min, max } = getDmg(item);
+
+  const bonusStr = getBonus(item, "strength");
+  const bonusInt = getBonus(item, "intellect");
+  const bonusDef = getBonus(item, "defense");
+  const bonusHp  = getBonus(item, "hp");
+
+  // Példa scaling:
+  // dmg: +2 per level
+  // def: +2 per level
+  // hp : +10 per level
+  // int/str: +1 per level
+  const dmgAdd = 2 * nextLvl;
+  const defAdd = 2 * nextLvl;
+  const hpAdd  = 10 * nextLvl;
+  const statAdd = 1 * nextLvl;
+
+  // Típus alapján kicsit más:
+  const type = (item.type || "").toLowerCase();
+
+  const out = {
+    name: item.name,
+    upgrade_level: nextLvl,
+    min_dmg: min,
+    max_dmg: max,
+    bonus_strength: bonusStr,
+    bonus_intellect: bonusInt,
+    bonus_defense: bonusDef,
+    bonus_hp: bonusHp,
+  };
+
+  if (type === "weapon") {
+    out.min_dmg = min + dmgAdd;
+    out.max_dmg = max + dmgAdd;
+  } else {
+    out.bonus_defense = bonusDef + defAdd;
+    out.bonus_hp = bonusHp + hpAdd;
+
+    // ha van STR/INT bónusz tárgyon:
+    if (bonusStr > 0) out.bonus_strength = bonusStr + statAdd;
+    if (bonusInt > 0) out.bonus_intellect = bonusInt + statAdd;
+  }
+
+  return out;
+}
 
 export default function BlacksmithModal({ onClose }) {
   const [playerData, setPlayerData] = useState(null);
   const [playerItems, setPlayerItems] = useState([]);
   const [selectedItem, setSelectedItem] = useState(null);
+
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
 
   const userId = localStorage.getItem("sk_current_user_id");
 
-  // Player alapadatok
+  async function fetchPlayer() {
+    const r = await fetch(`http://localhost:3000/api/players/${userId}`);
+    if (!r.ok) throw new Error("player fetch failed");
+    return r.json();
+  }
+
+  async function fetchItems() {
+    const r = await fetch(`http://localhost:3000/api/player/${userId}/items`);
+    if (!r.ok) throw new Error("items fetch failed");
+    return r.json();
+  }
+
+  const refreshAll = async () => {
+    if (!userId) return;
+    const [p, items] = await Promise.all([fetchPlayer(), fetchItems()]);
+    setPlayerData(p);
+    setPlayerItems(items || []);
+
+    if (items && items.length > 0) {
+      const keep =
+        items.find((i) => selectedItem && i.item_id === selectedItem.item_id) ||
+        items[0];
+      setSelectedItem(keep);
+    } else {
+      setSelectedItem(null);
+    }
+  };
+
   useEffect(() => {
     if (!userId) {
       setLoading(false);
       return;
     }
-
     setLoading(true);
-    Promise.all([
-      fetch(`http://localhost:3000/api/players/${userId}`).then((r) =>
-        r.json()
-      ),
-      fetch(`http://localhost:3000/api/player/${userId}/items`).then((r) =>
-        r.json()
-      ),
-    ])
-      .then(([playerRes, itemsRes]) => {
-        setPlayerData(playerRes);
-        setPlayerItems(itemsRes || []);
-        if (itemsRes && itemsRes.length > 0) setSelectedItem(itemsRes[0]);
-      })
+    refreshAll()
       .catch((e) => {
-        console.error("Hiba a fetchnél:", e);
+        console.error(e);
         setError("Hiba a szerverrel való kapcsolatban.");
       })
       .finally(() => setLoading(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);
 
-  const refreshItems = async () => {
-    if (!userId) return;
-    try {
-      const res = await fetch(
-        `http://localhost:3000/api/player/${userId}/items`
-      );
-      const items = await res.json();
-      setPlayerItems(items || []);
-      if (items && items.length > 0) {
-        const found =
-          items.find(
-            (i) => selectedItem && i.item_id === selectedItem.item_id
-          ) || items[0];
-        setSelectedItem(found);
-      } else {
-        setSelectedItem(null);
-      }
-    } catch (e) {
-      console.error(e);
-    }
-  };
+  const currentGold = num(playerData?.gold, 0);
+  const upgradeCost = selectedItem ? (num(selectedItem.upgrade_level, 0) + 1) * 250 : null;
+  const notEnoughGold = selectedItem && upgradeCost != null && currentGold < upgradeCost;
+
+  const upgradedPreview = useMemo(() => previewUpgraded(selectedItem), [selectedItem]);
 
   const upgradeItem = async () => {
     if (!selectedItem || busy) return;
+
     setBusy(true);
     setError(null);
 
     try {
-      const res = await fetch(
-        `http://localhost:3000/api/blacksmith/upgrade`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            playerId: Number(userId),
-            itemId: selectedItem.item_id,
-          }),
-        }
-      );
-      const data = await res.json();
+      const res = await fetch(`http://localhost:3000/api/blacksmith/upgrade`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          playerId: Number(userId),
+          itemId: selectedItem.item_id,
+        }),
+      });
 
-      if (!res.ok) {
-        setError(data.error || "Sikertelen kérés.");
-      } else if (!data.success) {
-        setError(data.message || "A fejlesztés nem sikerült.");
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok || data?.success === false) {
+        setError(data?.error || data?.message || "A fejlesztés nem sikerült.");
       } else {
-        // siker — újra lekérjük a player-t és az itemeket
-        const playerRes = await fetch(
-          `http://localhost:3000/api/players/${userId}`
-        ).then((r) => r.json());
-        setPlayerData(playerRes);
-        await refreshItems();
+        // ✅ siker: frissítünk mindent
+        await refreshAll();
       }
     } catch (e) {
       console.error(e);
@@ -99,12 +170,29 @@ export default function BlacksmithModal({ onClose }) {
     }
   };
 
-  const currentGold = playerData?.gold ?? 0;
-  const upgradeCost = selectedItem
-    ? (selectedItem.upgrade_level + 1) * 250
+  const cur = selectedItem
+    ? {
+        name: selectedItem.name,
+        lvl: num(selectedItem.upgrade_level, 0),
+        dmg: getDmg(selectedItem),
+        str: getBonus(selectedItem, "strength"),
+        int: getBonus(selectedItem, "intellect"),
+        def: getBonus(selectedItem, "defense"),
+        hp: getBonus(selectedItem, "hp"),
+      }
     : null;
-  const notEnoughGold =
-    selectedItem && upgradeCost != null && currentGold < upgradeCost;
+
+  const nxt = upgradedPreview
+    ? {
+        name: upgradedPreview.name,
+        lvl: num(upgradedPreview.upgrade_level, 0),
+        dmg: { min: num(upgradedPreview.min_dmg, 0), max: num(upgradedPreview.max_dmg, 0) },
+        str: num(upgradedPreview.bonus_strength, 0),
+        int: num(upgradedPreview.bonus_intellect, 0),
+        def: num(upgradedPreview.bonus_defense, 0),
+        hp: num(upgradedPreview.bonus_hp, 0),
+      }
+    : null;
 
   return (
     <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
@@ -119,7 +207,7 @@ export default function BlacksmithModal({ onClose }) {
       >
         <button
           onClick={onClose}
-          className="absolute top-3 right-3 text-gray-400 hover:text-red-400"
+          className="absolute top-3 right-3 text-gray-300 hover:text-red-400"
         >
           ✕
         </button>
@@ -128,62 +216,49 @@ export default function BlacksmithModal({ onClose }) {
           <div className="m-auto text-center">Betöltés...</div>
         ) : (
           <>
-            {/* 🔥 Itt most GOLD látszik, nem XP */}
             <div className="text-center mb-4 text-sm bg-black/40 py-2 rounded">
               Fejlesztésre fordítható arany:{" "}
-              <span className="text-yellow-300">
-                {currentGold}
-              </span>
+              <span className="text-yellow-300">{currentGold}</span>
             </div>
 
             <div className="mb-4 text-center">
               {playerItems.length === 0 ? (
-                <div className="text-sm">
-                  Nincs tovább fejleszthető tárgyad.
-                </div>
+                <div className="text-sm">Nincs tovább fejleszthető tárgyad.</div>
               ) : (
                 <select
                   className="bg-gray-800 px-3 py-2 rounded border border-gray-600"
                   value={selectedItem?.item_id ?? ""}
-                  onChange={(e) =>
-                    setSelectedItem(
-                      playerItems.find(
-                        (i) => i.item_id == e.target.value
-                      )
-                    )
-                  }
+                  onChange={(e) => {
+                    const id = Number(e.target.value);
+                    setSelectedItem(playerItems.find((i) => Number(i.item_id) === id));
+                  }}
                 >
                   {playerItems.map((item) => (
                     <option key={item.item_id} value={item.item_id}>
-                      {item.name} +{item.upgrade_level ?? 0}
+                      {item.name} +{num(item.upgrade_level, 0)}
                     </option>
                   ))}
                 </select>
               )}
             </div>
 
-            {error && (
-              <div className="text-red-400 text-sm mb-2">{error}</div>
-            )}
+            {error && <div className="text-red-400 text-sm mb-2">{error}</div>}
 
             <div className="flex justify-between flex-1">
-              {/* Jelenlegi tárgy */}
-              <div className="w-[15%] bg-black/40 rounded p-4 border border-gray-700">
-                <h2 className="text-center mb-2 text-sm">
-                  Jelenlegi tárgy
-                </h2>
-                <div className="text-center">
-                  {selectedItem ? (
+              {/* Current */}
+              <div className="w-[18%] bg-black/40 rounded p-4 border border-gray-700">
+                <h2 className="text-center mb-2 text-sm">Jelenlegi tárgy</h2>
+                <div className="text-center text-sm space-y-1">
+                  {cur ? (
                     <>
-                      <p>
-                        {selectedItem.name} +{selectedItem.upgrade_level}
+                      <p className="font-semibold">
+                        {cur.name} +{cur.lvl}
                       </p>
-                      <p>
-                        DMG: {selectedItem.min_dmg} -{" "}
-                        {selectedItem.max_dmg}
-                      </p>
-                      <p>Védelem: {selectedItem.defense_bonus}</p>
-                      <p>HP: {selectedItem.hp_bonus}</p>
+                      <p>DMG: {cur.dmg.min} - {cur.dmg.max}</p>
+                      {cur.str ? <p>STR: +{cur.str}</p> : null}
+                      {cur.int ? <p>INT: +{cur.int}</p> : null}
+                      {cur.def ? <p>DEF: +{cur.def}</p> : null}
+                      {cur.hp ? <p>HP: +{cur.hp}</p> : null}
                     </>
                   ) : (
                     <p>—</p>
@@ -191,7 +266,7 @@ export default function BlacksmithModal({ onClose }) {
                 </div>
               </div>
 
-              {/* Középső rész: cost + gomb */}
+              {/* Center */}
               <div className="w-1/3 flex flex-col items-center justify-center text-center">
                 <p className="text-sm mt-2">
                   Fejlesztés költsége:{" "}
@@ -203,6 +278,7 @@ export default function BlacksmithModal({ onClose }) {
                     "-"
                   )}
                 </p>
+
                 {notEnoughGold && (
                   <p className="text-xs text-red-400 mt-1">
                     Nincs elég aranyod a fejlesztéshez.
@@ -214,38 +290,34 @@ export default function BlacksmithModal({ onClose }) {
                   onClick={upgradeItem}
                   disabled={!selectedItem || busy || notEnoughGold}
                 >
-                  {busy
-                    ? "Feldolgozás..."
-                    : "Fejlesztés"}
+                  {busy ? "Feldolgozás..." : "Fejlesztés"}
                 </button>
               </div>
 
-              {/* Fejlesztett tárgy preview */}
-              <div className="w-[15%] bg-black/40 rounded p-4 border border-gray-700">
-                <h2 className="text-center mb-2 text-sm">
-                  Fejlesztett tárgy
-                </h2>
-                <div className="text-center">
-                  {selectedItem ? (
+              {/* Preview */}
+              <div className="w-[18%] bg-black/40 rounded p-4 border border-gray-700">
+                <h2 className="text-center mb-2 text-sm">Fejlesztett tárgy</h2>
+                <div className="text-center text-sm space-y-1">
+                  {nxt ? (
                     <>
-                      <p>
-                        {selectedItem.name} +
-                        {selectedItem.upgrade_level + 1}
+                      <p className="font-semibold">
+                        {nxt.name} +{nxt.lvl}
                       </p>
-                      <p>
-                        DMG: {selectedItem.min_dmg + 2} -{" "}
-                        {selectedItem.max_dmg + 2}
-                      </p>
-                      <p>
-                        Védelem: {selectedItem.defense_bonus + 2}
-                      </p>
-                      <p>HP: {selectedItem.hp_bonus + 10}</p>
+                      <p>DMG: {nxt.dmg.min} - {nxt.dmg.max}</p>
+                      {nxt.str ? <p>STR: +{nxt.str}</p> : null}
+                      {nxt.int ? <p>INT: +{nxt.int}</p> : null}
+                      {nxt.def ? <p>DEF: +{nxt.def}</p> : null}
+                      {nxt.hp ? <p>HP: +{nxt.hp}</p> : null}
                     </>
                   ) : (
                     <p>—</p>
                   )}
                 </div>
               </div>
+            </div>
+
+            <div className="mt-4 text-xs text-gray-300 bg-black/40 p-3 rounded">
+              Tipp: ha a preview nálad máshogy skálázódik, szólj és átírom a <code>previewUpgraded()</code> függvényt a te logikádra.
             </div>
           </>
         )}

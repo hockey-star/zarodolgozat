@@ -1,101 +1,180 @@
 // frontend/src/context/PlayerContext.jsx
-import { createContext, useContext, useState } from "react";
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  useCallback,
+} from "react";
 
-const PlayerContext = createContext();
+const PlayerContext = createContext(null);
+
+function safeNum(v, fallback = 0) {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : fallback;
+}
 
 export function PlayerProvider({ children }) {
   const [player, setPlayer] = useState(null);
 
-  // XP kalkuláció (könnyen állítható)
-  function xpForLevel(level) {
-    return 100 * level;
-  }
+  // ✅ item bónuszok külön (zárójeles + kijelzéshez)
+  const [itemBonuses, setItemBonuses] = useState({
+    strength: 0,
+    intellect: 0,
+    defense: 0,
+    hp: 0,
+  });
 
-  function addXP(amount) {
-    setPlayer((prev) => {
-      if (!prev) return prev;
+  // ✅ final statok (base + item) – CombatView / StatModal használja
+  const [derivedStats, setDerivedStats] = useState({
+    strength: 0,
+    intellect: 0,
+    defense: 0,
+    hp: 0,
+    max_hp: 0,
+  });
 
-      let xp = prev.xp + amount;
-      let level = prev.level;
-      let statPoints = prev.statPoints ?? 0;
-      let xpNeeded = xpForLevel(level);
-
-      while (xp >= xpNeeded) {
-        xp -= xpNeeded;
-        level += 1;
-        statPoints += 3;
-        xpNeeded = xpForLevel(level);
-      }
-
-      return {
-        ...prev,
-        xp,
-        level,
-        statPoints,
-      };
-    });
-  }
-
-  function addGold(amount) {
-    setPlayer((prev) => (!prev ? prev : { ...prev, gold: prev.gold + amount }));
-  }
-
-  function increaseStat(stat) {
-    setPlayer((prev) => {
-      if (!prev) return prev;
-      if ((prev.unspentStatPoints || 0) <= 0) return prev;
-
-      let update = {};
-
-      if (stat === "strength") update.strength = prev.strength + 1;
-      if (stat === "intellect") update.intellect = prev.intellect + 1;
-      if (stat === "defense") update.defense = prev.defense + 1;
-
-      if (stat === "hp") {
-        update.max_hp = prev.max_hp + 5;
-        update.hp = prev.max_hp + 5; // full heal
-      }
-
-      return {
-        ...prev,
-        ...update,
-        unspentStatPoints: prev.unspentStatPoints - 1,
-      };
-    });
-  }
-
-  // ✅ MAGE MANA GLOBAL (nem fog resetelődni új CombatView-nál)
-  const MAGE_MANA_MAX = 8;
+  // ===== Mage mana (CombatView használja) =====
+  const MAGE_MANA_MAX = 6;
   const [mageMana, setMageMana] = useState(0);
 
-  function gainMageMana(amount = 1) {
-    setMageMana((prev) => Math.min(MAGE_MANA_MAX, prev + amount));
-  }
+  const gainMageMana = useCallback((amount = 1) => {
+    setMageMana((prev) => Math.min(MAGE_MANA_MAX, (prev || 0) + amount));
+  }, []);
 
-  function spendAllMageMana() {
+  const spendAllMageMana = useCallback(() => {
     setMageMana(0);
-  }
+  }, []);
+
+  // ✅ effectiveStats: ha derived még nincs, fallback a player base-re
+  const effectiveStats = useMemo(() => {
+    if (!player) return null;
+
+    const baseStr = safeNum(player.strength, 0);
+    const baseInt = safeNum(player.intellect, 0);
+    const baseDef = safeNum(player.defense, 0);
+    const baseHp = safeNum(player.hp, 0);
+    const baseMaxHp = safeNum(player.max_hp, 0);
+
+    const hasDerived =
+      derivedStats &&
+      (typeof derivedStats.strength === "number" ||
+        typeof derivedStats.intellect === "number" ||
+        typeof derivedStats.defense === "number");
+
+    if (!hasDerived) {
+      return {
+        strength: baseStr,
+        intellect: baseInt,
+        defense: baseDef,
+        hp: baseHp,
+        max_hp: baseMaxHp,
+      };
+    }
+
+    return {
+      strength: safeNum(derivedStats.strength, baseStr),
+      intellect: safeNum(derivedStats.intellect, baseInt),
+      defense: safeNum(derivedStats.defense, baseDef),
+      hp: safeNum(derivedStats.hp, baseHp),
+      max_hp: safeNum(derivedStats.max_hp, baseMaxHp),
+    };
+  }, [player, derivedStats]);
+
+  // ✅ FULL STATS FRISSÍTÉS BACKENDRŐL
+  // Backend válasz: { playerMeta, base, bonus, final }
+// frontend/src/context/PlayerContext.jsx
+const refreshFullStats = useCallback(async (playerId) => {
+  if (!playerId) return;
+
+  const res = await fetch(`http://localhost:3000/api/player/${playerId}/full-stats`);
+  if (!res.ok) throw new Error("full-stats fetch error");
+  const data = await res.json();
+
+  // ✅ támogatjuk mindkét formátumot:
+  // 1) új: { player, base, bonus, final } vagy { playerMeta, base, bonus, final }
+  // 2) régi: { strength, intellect, defense, hp, max_hp, bonuses }
+  const final = data?.final ?? data ?? {};
+  const bonus = data?.bonus ?? data?.bonuses ?? {};
+
+  const finalStr = Number(final?.strength ?? 0);
+  const finalInt = Number(final?.intellect ?? 0);
+  const finalDef = Number(final?.defense ?? 0);
+  const finalHp  = Number(final?.hp ?? 0);
+  const finalMaxHp = Number(final?.max_hp ?? 0);
+
+  setDerivedStats({
+    strength: finalStr,
+    intellect: finalInt,
+    defense: finalDef,
+    hp: finalHp,
+    max_hp: finalMaxHp,
+  });
+
+  // ✅ bonus: ha backend küldi, azt használjuk
+  const backendBonuses = {
+    strength: Number(bonus?.strength ?? 0) || 0,
+    intellect: Number(bonus?.intellect ?? 0) || 0,
+    defense: Number(bonus?.defense ?? 0) || 0,
+    hp: Number(bonus?.hp ?? 0) || 0,
+  };
+
+  setItemBonuses(backendBonuses);
+
+  // ✅ playerben csak HP/max_hp-t szinkronizálunk,
+  // és itt prev-ből számoljuk a "fallback" bónuszt ha kellene
+  setPlayer((prev) => {
+    if (!prev) return prev;
+
+    // ha a backend valamiért nem küldött bonus-t, itt tudnánk számolni prev alapján,
+    // de most a backendBonuses-t használjuk.
+
+    return {
+      ...prev,
+      hp: Number.isFinite(finalHp) ? finalHp : prev.hp,
+      max_hp: Number.isFinite(finalMaxHp) ? finalMaxHp : prev.max_hp,
+    };
+  });
+}, []);
+  // ✅ amikor player.id megvan, kérjük le a full-stats-ot
+  useEffect(() => {
+    if (!player?.id) return;
+    refreshFullStats(player.id).catch((e) => console.error(e));
+  }, [player?.id, refreshFullStats]);
+
+  const value = useMemo(
+    () => ({
+      player,
+      setPlayer,
+
+      // statok
+      itemBonuses,
+      derivedStats,
+      effectiveStats,
+      refreshFullStats,
+
+      // mana (CombatView)
+      mageMana,
+      setMageMana,
+      gainMageMana,
+      spendAllMageMana,
+      MAGE_MANA_MAX,
+    }),
+    [
+      player,
+      itemBonuses,
+      derivedStats,
+      effectiveStats,
+      refreshFullStats,
+      mageMana,
+      gainMageMana,
+      spendAllMageMana,
+    ]
+  );
 
   return (
-    <PlayerContext.Provider
-      value={{
-        player,
-        setPlayer,
-        addXP,
-        addGold,
-        increaseStat,
-        xpForLevel,
-
-        // ✅ mana API
-        mageMana,
-        setMageMana,
-        gainMageMana,
-        spendAllMageMana,
-        MAGE_MANA_MAX,
-      }}
-    >
-      {children}
-    </PlayerContext.Provider>
+    <PlayerContext.Provider value={value}>{children}</PlayerContext.Provider>
   );
 }
 

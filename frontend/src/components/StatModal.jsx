@@ -1,48 +1,80 @@
 // frontend/src/components/StatModal.jsx
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { usePlayer } from "../context/PlayerContext.jsx";
-
 
 function xpToNextLevel(level) {
   if (level <= 1) return 30;
   return 30 + (level - 1) * 20;
 }
 
+function formatWithBonus(finalValue, bonus) {
+  const b = Number(bonus) || 0;
+  if (!b) return `${finalValue}`;
+  return `${finalValue} (+${b})`;
+}
+
 export default function StatModal({ onClose }) {
-  const { player, setPlayer } = usePlayer() || {};
+  const { player, setPlayer, effectiveStats, itemBonuses, refreshFullStats } = usePlayer() || {};
+  const [saving, setSaving] = useState(false);
 
   if (!player) return null;
 
-  const [saving, setSaving] = useState(false);
-
   const unspent = player.unspentStatPoints ?? 0;
 
+  // ✅ itt is a final statokat mutatjuk (és zárójelben a bónuszt)
+  const view = useMemo(() => {
+    const finalStr = effectiveStats?.strength ?? (player.strength ?? 0);
+    const finalInt = effectiveStats?.intellect ?? (player.intellect ?? 0);
+    const finalDef = effectiveStats?.defense ?? (player.defense ?? 0);
+    const finalHp = effectiveStats?.hp ?? (player.hp ?? 0);
+    const finalMaxHp = effectiveStats?.max_hp ?? (player.max_hp ?? 0);
+
+    return {
+      strText: formatWithBonus(finalStr, itemBonuses?.strength ?? 0),
+      intText: formatWithBonus(finalInt, itemBonuses?.intellect ?? 0),
+      defText: formatWithBonus(finalDef, itemBonuses?.defense ?? 0),
+      hpText: `${finalHp} / ${finalMaxHp}${(itemBonuses?.hp ?? 0) ? ` (+${itemBonuses.hp})` : ""}`,
+      maxHpFinal: finalMaxHp,
+    };
+  }, [effectiveStats, player, itemBonuses]);
+
   async function handlePlus(stat) {
-    if (unspent <= 0) return;
+    if (unspent <= 0 || saving) return;
 
-    let updated = { ...player };
+    // ⚠️ FONTOS: a DB-ben a BASE statot növeljük!
+    const updated = { ...player };
 
-    if (stat === "strength") updated.strength += 1;
-    if (stat === "intellect") updated.intellect += 1;
-    if (stat === "defense") updated.defense += 1;
+    if (stat === "strength") updated.strength = (updated.strength ?? 0) + 1;
+    if (stat === "intellect") updated.intellect = (updated.intellect ?? 0) + 1;
+    if (stat === "defense") updated.defense = (updated.defense ?? 0) + 1;
     if (stat === "hp") {
-      updated.max_hp += 5;
-      updated.hp = updated.max_hp; // Full heal a stat növelésnél
+      updated.max_hp = (updated.max_hp ?? 0) + 5;
+      updated.hp = updated.max_hp; // full heal stat növeléskor (ahogy eddig)
     }
 
-    updated.unspentStatPoints -= 1;
+    updated.unspentStatPoints = (updated.unspentStatPoints ?? 0) - 1;
 
-    // FRONTEND: update local
+    // local
     setPlayer(updated);
 
-    // BACKEND: save to DB
-    setSaving(true);
-    await fetch(`http://localhost:3000/api/players/${player.id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(updated),
-    });
-    setSaving(false);
+    // db save
+    try {
+      setSaving(true);
+      const res = await fetch(`http://localhost:3000/api/players/${player.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updated),
+      });
+      if (!res.ok) throw new Error("Stat save failed");
+
+      // ✅ statok újraszámolása (base + item)
+      await refreshFullStats(player.id);
+    } catch (e) {
+      console.error(e);
+      alert("Nem sikerült menteni a statokat.");
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
@@ -54,6 +86,10 @@ export default function StatModal({ onClose }) {
           Szint: {player.level} — XP: {player.xp} / {xpToNextLevel(player.level)}
         </div>
 
+        <div className="mb-3 text-center text-cyan-200 font-mono">
+          HP: {view.hpText}
+        </div>
+
         <div className="mb-6 text-center text-green-400">
           Elosztható pontok: {unspent}
         </div>
@@ -61,25 +97,25 @@ export default function StatModal({ onClose }) {
         <div className="grid grid-cols-2 gap-4 text-center">
           <StatRow
             label="Erő (STR)"
-            value={player.strength}
+            value={view.strText}
             onPlus={() => handlePlus("strength")}
             disabled={unspent <= 0 || saving}
           />
           <StatRow
             label="Intelligencia (INT)"
-            value={player.intellect}
+            value={view.intText}
             onPlus={() => handlePlus("intellect")}
             disabled={unspent <= 0 || saving}
           />
           <StatRow
             label="Védelem (DEF)"
-            value={player.defense}
+            value={view.defText}
             onPlus={() => handlePlus("defense")}
             disabled={unspent <= 0 || saving}
           />
           <StatRow
             label="Életerő (Max HP +5)"
-            value={player.max_hp}
+            value={`${view.maxHpFinal}`}
             onPlus={() => handlePlus("hp")}
             disabled={unspent <= 0 || saving}
           />
