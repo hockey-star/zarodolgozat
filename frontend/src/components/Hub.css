@@ -50,11 +50,11 @@
 
 
 .hub-camera {
-  width: 120vw;
-  height: 120vh;
   position: absolute;
-  left: -10vw;
-  top: -10vh;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  will-change: transform;
 }
 
 .hub-map {
