@@ -20,6 +20,10 @@
   z-index: 3;
 }
 
+.hub-zooming {
+  filter: blur(1px) brightness(0.9);
+}
+
 /* A belső piros csík – KÖZÉPRE IGAZÍTVA */
 .loaderFill {
   position: absolute;
@@ -42,4 +46,36 @@
 @keyframes loadBarFill {
   from { transform: translateY(-50%) scaleX(0); }
   to   { transform: translateY(-50%) scaleX(1); }
+}
+
+
+.hub-camera {
+  position: absolute;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  will-change: transform;
+}
+
+.hub-map {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+}
+
+.hub-zooming {
+  animation: hubZoomFX 0.6s ease-out forwards;
+}
+
+@keyframes hubZoomFX {
+  0% {
+    filter: blur(0px) brightness(1);
+  }
+  30% {
+    filter: blur(3px) brightness(0.8);
+  }
+  100% {
+    filter: blur(0px) brightness(1);
+  }
 }

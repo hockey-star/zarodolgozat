@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import ShopModal from "./BoltModal.jsx";
 import BlacksmithModal from "./KovacsModal.jsx";
 import InvModal from "./Inv.jsx";
@@ -9,7 +9,8 @@ import "./Hub.css";
 
 export default function Hub({ onGoAdventure }) {
   const { player } = usePlayer();
-
+  const clamp = (value, min, max) =>
+  Math.min(Math.max(value, min), max);
   const [playerPos, setPlayerPos] = useState({ x: 40, y: 75 });
   const [isMoving, setIsMoving] = useState(false);
 
@@ -18,12 +19,65 @@ export default function Hub({ onGoAdventure }) {
   const [showInv, setShowInv] = useState(false);
   const [showQuestBoard, setShowQuestBoard] = useState(false);
   const [isAdventuring, setIsAdventuring] = useState(false);
+  const hubRef = useRef(null);
+  /** ZOOM STATE */
+  const [zoom, setZoom] = useState(1);
+  const [offset, setOffset] = useState({ x: 0, y: 0 });
+  const [isZooming, setIsZooming] = useState(false);
 
   const timeoutRef = useRef(null);
 
   const SPEED = 20; // % / másodperc
 
+  /** BETÖLTÉSKORI ZOOM */
+  useEffect(() => {
+    setZoom(1);
+    setTimeout(() => setZoom(1), 100);
+  }, []);
+
+  /** KAMERA ZOOM EGY PONTRA */
+  const zoomTo = (xPercent, yPercent, zoomLevel = 1) => {
+  if (!hubRef.current) return;
+
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+
+  const worldW = hubRef.current.offsetWidth;
+  const worldH = hubRef.current.offsetHeight;
+
+  const targetX = (xPercent / 100) * worldW;
+  const targetY = (yPercent / 100) * worldH;
+
+  const centerX = vw / 2;
+  const centerY = vh / 2;
+
+  let offsetX = (centerX - targetX * zoomLevel) / zoomLevel;
+  let offsetY = (centerY - targetY * zoomLevel) / zoomLevel;
+
+  // 🔒 CLAMP – EZ OLDJA MEG A CSÍKOSODÁST
+  const maxX = 0;
+  const maxY = 0;
+
+  const minX = vw - worldW * zoomLevel;
+  const minY = vh - worldH * zoomLevel;
+
+  offsetX = clamp(offsetX, minX / zoomLevel, maxX);
+  offsetY = clamp(offsetY, minY / zoomLevel, maxY);
+
+  setZoom(zoomLevel);
+  setOffset({ x: offsetX, y: offsetY });
+};
+
+  const resetZoom = () => {
+  setZoom(1);
+  setOffset({ x: 0, y: 0 });
+};
+
+  /** MOZGÁS + MODAL */
   const moveTo = (x, y, type) => {
+    setIsZooming(true);
+    zoomTo(x, y);
+
     const dx = x - playerPos.x;
     const dy = y - playerPos.y;
     const distance = Math.sqrt(dx * dx + dy * dy);
@@ -54,84 +108,121 @@ export default function Hub({ onGoAdventure }) {
   };
 
   return (
-    <div
-      className="fixed inset-0 flex items-center justify-center text-white overflow-hidden"
-      style={{
-        backgroundImage: `url("./src/assets/pics/HUB.png")`,
-        backgroundSize: "cover",
-      }}
-    >
-      {/* Interakciós zónák */}
+    <div className="fixed inset-0 overflow-hidden bg-black text-white">
+      {/* ZOOMOLHATÓ HUB */}
       <div
-        className="absolute cursor-pointer group"
-        style={{ left: "38%", bottom: "15%", width: "440px", height: "500px" }}
-        onClick={() => moveTo(50, 80, "adventure")}
-      >
-        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition"></div>
-      </div>
-
-      <div
-        className="absolute cursor-pointer group"
-        style={{ left: "5%", bottom: "10%", width: "600px", height: "350px" }}
-        onClick={() => moveTo(30, 85, "blacksmith")}
-      >
-        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition"></div>
-      </div>
-
-      <div
-        className="absolute cursor-pointer group"
-        style={{ right: "20%", bottom: "10%", width: "330px", height: "450px" }}
-        onClick={() => moveTo(65, 80, "shop")}
-      >
-        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition"></div>
-      </div>
-
-      <div
-        className="absolute cursor-pointer group"
-        style={{ right: "5%", bottom: "10%", width: "280px", height: "250px" }}
-        onClick={() => moveTo(85, 85, "inv")}
-      >
-        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition"></div>
-      </div>
-
-      <div
-        className="absolute cursor-pointer group"
-        style={{ right: "40%", top: "10%", width: "320px", height: "220px" }}
-        onClick={() => moveTo(50, 80, "quest")}
-      >
-        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition"></div>
-      </div>
-
-      {/* Player statikus csúszás */}
-      <img
-        src="./src/assets/pics/TESZT.PNG"
-        alt="player"
-        className={`absolute transition-all duration-[2000ms] ease-in-out ${isMoving ? "brightness-125" : ""}`}
+          ref={hubRef} className={`hub-camera transition-transform duration-[1200ms] ease-in-out ${
+    isZooming ? "hub-zooming" : ""
+  }`}
         style={{
-          left: `${playerPos.x}%`,
-          top: `${playerPos.y}%`,
-          transform: "translate(-50%, -50%)",
-          width: "5%",
+          transform: `translate(${offset.x}px, ${offset.y}px) scale(${zoom})`,
+          transformOrigin: "center center",
+          backgroundImage: `url("./src/assets/pics/HUB.png")`,
+          backgroundSize: "cover",
         }}
-      />
+      >
+        {/* INTERAKCIÓS ZÓNÁK */}
+        <div
+          className="absolute cursor-pointer group"
+          style={{ left: "38%", bottom: "15%", width: "440px", height: "500px" }}
+          onClick={() => moveTo(50, 80, "adventure")}
+        >
+          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition"></div>
+        </div>
 
-      {/* Modálok */}
-      {showShop && <ShopModal onClose={() => setShowShop(false)} />}
-      {showBlacksmith && <BlacksmithModal onClose={() => setShowBlacksmith(false)} />}
-      {showInv && <InvModal onClose={() => setShowInv(false)} />}
+        <div
+          className="absolute cursor-pointer group"
+          style={{ left: "5%", bottom: "10%", width: "600px", height: "350px" }}
+          onClick={() => moveTo(30, 85, "blacksmith")}
+        >
+          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition"></div>
+        </div>
+
+        <div
+          className="absolute cursor-pointer group"
+          style={{ right: "20%", bottom: "10%", width: "330px", height: "270px" }}
+          onClick={() => moveTo(65, 80, "quest")}
+        >
+          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition"></div>
+        </div>
+
+        <div
+          className="absolute cursor-pointer group"
+          style={{ right: "5%", bottom: "10%", width: "280px", height: "250px" }}
+          onClick={() => moveTo(85, 85, "shop")}
+        >
+          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition"></div>
+        </div>
+
+        <div
+          className="absolute cursor-pointer group"
+          style={{ right: "20%", bottom: "35%", width: "330px", height: "270px" }}
+          onClick={() => moveTo(60, 80, "inv")}
+        >
+          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition"></div>
+        </div>
+
+        {/* PLAYER */}
+        <img
+          src="./src/assets/pics/TESZT.PNG"
+          alt="player"
+          className={`absolute transition-all duration-[2000ms] ease-in-out ${
+            isMoving ? "brightness-125" : ""
+          }`}
+          style={{
+            left: `${playerPos.x}%`,
+            top: `${playerPos.y}%`,
+            transform: "translate(-50%, -50%)",
+            width: "5%",
+          }}
+        />
+      </div>
+
+      {/* MODALOK */}
+      {showShop && (
+        <ShopModal
+          onClose={() => {
+            setShowShop(false);
+            resetZoom();
+          }}
+        />
+      )}
+
+      {showBlacksmith && (
+        <BlacksmithModal
+          onClose={() => {
+            setShowBlacksmith(false);
+            resetZoom();
+          }}
+        />
+      )}
+
+      {showInv && (
+        <InvModal
+          onClose={() => {
+            setShowInv(false);
+            resetZoom();
+          }}
+        />
+      )}
+
       {showQuestBoard && player && (
         <QuestBoardModal
           playerId={player.id}
           playerClassId={CLASS_STRING[player.class_id]}
-          onClose={() => setShowQuestBoard(false)}
+          onClose={() => {
+            setShowQuestBoard(false);
+            resetZoom();
+          }}
         />
       )}
 
-      {/* LoadingScreen */}
+      {/* LOADING */}
       {isAdventuring && (
         <LoadingScreen
           onDone={() => {
             setIsAdventuring(false);
+            resetZoom();
             onGoAdventure && onGoAdventure();
           }}
         />
