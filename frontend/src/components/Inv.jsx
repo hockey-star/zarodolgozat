@@ -13,6 +13,21 @@ import StatModal from "./StatModal.jsx";
 /* ==============================
    HELPERS
    ============================== */
+
+
+const RARITY_UI = {
+  common:    { border: "border-gray-500",    ring: "ring-gray-400",    text: "text-gray-300" },
+  uncommon:  { border: "border-green-500",   ring: "ring-green-400",   text: "text-green-300" },
+  rare:      { border: "border-blue-500",    ring: "ring-blue-400",    text: "text-blue-300" },
+  epic:      { border: "border-purple-500",  ring: "ring-purple-400",  text: "text-purple-300" },
+  legendary: { border: "border-yellow-500",  ring: "ring-yellow-400",  text: "text-yellow-300" },
+};
+
+function rarityUi(rarity) {
+  const key = (rarity || "common").toLowerCase();
+  return RARITY_UI[key] || RARITY_UI.common;
+}
+
 function resolveCardImageFromAbility(ab) {
   if (!ab) return "";
   if (typeof ab.image === "string" && ab.image.startsWith("/cards/")) {
@@ -28,7 +43,8 @@ const EQUIP_SLOTS = [
   { key: "weapon", label: "Weapon" },
   { key: "armor", label: "Chest" },
   { key: "helmet", label: "Head" },
-  { key: "accessory", label: "Trinket" },
+  { key: "accessory", label: "Accessory" },
+  { key: "accessory", label: "Accessory" },
 ];
 
 function mapItemTypeToSlot(type) {
@@ -389,17 +405,19 @@ export default function Inv({ onClose }) {
 
                   {EQUIP_SLOTS.map((slot) => {
                     const equipped = equippedBySlot[slot.key];
+                    const ui = equipped ? rarityUi(equipped.rarity) : rarityUi("common");
                     return (
                       <button
                         key={slot.key}
                         onClick={() => {
                           if (equipped) setSelectedItem(equipped);
                         }}
+                        
                         className={[
-                          "h-20 rounded-lg border",
+                           "h-20 rounded-lg border",
                           "flex flex-col justify-center px-3 text-left",
                           "bg-neutral-900/50 hover:bg-neutral-900",
-                          equipped ? "border-emerald-600" : "border-neutral-700",
+                          equipped ? ui.border : "border-neutral-700",
                         ].join(" ")}
                         title={equipped ? "Kattints a részletekhez" : "Üres slot"}
                       >
@@ -459,21 +477,23 @@ export default function Inv({ onClose }) {
                         )}
 
                         {inventoryItems.map((item) => {
-                          const isSelected = selectedItem?.item_id === item.item_id;
-
+                            const isSelected = selectedItem?.item_id === item.item_id;
+                            const ui = rarityUi(item.rarity);
                           return (
                             <button
-                              key={item.item_id}
-                              onClick={() => setSelectedItem(item)}
-                              className={[
-                                "h-20 rounded-lg border text-left px-3",
-                                "bg-neutral-900/40 hover:bg-neutral-900",
-                                item.is_equipped
-                                  ? "border-emerald-600"
-                                  : "border-neutral-700",
-                                isSelected ? "ring-2 ring-yellow-400" : "",
-                              ].join(" ")}
-                              title="Kattints a részletekhez"
+                            key={item.item_id}
+                                  onClick={() => setSelectedItem(item)}
+                                  className={[
+                                    "h-20 rounded-lg border text-left px-3",
+                                    "bg-neutral-900/40 hover:bg-neutral-900",
+                                    // rarity border (alap)
+                                    ui.border,
+                                    // equipped: maradhat zöld, vagy ha akarod rarity-vel is mehet (lásd lent)
+                                    item.is_equipped ? "border-emerald-600" : "",
+                                    // selected ring rarity alapján
+                                    isSelected ? `ring-2 ${ui.ring}` : "",
+                                  ].join(" ")}
+                                  title="Kattints a részletekhez"
                             >
                               <div className="text-sm font-semibold truncate">
                                 {item.name}

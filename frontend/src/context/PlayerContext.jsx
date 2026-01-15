@@ -104,13 +104,13 @@ const refreshFullStats = useCallback(async (playerId) => {
   const finalHp  = Number(final?.hp ?? 0);
   const finalMaxHp = Number(final?.max_hp ?? 0);
 
-  setDerivedStats({
-    strength: finalStr,
-    intellect: finalInt,
-    defense: finalDef,
-    hp: finalHp,
-    max_hp: finalMaxHp,
-  });
+ setDerivedStats({
+  strength: finalStr,
+  intellect: finalInt,
+  defense: finalDef,
+  hp: safeNum(player?.hp, 0), // ✅ current HP csak playerből
+  max_hp: Number.isFinite(finalMaxHp) ? finalMaxHp : safeNum(player?.max_hp, 0)
+});
 
   // ✅ bonus: ha backend küldi, azt használjuk
   const backendBonuses = {
@@ -132,8 +132,8 @@ const refreshFullStats = useCallback(async (playerId) => {
 
     return {
       ...prev,
-      hp: Number.isFinite(finalHp) ? finalHp : prev.hp,
       max_hp: Number.isFinite(finalMaxHp) ? finalMaxHp : prev.max_hp,
+     
     };
   });
 }, []);

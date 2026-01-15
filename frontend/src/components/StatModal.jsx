@@ -47,10 +47,24 @@ export default function StatModal({ onClose }) {
     if (stat === "strength") updated.strength = (updated.strength ?? 0) + 1;
     if (stat === "intellect") updated.intellect = (updated.intellect ?? 0) + 1;
     if (stat === "defense") updated.defense = (updated.defense ?? 0) + 1;
-    if (stat === "hp") {
-      updated.max_hp = (updated.max_hp ?? 0) + 5;
-      updated.hp = updated.max_hp; // full heal stat növeléskor (ahogy eddig)
-    }
+   if (stat === "hp") {
+  const bonusHp = Number(itemBonuses?.hp) || 0;
+
+  // final max_hp (amit a UI mutat)
+  const finalMaxHp = effectiveStats?.max_hp ?? player.max_hp ?? 0;
+
+  // ✅ BASE max_hp = final - item bonus
+  const baseMaxHp = Math.max(0, finalMaxHp - bonusHp);
+
+  const newBaseMaxHp = baseMaxHp + 5;
+
+  updated.max_hp = newBaseMaxHp;
+
+  // ha akarsz "full heal"-t statoláskor, akkor base-re healelj:
+  updated.hp = newBaseMaxHp; 
+  // (ha nem akarsz heal-t, akkor inkább:)
+  // updated.hp = Math.min(updated.hp ?? 0, newBaseMaxHp);
+}
 
     updated.unspentStatPoints = (updated.unspentStatPoints ?? 0) - 1;
 
