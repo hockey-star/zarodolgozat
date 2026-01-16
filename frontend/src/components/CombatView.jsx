@@ -101,7 +101,7 @@ const CLASS_BOSS_MAP = {
 };
 
 // ===== WARRIOR HELPERS =====
-function clamp01(v) {
+function clamp01(v) { 
   return Math.max(0, Math.min(1, v));
 }
 function getWarriorRage01(currentHP, maxHP) {
