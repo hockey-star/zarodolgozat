@@ -93,7 +93,7 @@ export default function ShopModal({ onClose }) {
                     disabled={busy}
                     className="mt-1 border border-yellow-600 py-1 hover:bg-yellow-800/40 disabled:opacity-50"
                   >
-                    {item.price} ♢
+                    {item.prize}
                   </button>
                 </div>
               ))}
