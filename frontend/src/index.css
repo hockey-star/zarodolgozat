@@ -68,3 +68,22 @@ html, body, #root {
   }
 }
 
+/* teljes scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+/* háttér (sín) */
+::-webkit-scrollbar-track {
+  background: #290f0f;
+}
+
+/* mozgó rész */
+::-webkit-scrollbar-thumb {
+  background: #fef9c2;
+}
+
+/* hover */
+::-webkit-scrollbar-thumb:hover {
+  background: #fef9c2;
+}

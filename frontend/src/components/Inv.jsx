@@ -9,6 +9,8 @@ import {
 import spellbookImg from "../assets/pics/spellbook.png";
 import HAZImg from "../assets/pics/HAZ.jpg";
 import StatModal from "./StatModal.jsx";
+import "./Inv.css";
+
 
 /* ==============================
    HELPERS
@@ -382,24 +384,27 @@ export default function Inv({ onClose }) {
 
         {showStats && <StatModal onClose={() => setShowStats(false)} />}
 
+
+        {/* INVENTORY */}
+
+
         {showInventory && (
           <div className="absolute inset-0 bg-black/85 flex items-center justify-center p-10 z-40">
-            <div className="bg-neutral-950/90 border border-neutral-800 rounded-2xl shadow-xl w-4/5 h-4/5 text-white relative p-6">
+            <div className="invMinden w-4/5 h-4/5 p-6">
               <button
-                className="absolute top-4 right-4 w-9 h-9 flex items-center justify-center
-                           bg-red-600 hover:bg-red-700 text-white rounded-full text-lg font-bold"
+                className="invBezaras text-center"
                 onClick={() => {
                   setShowInventory(false);
                   setSelectedItem(null);
                 }}
                 title="Bezárás"
               >
-                ✕
+                X
               </button>
 
               <div className="h-full grid grid-cols-12 gap-6 min-h-0">
                 <div className="col-span-2 flex flex-col gap-3 min-h-0">
-                  <div className="text-xs tracking-widest text-neutral-400 uppercase">
+                  <div className="invEquipmentText">
                     Equipment
                   </div>
 
@@ -414,20 +419,23 @@ export default function Inv({ onClose }) {
                         }}
                         
                         className={[
-                           "h-20 rounded-lg border",
+                          "h-20",
+                          "invEquipedItems flex flex-col justify-center px-3 text-left",
+                          equipped ? "invEquipedItemsEquipped" : "invEquipedItemsUnEquipped",
+                           "",
                           "flex flex-col justify-center px-3 text-left",
-                          "bg-neutral-900/50 hover:bg-neutral-900",
+                          "",
                           equipped ? ui.border : "border-neutral-700",
                         ].join(" ")}
                         title={equipped ? "Kattints a részletekhez" : "Üres slot"}
                       >
-                        <div className="text-[11px] text-neutral-400">
+                        <div className="invEquipedItemType">
                           {slot.label}
                         </div>
-                        <div className="text-sm font-semibold truncate">
-                          {equipped ? equipped.name : "Empty"}
+                        <div className="invEquipedItemName">
+                          {equipped ? equipped.name : "Üres"}
                         </div>
-                        <div className="text-[10px] text-neutral-500 uppercase">
+                        <div className="invEquipedItemRarity">
                           {equipped ? equipped.rarity : ""}
                         </div>
                       </button>
@@ -436,42 +444,42 @@ export default function Inv({ onClose }) {
                 </div>
 
                 <div className="col-span-6 flex flex-col min-h-0">
-                  <div className="text-xs tracking-widest text-neutral-400 uppercase">
-                    Character
+                  <div className="invCharacterText">
+                    {player.username}
                   </div>
-                  <div className="mt-3 flex-1 min-h-0 rounded-2xl border border-neutral-800 bg-neutral-950/50 flex items-center justify-center">
-                    <div className="text-neutral-600 text-sm">(placeholder)</div>
+                  <div className="invCharacterImg mt-3 flex-1 min-h-0 flex items-center justify-center">
+                    <div className="text-neutral-600">(placeholder)</div>
                   </div>
                 </div>
 
                 <div className="col-span-4 flex flex-col gap-4 min-h-0">
-                  <div className="rounded-2xl border border-neutral-800 bg-neutral-950/50 p-4 shrink-0">
-                    <div className="text-xs tracking-widest text-neutral-400 uppercase mb-3">
+                  <div className="invStatsBorder p-4 ">
+                    <div className="invStatsText">
                       Stats
                     </div>
 
-                    <div className="space-y-2 text-sm">
+                    <div className="invStats space-y-2">
                       {stats.map((s) => (
                         <div
                           key={s.label}
-                          className="flex justify-between border-b border-neutral-800 pb-1"
+                          className="invStatsDiv flex justify-between border-neutral-800 pb-1"
                         >
-                          <span className="text-neutral-300">{s.label}</span>
-                          <span className="text-neutral-100">{s.value}</span>
+                          <span className="invStatName">{s.label}</span>
+                          <span className="invStatNumber">{s.value}</span>
                         </div>
                       ))}
                     </div>
                   </div>
 
-                  <div className="rounded-2xl border border-neutral-800 bg-neutral-950/50 p-4 flex-1 min-h-0 flex flex-col">
-                    <div className="text-xs tracking-widest text-neutral-400 uppercase mb-3 shrink-0">
+                  <div className="invInvBorder p-4 flex-1 min-h-0 flex flex-col">
+                    <div className="invInvText">
                       Inventory
                     </div>
 
-                    <div className="flex-1 min-h-0 overflow-y-auto pr-1">
-                      <div className="grid grid-cols-4 gap-3">
+                    <div className="invItemsBorder overflow-y-auto">
+                      <div className="invInvGridItems grid grid-cols-3 gap-4">
                         {inventoryItems.length === 0 && (
-                          <div className="text-neutral-500 col-span-4 text-center mt-10">
+                          <div className="invInvGridItemsNull text-neutral-500 col-span-4 text-center mt-10">
                             Az inventory üres
                           </div>
                         )}
@@ -479,26 +487,26 @@ export default function Inv({ onClose }) {
                         {inventoryItems.map((item) => {
                             const isSelected = selectedItem?.item_id === item.item_id;
                             const ui = rarityUi(item.rarity);
+                            
                           return (
                             <button
-                            key={item.item_id}
-                                  onClick={() => setSelectedItem(item)}
-                                  className={[
-                                    "h-20 rounded-lg border text-left px-3",
-                                    "bg-neutral-900/40 hover:bg-neutral-900",
-                                    // rarity border (alap)
-                                    ui.border,
-                                    // equipped: maradhat zöld, vagy ha akarod rarity-vel is mehet (lásd lent)
-                                    item.is_equipped ? "border-emerald-600" : "",
-                                    // selected ring rarity alapján
-                                    isSelected ? `ring-2 ${ui.ring}` : "",
-                                  ].join(" ")}
-                                  title="Kattints a részletekhez"
+                              key={item.item_id}
+                              onClick={() => setSelectedItem(item)}
+                              className={[
+                                "h-20 border text-left px-3",
+                                "bg-neutral-900/40 hover:bg-neutral-900",
+                                item.is_equipped
+                                  ? "border-rose-950"
+                                  : "border-neutral-700",
+                                isSelected ? "ring-2 ring-yellow-400" : "",
+                              ].join(" ")}
+                              title="Kattints a részletekhez"
+
                             >
-                              <div className="text-sm font-semibold truncate">
+                              <div className=" truncate">
                                 {item.name}
                               </div>
-                              <div className="text-[10px] text-neutral-400 uppercase">
+                              <div className="text-[10px] text-neutral-400 uppercase"> {/*RARITY ALAPJÁN SZÍN*/}
                                 {item.type} • {item.rarity}
                               </div>
                               {item.upgrade_level > 0 && (
@@ -518,15 +526,15 @@ export default function Inv({ onClose }) {
                     </div>
                   </div>
 
-                  <div className="rounded-2xl border border-neutral-800 bg-neutral-950/50 p-4 shrink-0">
+                  <div className="invInvSelectedBorder p-4">
                     {selectedItem ? (
                       <div className="flex flex-col gap-3">
                         <div>
-                          <div className="text-xs tracking-widest text-neutral-400 uppercase">
+                          <div className="invInvSelectedText">
                             Selected
                           </div>
-                          <div className="text-lg font-bold">{selectedItem.name}</div>
-                          <div className="text-[11px] text-neutral-400 uppercase">
+                          <div className="invInvSelectedItem">{selectedItem.name}</div>
+                          <div className="invInvSelectedItemInfo">
                             {selectedItem.type} • {selectedItem.rarity}
                             {selectedItem.upgrade_level > 0
                               ? ` • +${selectedItem.upgrade_level}`
@@ -534,7 +542,7 @@ export default function Inv({ onClose }) {
                           </div>
                         </div>
 
-                        <div className="text-sm text-neutral-200 space-y-1">
+                        <div className="invInvSelectedItemStat space-y-1">
                           {formatBonusLine("Strength", selectedItem.bonus_strength)}
                           {formatBonusLine("Intellect", selectedItem.bonus_intellect)}
                           {formatBonusLine("Defense", selectedItem.bonus_defense)}
@@ -544,14 +552,14 @@ export default function Inv({ onClose }) {
                         <div className="flex gap-2">
                           {!selectedItem.is_equipped ? (
                             <button
-                              className="flex-1 py-2 rounded bg-emerald-600 hover:bg-emerald-500"
+                              className="invInvEquipBtn flex-1 py-2"
                               onClick={() => equipItem(selectedItem.item_id)}
                             >
-                              Equip
+                              Felvétel
                             </button>
                           ) : (
                             <button
-                              className="flex-1 py-2 rounded bg-red-600 hover:bg-red-500"
+                              className="invInvUnEquipBtn flex-1 py-2"
                               onClick={() => unequipItem(selectedItem.item_id)}
                             >
                               Levétel
@@ -559,7 +567,7 @@ export default function Inv({ onClose }) {
                           )}
 
                           <button
-                            className="px-4 py-2 rounded bg-neutral-800 hover:bg-neutral-700"
+                            className="invInvItemClear px-4 py-2"
                             onClick={() => setSelectedItem(null)}
                             title="Kijelölés törlése"
                           >
@@ -574,7 +582,7 @@ export default function Inv({ onClose }) {
                         )}
                       </div>
                     ) : (
-                      <div className="text-center text-neutral-500">
+                      <div className="invInvValassz text-center">
                         Válassz ki egy tárgyat
                       </div>
                     )}
@@ -587,17 +595,154 @@ export default function Inv({ onClose }) {
 
         {/* SPELLBOOK / DECK MODAL: placeholder */}
         {showDeckEditor && (
-          <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-40">
-            <div className="relative text-white flex flex-col items-center">
-              <button
-                className="px-4 py-2 bg-gray-800 rounded hover:bg-gray-700"
-                onClick={() => setShowDeckEditor(false)}
-              >
-                Bezárás
-              </button>
+  <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-40">
+    <div className="relative text-white flex flex-col items-center">
+
+      {/* FEJLÉC */}
+      <div className="w-full max-w-[1200px] flex justify-between items-center mb-2 px-2">
+        <h2 className="text-xl font-bold">
+          Spellbook / Deck – {classKey?.toUpperCase()}
+        </h2>
+        <div className="text-sm text-gray-200">
+          Deck mérete: {tempDeck.length} / {MAX_DECK_SIZE}
+        </div>
+      </div>
+
+      {/* SPELLBOOK KÉP */}
+      <div
+        className="relative w-[68vw] max-w-[1000px] aspect-[870/704] flex items-center justify-center"
+      >
+        <img
+          src={spellbookImg}
+          alt="Spellbook"
+          className="absolute inset-0 w-full h-full object-contain pointer-events-none select-none"
+        />
+
+        {/* TARTALOM */}
+        <div
+          className="absolute flex pointer-events-none"
+          style={{
+            width: "78%",
+            height: "52%",
+            top: "37%",
+            left: "50%",
+            transform: "translate(-50%, -50%)",
+            gap: "3rem",
+          }}
+        >
+          {/* BAL OLDAL – ABILITIES */}
+          <div className="flex-1 pointer-events-auto">
+            <div className="font-semibold mb-1 text-sm text-yellow-100">
+              Elérhető képességek
+            </div>
+
+            <div className="h-full overflow-y-auto pr-1 pixel-scroll">
+              <div className="grid grid-cols-3 gap-2">
+                {abilityPool.map((ab) => {
+                  const imgSrc = resolveCardImageFromAbility(ab);
+                  return (
+                    <button
+                      key={ab.id}
+                      onClick={() => handleAddToDeck(ab.id)}
+                      className="relative aspect-[3/4] rounded-md overflow-hidden hover:brightness-110"
+                    >
+                      <img
+                        src={imgSrc}
+                        alt={ab.name}
+                        className="absolute inset-0 w-full h-full object-cover"
+                      />
+                      <div className="absolute bottom-0 w-full bg-black/75 px-1 py-[3px]">
+                        <div className="text-[9px] font-semibold text-center">
+                          {ab.name}
+                        </div>
+                        <div className="text-[8px] text-amber-200 uppercase text-center">
+                          {ab.type} • {ab.rarity}
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           </div>
-        )}
+
+          {/* JOBB OLDAL – DECK */}
+          <div className="flex-1 pointer-events-auto">
+            <div className="font-semibold mb-1 text-sm text-yellow-100">
+              Jelenlegi pakli
+            </div>
+
+            <div className="h-full overflow-y-auto pr-1 pixel-scroll">
+              {uniqueDeckIds.length === 0 ? (
+                <div className="text-sm text-amber-100/80">
+                  A pakli üres. Kattints bal oldalt egy képességre.
+                </div>
+              ) : (
+                <div className="grid grid-cols-3 gap-2">
+                  {uniqueDeckIds.map((id) => {
+                    const ab = ABILITIES_BY_ID[id];
+                    if (!ab) return null;
+                    const count = deckCounts[id];
+                    const imgSrc = resolveCardImageFromAbility(ab);
+
+                    return (
+                      <button
+                        key={id}
+                        onClick={() => handleRemoveOneFromDeck(id)}
+                        className="relative aspect-[3/4] rounded-md overflow-hidden hover:brightness-110"
+                      >
+                        <img
+                          src={imgSrc}
+                          alt={ab.name}
+                          className="absolute inset-0 w-full h-full object-cover"
+                        />
+                        <div className="absolute top-1 left-1 bg-black/80 text-[8px] px-1 rounded">
+                          x{count}
+                        </div>
+                        <div className="absolute bottom-0 w-full bg-black/75 px-1 py-[3px]">
+                          <div className="text-[9px] font-semibold text-center">
+                            {ab.name}
+                          </div>
+                          <div className="text-[8px] text-amber-200 uppercase text-center">
+                            {ab.type} • {ab.rarity}
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ALSÓ GOMBOK */}
+      <div className="mt-4 w-full max-w-[1200px] flex justify-between items-center px-2">
+        <div className="text-xs text-gray-200">
+          Tipp: bal oldalt hozzáadsz, jobb oldalt eltávolítasz.
+        </div>
+
+        <div className="space-x-2">
+          <button
+            className="px-4 py-2 bg-gray-800 rounded"
+            onClick={() => setShowDeckEditor(false)}
+          >
+            Mégse
+          </button>
+          <button
+            className="px-4 py-2 bg-emerald-600 rounded"
+            onClick={handleSaveDeck}
+          >
+            Mentés
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+)}
+
 
         {/* HOTSPOTOK A HÁZBAN */}
         <div className="flex justify-between flex-1">

@@ -1,5 +1,6 @@
 // frontend/src/components/BlacksmithModal.jsx
 import React, { useEffect, useMemo, useState } from "react";
+import "./KovacsModal.css";
 
 function num(v, fallback = 0) {
   const n = Number(v);
@@ -45,8 +46,8 @@ function previewUpgraded(item) {
   // hp : +10 per level
   // int/str: +1 per level
   const dmgAdd = 2 * nextLvl;
-  const defAdd = 2 * nextLvl;
-  const hpAdd  = 10 * nextLvl;
+  const defAdd = 0.5 * nextLvl;
+  const hpAdd  = 5 * nextLvl;
   const statAdd = 1 * nextLvl;
 
   // Típus alapján kicsit más:
@@ -133,7 +134,7 @@ export default function BlacksmithModal({ onClose }) {
   }, [userId]);
 
   const currentGold = num(playerData?.gold, 0);
-  const upgradeCost = selectedItem ? (num(selectedItem.upgrade_level, 0) + 1) * 250 : null;
+  const upgradeCost = selectedItem ? (num(selectedItem.upgrade_level, 0) + 1) * 50 : null;
   const notEnoughGold = selectedItem && upgradeCost != null && currentGold < upgradeCost;
 
   const upgradedPreview = useMemo(() => previewUpgraded(selectedItem), [selectedItem]);
@@ -195,9 +196,9 @@ export default function BlacksmithModal({ onClose }) {
     : null;
 
   return (
-    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
+    <div className="fixed inset-0 bg-black/70 flex justify-center z-50">
       <div
-        className="relative w-[85%] h-[85%] flex-col shadow-xl p-6 text-white"
+        className="kovacs relative w-[85%] h-[85%] flex-col shadow-xl p-6 text-white"
         style={{
           backgroundImage: "url('./src/assets/pics/KOVACS.png')",
           backgroundSize: "cover",
@@ -207,26 +208,26 @@ export default function BlacksmithModal({ onClose }) {
       >
         <button
           onClick={onClose}
-          className="absolute top-3 right-3 text-gray-300 hover:text-red-400"
+          className="kilepes absolute top-3 right-3 text-center"
         >
-          ✕
+          X
         </button>
 
         {loading ? (
           <div className="m-auto text-center">Betöltés...</div>
         ) : (
           <>
-            <div className="text-center mb-4 text-sm bg-black/40 py-2 rounded">
+            <div className="info text-center ">
               Fejlesztésre fordítható arany:{" "}
-              <span className="text-yellow-300">{currentGold}</span>
+              <span className="arany text-yellow-300">{currentGold}</span>
             </div>
 
             <div className="mb-4 text-center">
               {playerItems.length === 0 ? (
-                <div className="text-sm">Nincs tovább fejleszthető tárgyad.</div>
+                <div className="nincstargy mt-1">Nincs tovább fejleszthető tárgyad.</div>
               ) : (
                 <select
-                  className="bg-gray-800 px-3 py-2 rounded border border-gray-600"
+                  className="itemSelect px-3 py-2"
                   value={selectedItem?.item_id ?? ""}
                   onChange={(e) => {
                     const id = Number(e.target.value);
@@ -242,19 +243,16 @@ export default function BlacksmithModal({ onClose }) {
               )}
             </div>
 
-            {error && <div className="text-red-400 text-sm mb-2">{error}</div>}
-
             <div className="flex justify-between flex-1">
               {/* Current */}
-              <div className="w-[18%] bg-black/40 rounded p-4 border border-gray-700">
-                <h2 className="text-center mb-2 text-sm">Jelenlegi tárgy</h2>
-                <div className="text-center text-sm space-y-1">
+              <div className="jelenlegiBorder w-[18%]">
+                <h2 className="jelenlegi text-center mb-2">Jelenlegi tárgy</h2>
+                <div className="jelenlegiStat text-center space-y-1">
                   {cur ? (
                     <>
-                      <p className="font-semibold">
+                      <p>
                         {cur.name} +{cur.lvl}
                       </p>
-                      <p>DMG: {cur.dmg.min} - {cur.dmg.max}</p>
                       {cur.str ? <p>STR: +{cur.str}</p> : null}
                       {cur.int ? <p>INT: +{cur.int}</p> : null}
                       {cur.def ? <p>DEF: +{cur.def}</p> : null}
@@ -268,11 +266,11 @@ export default function BlacksmithModal({ onClose }) {
 
               {/* Center */}
               <div className="w-1/3 flex flex-col items-center justify-center text-center">
-                <p className="text-sm mt-2">
+                <p className="fejlesztesiKoltseg">
                   Fejlesztés költsége:{" "}
                   {selectedItem ? (
-                    <span className={notEnoughGold ? "text-red-400" : ""}>
-                      {upgradeCost} arany
+                    <span className={notEnoughGold ? "" : ""}>
+                      <b className="arany text-yellow-300">{upgradeCost}</b> arany
                     </span>
                   ) : (
                     "-"
@@ -280,13 +278,13 @@ export default function BlacksmithModal({ onClose }) {
                 </p>
 
                 {notEnoughGold && (
-                  <p className="text-xs text-red-400 mt-1">
+                  <p className="nincseleg mt-1">
                     Nincs elég aranyod a fejlesztéshez.
                   </p>
                 )}
 
                 <button
-                  className="bg-blue-700 px-4 py-2 rounded mt-3 hover:bg-blue-600 disabled:opacity-50"
+                  className="fejlesztes"
                   onClick={upgradeItem}
                   disabled={!selectedItem || busy || notEnoughGold}
                 >
@@ -295,15 +293,14 @@ export default function BlacksmithModal({ onClose }) {
               </div>
 
               {/* Preview */}
-              <div className="w-[18%] bg-black/40 rounded p-4 border border-gray-700">
-                <h2 className="text-center mb-2 text-sm">Fejlesztett tárgy</h2>
-                <div className="text-center text-sm space-y-1">
+              <div className="fejlesztettBorder w-[18%]">
+                <h2 className="fejlesztett text-center mb-2">Fejlesztett tárgy</h2>
+                <div className="fejlesztettStat text-center space-y-1">
                   {nxt ? (
                     <>
-                      <p className="font-semibold">
+                      <p className="">
                         {nxt.name} +{nxt.lvl}
                       </p>
-                      <p>DMG: {nxt.dmg.min} - {nxt.dmg.max}</p>
                       {nxt.str ? <p>STR: +{nxt.str}</p> : null}
                       {nxt.int ? <p>INT: +{nxt.int}</p> : null}
                       {nxt.def ? <p>DEF: +{nxt.def}</p> : null}
@@ -314,10 +311,6 @@ export default function BlacksmithModal({ onClose }) {
                   )}
                 </div>
               </div>
-            </div>
-
-            <div className="mt-4 text-xs text-gray-300 bg-black/40 p-3 rounded">
-              Tipp: ha a preview nálad máshogy skálázódik, szólj és átírom a <code>previewUpgraded()</code> függvényt a te logikádra.
             </div>
           </>
         )}

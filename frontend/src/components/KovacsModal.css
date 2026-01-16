@@ -1,0 +1,113 @@
+.kovacs{
+    position: fixed;
+    margin: auto;
+}
+
+.kilepes{
+    color: #fef9c2;
+     background-color: #460809;
+     padding: 15px 40px 15px 40px;
+     margin: 10px;
+     text-align: center;
+     font-size: 20px;
+     font-family: "Jersey 10", sans-serif;
+     border: 0;
+     box-shadow: 0px 5px black, 0px -5px black, 5px 0px black, -5px 0px black, 0px 10px #00000038, 5px 5px #00000038, -5px 5px #00000038, inset 0px 5px #ffffff36;
+     cursor: pointer;
+     width: 40px;
+     
+}
+
+.kilepes:active {
+     transform: translateY(5px);
+     box-shadow: 0px 5px black, 0px -5px black, 5px 0px black, -5px 0px black,inset 0px 5px #00000038;
+}
+
+.fejlesztes{
+    color: #fef9c2;
+     background-color: #460809;
+     padding: 15px 40px 15px 40px;
+     margin: 10px;
+     text-align: center;
+     font-size: 25px;
+     font-family: "Jersey 10", sans-serif;
+     border: 0;
+     box-shadow: 0px 5px black, 0px -5px black, 5px 0px black, -5px 0px black, 0px 10px #00000038, 5px 5px #00000038, -5px 5px #00000038, inset 0px 5px #ffffff36;
+     cursor: pointer;
+     position: fixed;
+     top: 770px;
+
+     
+}
+
+.fejlesztes:active {
+     transform: translateY(5px);
+     box-shadow: 0px 5px black, 0px -5px black, 5px 0px black, -5px 0px black,inset 0px 5px #00000038;
+}
+
+.info{
+    background-color: #460809;
+    color: #fef9c2;
+    box-shadow: 0px 5px black, 0px -5px black, 5px 0px black, -5px 0px black, 0px 10px #00000038, 5px 5px #00000038, -5px 5px #00000038, inset 0px 5px #0c040436;
+    font-family: "Jersey 10", sans-serif;
+    font-size: 20px;
+    width: 400px;
+    margin: auto;
+    margin-bottom: 20px;
+    
+}
+
+.arany{
+    font-size: 26px;
+    letter-spacing: 3px;
+}
+
+.jelenlegiBorder,.fejlesztettBorder{
+    background-color: #460809;
+    box-shadow: 0px 5px black, 0px -5px black, 5px 0px black, -5px 0px black, 0px 10px #00000038, 5px 5px #00000038, -5px 5px #00000038, inset 0px 5px #0c040436;
+    padding: 10px;
+    text-shadow: 3px 3px 0px #240a0a;
+    
+}
+
+.jelenlegi,.fejlesztett{
+    font-family: "Jersey 10", sans-serif;
+    font-size: 25px;
+    color: #ee6969;
+    text-shadow: 3px 3px 0px #240a0a;
+    
+
+}
+
+.jelenlegiStat,.fejlesztettStat{
+    font-family: "Jersey 10", sans-serif;
+    color: #fef9c2;
+    letter-spacing: 2px;
+    font-size: 16px;
+}
+
+.fejlesztesiKoltseg{
+    font-family: "Jersey 10", sans-serif;
+    color: #fef9c2;
+    text-shadow: 3px 3px 0px #460809;
+    font-size: 20px;
+    position: fixed;
+    top: 250px;
+}
+
+.itemSelect{
+    font-family: "Jersey 10", sans-serif;
+    color: #fef9c2;
+    font-size: 20px;
+    background-color: #460809;
+    box-shadow: 0px 5px black, 0px -5px black, 5px 0px black, -5px 0px black, 0px 10px #00000038, 5px 5px #00000038, -5px 5px #00000038, inset 0px 5px #0c040436;
+}
+
+.nincseleg,.nincstargy{
+    font-family: "Jersey 10", sans-serif;
+    color: #fef9c2;
+    background-color: #460809;
+    box-shadow: 0px 5px black, 0px -5px black, 5px 0px black, -5px 0px black, 0px 10px #00000038, 5px 5px #00000038, -5px 5px #00000038, inset 0px 5px #0c040436;
+    width: 300px;
+    margin: auto;
+}

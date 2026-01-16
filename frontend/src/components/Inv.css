@@ -1,0 +1,213 @@
+.invBezaras{
+    color: #fef9c2;
+     background-color: #460809;
+     font-size: 20px;
+     font-family: "Jersey 10", sans-serif;
+     border: 0;
+     box-shadow: 0px 5px black, 0px -5px black, 5px 0px black, -5px 0px black, 0px 10px #00000038, 5px 5px #00000038, -5px 5px #00000038, inset 0px 5px #ffffff36;
+     cursor: pointer;
+     width: 60px;
+     height: 50px;
+     position: fixed;
+     top: 60px;
+     right: 200px;
+}
+
+.invBezaras:active {
+     transform: translateY(5px);
+     box-shadow: 0px 5px black, 0px -5px black, 5px 0px black, -5px 0px black,inset 0px 5px #00000038;
+}
+
+.invMinden{
+    box-shadow: 0px 5px black, 0px -5px black, 5px 0px black, -5px 0px black,inset 0px 5px #00000038;
+    background-color: #290f0f;
+}
+
+.invEquipmentText{
+    font-family: "Jersey 10", sans-serif;
+    color: #fef9c2;
+    text-transform: uppercase;
+    font-size: 25px;
+    letter-spacing: 3px;
+    text-shadow: 2px 2px 0px #290f0f;
+}
+
+.invEquipedItems{
+    font-family: "Jersey 10", sans-serif;
+    box-shadow: 0px 5px black, 0px -5px black, 5px 0px black, -5px 0px black,inset 0px 5px #00000038;
+    background-color: #460809;
+    text-transform: uppercase;
+    
+}
+
+.invEquipedItemType{
+    text-shadow: 2px 2px 0px #000000;
+    letter-spacing: 3px;
+    font-size: 20px;
+
+}
+
+.invEquipedItemName{
+    color: #fef9c2;
+    letter-spacing: 3px;
+}
+
+.invEquipedItemRarity{
+    color: #b8b8b8;
+    text-shadow: 2px 2px 0px #290f0f;
+    letter-spacing: 3px;
+    font-size: 13px;
+}
+
+.invEquipedItemsUnEquipped{
+    background-color: #242424;
+}
+
+.invCharacterText{
+    font-family: "Jersey 10", sans-serif;
+    color: #b61a1a;
+    text-transform: uppercase;
+    font-size: 45px;
+    letter-spacing: 3px;
+    text-shadow: 2px 2px 0px #290f0f;
+    margin: auto;
+    letter-spacing: 5px;
+}
+
+.invCharacterImg{
+    box-shadow: 0px 5px black, 0px -5px black, 5px 0px black, -5px 0px black,inset 0px 5px #00000038;
+    background-color: #460809;
+    
+}
+
+.invStatsBorder{
+    box-shadow: 0px 5px black, 0px -5px black, 5px 0px black, -5px 0px black,inset 0px 5px #00000038;
+    background-color: #460809;
+}
+
+.invStatsText{
+    font-family: "Jersey 10", sans-serif;
+    color: #fef9c2;
+    text-transform: uppercase;
+    font-size: 25px;
+    letter-spacing: 3px;
+    text-shadow: 2px 2px 0px #290f0f;
+    
+}
+
+.invStats{
+    font-family: "Jersey 10", sans-serif;
+    
+}
+
+.invStatsDiv{
+    background-color: #290f0f;
+}
+
+.invStatName{
+    font-family: "Jersey 10", sans-serif;
+    color: #fef9c2;
+    font-size: 20px;
+    margin-left: 5px;
+}
+
+.invStatNumber{
+    color: #fef9c2;
+    margin-right: 5px;
+
+}
+
+.invInvBorder{
+    box-shadow: 0px 5px black, 0px -5px black, 5px 0px black, -5px 0px black,inset 0px 5px #00000038;
+    background-color: #460809;
+}
+
+.invItemsBorder{
+    box-shadow: 0px 5px black, 0px -5px black, 5px 0px black, -5px 0px black,inset 0px 5px #00000038;
+    background-color: #290f0f;
+    padding: 5px;
+}
+
+.invInvText{
+    font-family: "Jersey 10", sans-serif;
+    color: #fef9c2;
+    text-transform: uppercase;
+    font-size: 25px;
+    letter-spacing: 3px;
+    text-shadow: 2px 2px 0px #290f0f;
+}
+
+.invInvGridItems{
+    font-family: "Jersey 10", sans-serif;
+    color: #fef9c2;
+    margin: auto;
+}
+
+.invInvGridItemsNull{
+    font-size: 30px;
+    margin-bottom: 40px;
+}
+
+.invInvSelectedBorder{
+    box-shadow: 0px 5px black, 0px -5px black, 5px 0px black, -5px 0px black,inset 0px 5px #00000038;
+    background-color: #460809;
+    padding: 5px;
+}
+
+.invInvSelectedText{
+    font-family: "Jersey 10", sans-serif;
+    color: #fef9c2;
+    text-transform: uppercase;
+    font-size: 25px;
+    letter-spacing: 3px;
+    text-shadow: 2px 2px 0px #290f0f;
+}
+
+.invInvSelectedItem{
+    font-family: "Jersey 10", sans-serif;
+    color: #fef9c2;
+    font-size: 20px;
+}
+
+.invInvSelectedItemInfo{
+    font-family: "Jersey 10", sans-serif;
+    color: #7e7e7e;
+    text-transform: uppercase;
+}
+
+.invInvSelectedItemStat{
+    font-family: "Jersey 10", sans-serif;
+    color: #fef9c2;
+    text-transform: uppercase;
+}
+
+.invInvValassz{
+    font-family: "Jersey 10", sans-serif;
+    color: #9b9b9b;
+    font-size: 20px;
+}
+
+.invInvEquipBtn,.invInvUnEquipBtn,.invInvItemClear{
+    color: #fef9c2;
+     background-color: #460809;
+     font-size: 20px;
+     font-family: "Jersey 10", sans-serif;
+     border: 0;
+     box-shadow: 0px 5px black, 0px -5px black, 5px 0px black, -5px 0px black, 0px 10px #00000038, 5px 5px #00000038, -5px 5px #00000038, inset 0px 5px #ffffff36;
+     cursor: pointer;
+}
+
+.invInvEquipBtn:active {
+     transform: translateY(5px);
+     box-shadow: 0px 5px black, 0px -5px black, 5px 0px black, -5px 0px black,inset 0px 5px #00000038;
+}
+
+.invInvUnEquipBtn:active {
+     transform: translateY(5px);
+     box-shadow: 0px 5px black, 0px -5px black, 5px 0px black, -5px 0px black,inset 0px 5px #00000038;
+}
+
+.invInvItemClear:active {
+     transform: translateY(5px);
+     box-shadow: 0px 5px black, 0px -5px black, 5px 0px black, -5px 0px black,inset 0px 5px #00000038;
+}
