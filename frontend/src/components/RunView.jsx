@@ -1,69 +1,122 @@
-// frontend/src/components/RunView.jsx
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import PathChoice from "./PathChoice";
 import CombatView from "./CombatView";
+import EventView from "./EventView";
 import TransitionOverlay from "./TransitionOverlay";
+import LoadingScreen from "./LoadingScreen";
 
+import wizardBg from "../assets/pics/EVENT_WIZARD_PLACEHOLDER.png";
 import combatIntroVideo from "../assets/transitions/combat-intro.webm";
 
-export default function RunView() {
-  const [screen, setScreen] = useState("path"); // "path" | "combat"
-  const [level, setLevel] = useState(1);
+const EVENT_CHANCE = 1.0; // TESZTHEZ 100% esély
+const EVENT_POOL = [
+  {
+    id: "wizard",
+    title: "Vándor varázsló",
+    story:
+      "Az út porában egy köpenyes varázsló lép eléd. Egy fiolát tart feléd.\n\n„Erőt ad… vagy elátkoz.”",
+    background: wizardBg,
+    choices: [
+      {
+        label: "Megiszom",
+        resolve: () => {
+          if (Math.random() < 0.7) return { dmgMult: 1.1, pathsLeft: 3 };
+          return { poisonTurns: 2, pathsLeft: 5 };
+        },
+      },
+      { label: "Elutasítom", resolve: () => null },
+    ],
+  },
+];
 
-  const [currentPath, setCurrentPath] = useState(null);
+export default function RunView() {
+  const [screen, setScreen] = useState("path"); // path | loading | event | combat
+  const [level, setLevel] = useState(1);
+  const [activeEvent, setActiveEvent] = useState(null);
+  const [runEffect, setRunEffect] = useState(null);
+  const [pendingPath, setPendingPath] = useState(null);
+
+  const loadingLockRef = useRef(false); // ✅ egyszeri hívás biztosítás
   const [showTransition, setShowTransition] = useState(false);
 
-  // PathChoice → katt
   function handlePathChoose(choice) {
-    // pl. choice = { type: "fight" | "elite" | "rest" | "mystery" }
-    setCurrentPath(choice);
-    setScreen("combat");        // AZONNAL áttesszük combatra
-    setShowTransition(true);    // és ráhúzzuk a transition overlayt
+    setPendingPath(choice);
+    setScreen("loading");
+    loadingLockRef.current = false; // reset lock minden új pathnál
   }
 
-  // Transition vége
-  function handleTransitionEnd() {
-    setShowTransition(false);
+  function handleEventChoice(choice) {
+    const effect = choice.resolve();
+    if (effect) setRunEffect(effect);
+
+    setActiveEvent(null);
+    startCombat();
   }
 
-  // Combat vége
-  function handleCombatEnd(playerHP, victory) {
+  function startCombat() {
+    setScreen("combat");
+    setShowTransition(true);
+  }
+
+  function handleCombatEnd(victory) {
     if (victory) {
-      setLevel((prev) => Math.min(prev + 1, 16));
+      setLevel((l) => l + 1);
+    } else {
+      setRunEffect(null);
     }
-    setScreen("path");
-    setCurrentPath(null);
+
+    setScreen("path"); // vissza path választáshoz
   }
+
+ function handleLoadingDone() {
+  // 1. Azonnali kilépés, ha már folyamatban van vagy nincs mit betölteni
+  if (!pendingPath || loadingLockRef.current) return;
+  
+  // 2. Azonnali lockolás és állapot ürítés (még a logika előtt!)
+  loadingLockRef.current = true;
+  setPendingPath(null); 
+
+  const chance = Number(EVENT_CHANCE);
+  const roll = Math.random();
+  const shouldEvent = chance >= 1 || roll < chance;
+
+  console.log("[RunView] Loading done", { roll, chance, shouldEvent });
+
+  if (shouldEvent) {
+    const ev = EVENT_POOL[Math.floor(Math.random() * EVENT_POOL.length)];
+    setActiveEvent(ev);
+    setScreen("event");
+  } else {
+    startCombat();
+  }
+}
 
   return (
-    <div className="relative min-h-screen bg-black text-white overflow-hidden">
-      {/* Alap view (PathChoice vagy Combat) */}
-      <div className="relative z-10">
-        {screen === "path" && (
-          <PathChoice onChoose={handlePathChoose} level={level} />
-        )}
+    <div className="relative min-h-screen bg-black">
+      {screen === "path" && (
+        <PathChoice level={level} onChoose={handlePathChoose} />
+      )}
 
-        {screen === "combat" && (
+      {screen === "loading" && (
+        <LoadingScreen onDone={handleLoadingDone} />
+      )}
+
+      {screen === "event" && activeEvent && (
+        <EventView event={activeEvent} onChoose={handleEventChoice} />
+      )}
+
+      {screen === "combat" && (
+        <>
           <CombatView
             level={level}
-            pathType={currentPath?.type || "fight"}
-            boss={currentPath?.type === "elite"} // példa: elite-ből boss-flag
+            runEffect={runEffect}
             onEnd={handleCombatEnd}
           />
-        )}
-      </div>
-
-      {/* Transition overlay – PathChoice clicktől indul */}
-      {showTransition && (
-        <TransitionOverlay
-          src={combatIntroVideo}
-          onEnd={handleTransitionEnd}
-          darkDelay={0}
-          darkFadeIn={250}
-          darkFadeOut={400}
-          darkOpacity={0.7}
-          videoDelay={350}
-        />
+          <TransitionOverlay
+            src={combatIntroVideo}
+            onEnd={() => setShowTransition(false)}
+          />
+        </>
       )}
     </div>
   );

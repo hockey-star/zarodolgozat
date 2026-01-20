@@ -531,6 +531,7 @@ export default function CombatView({
   wave = 1,
   maxWaves = 16,
   playerHP: playerHPProp,
+   runEffect,
 }) {
   const {
     player,
@@ -762,6 +763,8 @@ export default function CombatView({
   const [enemyVulnerability, setEnemyVulnerability] = useState(null);
   const [enemyBleed, setEnemyBleed] = useState(null);
   const [playerEvasionTurns, setPlayerEvasionTurns] = useState(0);
+  const [playerPoison, setPlayerPoison] = useState(null);
+
 
   // ===== ENEMY ABILITY STATE =====
   const [enemyGuardHits, setEnemyGuardHits] = useState(0);
@@ -1070,12 +1073,21 @@ export default function CombatView({
         setEnemyVulnerability(null);
         setEnemyBleed(null);
         setPlayerEvasionTurns(0);
+        setPlayerPoison(null);
 
         setEnemyGuardHitsSync(0);
         setEnemyInvulnTurnsSync(0);
         setEnemyFrenzyTurnsSync(0);
         setPlayerWeakenTurnsSync(0);
         enemyUsesRef.current = {};
+
+        // ✅ RUN EVENT: POISON a combat elején (utazásból)
+        if (runEffect?.poisonTurns && runEffect.poisonTurns > 0) {
+          // nálad enemyPoison van, playerPoison NINCS – ezért kell egy új state
+          // 1) a state-et fent hozzuk létre (lent írom)
+          setPlayerPoison({ damagePerTurn: runEffect.poisonDmg ?? 3, remainingTurns: runEffect.poisonTurns });
+          pushLog(`☠️ Utazási event: megmérgeződtél (${runEffect.poisonTurns} kör).`);
+        }
 
         if (classKey === "archer") {
           const max = Math.floor(maxHPFromPlayer * PET_CFG.HP_RATIO);
@@ -1177,6 +1189,8 @@ export default function CombatView({
     spendAllMageMana();
 
     const playerIntellect = derivedStats?.intellect ?? player?.intellect ?? 0;
+    
+
 
     if (choice.kind === "damage_percent") {
       const dmg = Math.max(1, Math.floor((enemy?.maxHp ?? 1) * choice.percent));
@@ -1189,6 +1203,7 @@ export default function CombatView({
         return newHP;
       });
     }
+    
 
     if (choice.kind === "full_heal") {
       spawnAbilityEffect({ src: healFx, target: "player", width: "1000px", height: "1000px" });
@@ -1408,6 +1423,16 @@ export default function CombatView({
           pushLog(`🔮 A korábbi Arcane Surge miatt ${enemy.name} több sebzést szenved el!`);
         }
 
+        const runDmgMult = runEffect?.dmgMult ?? 1.0;
+        if (runDmgMult !== 1.0) {
+          finalRolls = finalRolls.map((r) => ({
+            ...r,
+            amount: Math.max(1, Math.floor(r.amount * runDmgMult)),
+          }));
+          // csak 1 log, nem hit-enként
+          pushLog(`✨ Utazási hatás: +${Math.round((runDmgMult - 1) * 100)}% sebzés`);
+        }
+
         finalRolls.forEach((roll, index) => {
           trackTimeout(
             setTimeout(() => {
@@ -1619,6 +1644,25 @@ export default function CombatView({
       if (battleOverRef.current) return;
 
       // ===== DoT tickek =====
+
+
+      if (playerPoison && playerHP > 0) {
+  const pDmg = playerPoison.damagePerTurn ?? 0;
+  const newHP = Math.max(0, playerHP - pDmg);
+
+  if (pDmg > 0) {
+    setPlayerHP(newHP);
+    addHPPopup(-pDmg, "player");
+    pushLog(`☠️ Méreg sebzés: ${pDmg} (Te – ${newHP} HP).`);
+  }
+
+  const remaining = (playerPoison.remainingTurns ?? 1) - 1;
+  if (remaining <= 0 || newHP <= 0) setPlayerPoison(null);
+  else setPlayerPoison((prev) => (prev ? { ...prev, remainingTurns: remaining } : null));
+
+  if (newHP <= 0) { endBattle(); return; }
+}
+
       if (enemyBurn && enemyHP > 0) {
         const burnDmg = enemyBurn.damagePerTurn ?? 0;
         const newHP = Math.max(0, enemyHP - burnDmg);
@@ -1779,6 +1823,27 @@ export default function CombatView({
 async function handleContinue() {
   const victory = enemyHP <= 0 && playerHP > 0;
   const isRunEnd = (!victory) || (wave >= maxWaves);
+
+   if (victory && player?.id) {
+    const { xpGain, goldGain } = rollRewards();
+
+    try {
+      await fetch("http://localhost:3000/api/combat/reward", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          playerId: player.id,
+          xpGain,
+          goldGain,
+        }),
+      });
+
+      // 🔑 FRONTEND PLAYER FRISSÍTÉS
+      await refreshFullStats(player.id);
+    } catch (err) {
+      console.error("Reward save failed", err);
+    }
+  }
 
   // ✅ WAVE COMPLETE (nem run vége): vissza Path-ra, HP marad, storage marad
   if (!isRunEnd) {

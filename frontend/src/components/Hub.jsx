@@ -1,10 +1,11 @@
+// frontend/src/components/Hub.jsx
 import React, { useState, useRef } from "react";
 import ShopModal from "./BoltModal.jsx";
 import BlacksmithModal from "./KovacsModal.jsx";
 import InvModal from "./Inv.jsx";
 import QuestBoardModal from "./QuestBoardModal.jsx";
 import { usePlayer } from "../context/PlayerContext.jsx";
-import LoadingScreen from "./LoadingScreen.jsx";
+// TÖRÖLVE: import LoadingScreen from "./LoadingScreen.jsx"; <-- Itt már nem kell!
 import "./Hub.css";
 
 export default function Hub({ onGoAdventure }) {
@@ -18,7 +19,8 @@ export default function Hub({ onGoAdventure }) {
   const [showBlacksmith, setShowBlacksmith] = useState(false);
   const [showInv, setShowInv] = useState(false);
   const [showQuestBoard, setShowQuestBoard] = useState(false);
-  const [isAdventuring, setIsAdventuring] = useState(false);
+  
+  // TÖRÖLVE: const [isAdventuring, setIsAdventuring] = useState(false); <-- Nem kell helyi state
 
   /** 🎥 CAMERA */
   const [zoom, setZoom] = useState(1);
@@ -54,34 +56,45 @@ export default function Hub({ onGoAdventure }) {
 
   /** 🚶 MOZGÁS */
   const moveTo = (x, y, type) => {
-  zoomTo(x, y);
+    zoomTo(x, y);
 
-  const dx = x - playerPos.x;
-  const dy = y - playerPos.y;
-  const distance = Math.sqrt(dx * dx + dy * dy);
-  const duration = (distance / SPEED) * 500;
+    const dx = x - playerPos.x;
+    const dy = y - playerPos.y;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+    const duration = (distance / SPEED) * 500;
 
-  setIsMoving(true);
-  setPlayerPos({ x, y });
+    setIsMoving(true);
+    setPlayerPos({ x, y });
 
-  clearTimeout(timeoutRef.current);
+    clearTimeout(timeoutRef.current);
 
-  // ⏱ modal hamarabb nyílik
-  timeoutRef.current = setTimeout(() => {
-    openModal(type);
-  }, duration * 0.5);
+    // ⏱ modal / esemény hamarabb nyílik
+    // Kicsit növeltem az időzítést (0.5 -> 0.8), hogy a karakter odaérjen, mielőtt váltunk
+    timeoutRef.current = setTimeout(() => {
+      openModal(type);
+    }, duration * 0.8);
 
-  // mozgás befejezése
-  setTimeout(() => {
-    setIsMoving(false);
-  }, duration);
-};
+    // mozgás befejezése
+    setTimeout(() => {
+      setIsMoving(false);
+    }, duration);
+  };
+
   const openModal = (type) => {
     if (type === "shop") setShowShop(true);
     if (type === "blacksmith") setShowBlacksmith(true);
     if (type === "inv") setShowInv(true);
     if (type === "quest") setShowQuestBoard(true);
-    if (type === "adventure") setIsAdventuring(true);
+    
+    // JAVÍTÁS: Itt történik a varázslat
+    if (type === "adventure") {
+        // Nem nyitunk helyi loading screen-t!
+        // Csak visszaállítjuk a zoomot és szólunk az App-nak.
+        resetZoom();
+        if (onGoAdventure) {
+            onGoAdventure(); 
+        }
+    }
   };
 
   const CLASS_STRING = {
@@ -136,15 +149,7 @@ export default function Hub({ onGoAdventure }) {
         />
       )}
 
-      {isAdventuring && (
-        <LoadingScreen
-          onDone={() => {
-            setIsAdventuring(false);
-            resetZoom();
-            onGoAdventure && onGoAdventure();
-          }}
-        />
-      )}
+      {/* TÖRÖLVE: Itt volt a <LoadingScreen />, most már nincs itt semmi. */}
     </div>
   );
 }
