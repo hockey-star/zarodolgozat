@@ -1,43 +1,58 @@
-import React from "react";
-
-// event dizájn szügségeltetik
+import React, { useState } from "react";
+import "./EventView.css";
 
 export default function EventView({ event, onChoose }) {
+  const [hoveredIdx, setHoveredIdx] = useState(null);
+
   if (!event) return null;
 
   return (
-    <div
-      className="fixed inset-0 flex items-center justify-center text-white"
-      style={{
-        backgroundImage: `url(${event.background})`,
-        backgroundSize: "cover",
-        backgroundPosition: "center",
-      }}
-    >
-      {/* sötét overlay */}
-      <div className="absolute inset-0 bg-black/70" />
+    <div className="event-root">
+      {/* ALAP HÁTTÉR (Pulzáló, fekete-fehér) */}
+      <div 
+        className="event-bg base" 
+        style={{ backgroundImage: `url(${event.background})` }} 
+      />
 
-      {/* tartalom */}
-      <div className="relative z-10 max-w-4xl w-full px-10">
-        {/* LORE */}
-        <h2 className="text-4xl font-bold text-center mb-6">
-          {event.title}
-        </h2>
+      {/* BAL OLDALI ÉLES HÁTTÉR */}
+      <div 
+        className={`event-bg left ${hoveredIdx === 0 ? "active" : ""}`}
+        style={{ backgroundImage: `url(${event.background})` }} 
+      />
 
-        <p className="text-lg text-center mb-12">
-          {event.story}
-        </p>
+      {/* JOBB OLDALI ÉLES HÁTTÉR */}
+      <div 
+        className={`event-bg right ${hoveredIdx === 1 ? "active" : ""}`}
+        style={{ backgroundImage: `url(${event.background})` }} 
+      />
 
-        {/* 2 NAGY GOMB – PathChoice feeling */}
-        <div className="flex gap-10 justify-center">
+      {/* TARTALOM OVERLAY */}
+      <div className="event-ui-overlay">
+        <h2 className="event-main-title">{event.title}</h2>
+        <div className="event-story-box">
+          <p>{event.story}</p>
+        </div>
+
+        {/* A KÉT HATALMAS INTERAKTÍV OLDAL */}
+        <div className="event-sides-container">
           {event.choices.map((choice, idx) => (
-            <button
+            <div
               key={idx}
+              className="event-side"
+              onMouseEnter={() => setHoveredIdx(idx)}
+              onMouseLeave={() => setHoveredIdx(null)}
               onClick={() => onChoose(choice)}
-              className="w-72 h-40 text-2xl font-bold bg-black/60 hover:bg-black/80 border-2 border-white transition"
             >
-              {choice.label}
-            </button>
+              <div className="event-choice-label">
+                {choice.label}
+              </div>
+              
+              {hoveredIdx === idx && (
+                <div className="event-tooltip-wrapper">
+                  <div className="event-tooltip">Kattints a választáshoz</div>
+                </div>
+              )}
+            </div>
           ))}
         </div>
       </div>

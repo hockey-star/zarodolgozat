@@ -1,207 +1,122 @@
 @import url('https://fonts.googleapis.com/css2?family=Jersey+10&display=swap');
 
-html, body {
-  overflow: hidden;
-  height: 100%;
-}
-
-/* ===== FŐ CONTAINER ===== */
-.path-choice-bg {
+/* ===== ALAP ÉS MŰKÖDÉS ===== */
+.path-choice-root {
   position: fixed;
   inset: 0;
+  background: black;
   overflow: hidden;
+  font-family: "Jersey 10", sans-serif;
 }
 
-/* ===== HÁTTÉR RÉTEGEK ===== */
+/* ===== HÁTTÉREK ===== */
 .path-bg {
   position: absolute;
   inset: 0;
   background-size: cover;
   background-position: center;
-  transition:
-    opacity 0.4s ease,
-    filter 0.4s ease,
-    transform 0.4s ease;
+  transition: opacity 0.4s ease, transform 0.4s ease;
 }
 
-/* ===== KONTRASZT + MÉRET PULZÁLÁS ===== */
-@keyframes bgPulse {
-  0% {
-    transform: scale(1.03);
-    filter: grayscale(100%) contrast(110%) blur(4px);
-  }
-  50% {
-    transform: scale(1.06);
-    filter: grayscale(100%) contrast(130%) blur(4px);
-  }
-  100% {
-    transform: scale(1.03);
-    filter: grayscale(100%) contrast(110%) blur(4px);
-  }
+@keyframes pathBgPulse {
+  0% { transform: scale(1.03); filter: grayscale(100%) blur(5px) contrast(1.2); }
+  50% { transform: scale(1.06); filter: grayscale(100%) blur(5px) contrast(1.4); }
+  100% { transform: scale(1.03); filter: grayscale(100%) blur(5px) contrast(1.2); }
 }
 
-/* BLUROS, FEKETE-FEHÉR ALAP */
 .path-bg.base {
   z-index: 1;
-  animation: bgPulse 4s ease-in-out infinite;
+  animation: pathBgPulse 5s ease-in-out infinite;
 }
 
-/* ===== ÉLES OVERLAYEK (BAL / JOBB) ===== */
-.path-bg.left,
-.path-bg.right {
+.path-bg.left, .path-bg.right {
   z-index: 2;
   opacity: 0;
-  transform: scale(1.03);
-  transition:
-    opacity 0.4s ease,
-    transform 0.4s ease;
+  transform: scale(1.05);
 }
 
-.path-bg.left {
-  clip-path: inset(0 50% 0 0);
-}
-
-.path-bg.right {
-  clip-path: inset(0 0 0 50%);
-}
+.path-bg.left { clip-path: inset(0 50% 0 0); }
+.path-bg.right { clip-path: inset(0 0 0 50%); }
 
 .path-bg.active {
   opacity: 1;
-}
-
-/* ===== HOVER LOGIKA ===== */
-/* Amelyik oldal aktív → visszamegy normál méretre */
-.path-bg.left.active,
-.path-bg.right.active {
   transform: scale(1);
 }
 
-/* Hoverkor CSAK AZ AKTÍV OLDAL áll meg */
-.path-choice-sides:hover ~ .path-bg.base {
-  /* base marad pulzálva → SEMMIT nem csinálunk vele */
-}
-
-/* ===== FELIRAT ===== */
-.pixelosvenyvalaszt {
-  font-family: "Jersey 10", sans-serif;
-  text-transform: uppercase;
-  font-size: 80px;
-  font-weight: 400;
-  letter-spacing: 3px;
-  text-shadow: 0 0 5px #000000cc;
-}
-
-.path-title {
+/* ===== UI ELEMEK ===== */
+.path-level-title {
   position: absolute;
-  top: 60px;
+  top: 40px;
   left: 50%;
   transform: translateX(-50%);
-  z-index: 10;
-  color: white;
-  user-select: none;
+  z-index: 20;
   font-size: 60px;
+  color: white;
+  text-shadow: 0 0 15px rgba(0,0,0,1);
 }
 
-/* ===== KATTINTHATÓ OLDALAK ===== */
-.path-choice-sides {
+.path-sides-container {
   position: absolute;
   inset: 0;
   display: flex;
   z-index: 10;
 }
 
-.side {
+.path-side {
   width: 50%;
   height: 100%;
-  position: relative;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   cursor: pointer;
+  position: relative;
 }
 
-/* ===== IKON ===== */
-.icon {
-  width: 140px;
-  height: 140px;
-  transition: transform 0.25s ease;
+.path-icon {
+  width: 160px;
+  height: 160px;
+  filter: drop-shadow(0 0 10px rgba(0,0,0,0.8));
+  transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  z-index: 25;
 }
 
-.side:hover .icon {
-  transform: scale(1.1);
+.path-side:hover .path-icon {
+  transform: scale(1.2) rotate(2deg);
 }
 
-/* ===== TOOLTIP WRAPPER ===== */
-.tooltip-wrapper {
+.path-tooltip-wrapper {
   position: absolute;
-  top: calc(50% + 90px); /* ikon közepe ALATT */
+  top: calc(50% + 120px);
   left: 50%;
   transform: translateX(-50%);
-  pointer-events: none;
-  z-index: 50;
-
-  /* animáció alapállapot */
-  animation: tooltipStretch 0.18s cubic-bezier(0.2, 0, 0.4, 1) forwards;
-  transform-origin: top center;
+  animation: tooltipStretch 0.2s ease-out forwards;
 }
 
-/* ===== TOOLTIP ===== */
-.tooltip {
-  padding: 15px 40px;
-  margin: 0;
-  text-align: center;
-  font-size: 20px;
-  font-family: "Jersey 10", sans-serif;
-  border: 0;
+.path-tooltip {
+  color: #ec0707;
+  font-size: 32px;
+  text-transform: uppercase;
   white-space: nowrap;
-
-
+  text-shadow: 0 0 5px black;
 }
 
-
-/* ===== ANIM: gomb közepéből lefelé kinyúl + glow ===== */
 @keyframes tooltipStretch {
-  0% {
-    opacity: 0;
-    transform: translateX(-50%) scaleX(0.1);
-
-      color: #ffb2b2;
-  }
-
-  20% {
-    transform: translateX(-50%) scaleX(5.05);
-
-      color: #ff5050;
-  }
-
-  70% {
-    opacity: 1;
-    transform: translateX(-50%) scaleX(1.05);
-
-    color: #ec0707;
-  }
-
-  100% {
-    opacity: 1;
-    transform: translateX(-50%) scaleX(1);
-
-    color: #ec0707;
-  }
+  0% { opacity: 0; transform: translateX(-50%) scaleX(0); }
+  100% { opacity: 1; transform: translateX(-50%) scaleX(1); }
 }
 
+/* ===== INTRO RÉSZ ===== */
 
-
-
-/* ===== INTRO ===== */
 .intro-container {
-  position: absolute;
+  position: fixed;
   inset: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 50;
-  background: black; /* teljes fekete háttér */
-  animation: scaleDownLinear 0.9s linear forwards; /* robotikus scale down az egész container */
+  z-index: 1000;
+  background: black;
+  animation: scaleDownLinear 0.9s linear forwards;
 }
 
 @keyframes scaleDownLinear {
@@ -209,32 +124,58 @@ html, body {
   to { transform: scale(0.9); }
 }
 
-/* Minden szó külön class-szal */
 .intro-word {
   color: white;
   font-family: "Jersey 10", sans-serif;
   text-transform: uppercase;
-  font-size: 80px;
-  font-weight: 400;
-  letter-spacing: 3px;
-  text-shadow: 0 0 0px #ffffffaa;
-  opacity: 1;
-  animation: glowFlash 0.15s linear forwards;
+  font-size: 85px; /* Kisebbre vettem az olvashatóságért */
+  /*letter-spacing: 5px;*/
+  animation: jumpscareGlow 0.15s ease-out forwards;
 }
 
-.intro-word-0 { /* külön állítás lehetőség */ }
-.intro-word-1 { }
-.intro-word-2 { }
-
-/* gyors glow flash minden szóra */
-@keyframes glowFlash {
+/* FEHÉR VILLANÁS AZ ELSŐ KÉT SZÓNAK */
+@keyframes jumpscareGlow {
   0% {
+    opacity: 0;
+    transform: scale(2);
     text-shadow: 0 0 30px #ffffffff, 0 0 60px #ffffffcc, 0 0 90px #ffffffaa;
+    filter: brightness(3);
+    letter-spacing: 30px;
   }
-  50% {
+  50%{
+    opacity: 0.5;
+    transform: scale(1.5);
     text-shadow: 0 0 10px #ffffffcc, 0 0 20px #ffffff99, 0 0 30px #ffffff77;
+    filter: brightness(2);
+    letter-spacing: 10px;
   }
   100% {
+    opacity: 1;
+    transform: scale(1);
     text-shadow: 0 0 0px #ffffff00, 0 0 0px #ffffff00, 0 0 0px #ffffff00;
+    filter: brightness(1);
+    letter-spacing: 5px;
   }
+}
+
+/* VÖRÖS VILLANÁS CSAK AZ UTOLSÓ SZÓNAK */
+@keyframes jumpscareBlood {
+  0% {
+    opacity: 0;
+    transform: scale(2.5);
+    text-shadow: 0 0 40px #8b0000;
+    filter: brightness(0.5);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+    text-shadow: 0 0 20px rgba(255, 0, 0, 0.6);
+    filter: brightness(1);
+  }
+}
+
+.intro-word-2 {
+  color: #c90101;
+  /* Felülírjuk az alap animációt a vörössel */
+  animation: jumpscareBlood 0.2s ease-out forwards;
 }

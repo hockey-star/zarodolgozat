@@ -1,4 +1,3 @@
-// frontend/src/components/PathChoice.jsx
 import React, { useState, useEffect } from "react";
 import "./PathChoice.css";
 
@@ -8,20 +7,13 @@ import mysteryIcon from "../assets/icons/mystery.png";
 import bg1 from "../assets/backgrounds/1.jpg";
 
 export default function PathChoice({ onChoose, level = 1 }) {
-  const [hoverTooltip, setHoverTooltip] = useState(null);
+  const [hoveredOption, setHoveredOption] = useState(null);
   const [showIntro, setShowIntro] = useState(true);
   const [currentWordIdx, setCurrentWordIdx] = useState(0);
 
   const EVENTS = ["fight", "elite", "rest", "mystery"];
   const [leftOption, setLeftOption] = useState("fight");
   const [rightOption, setRightOption] = useState("mystery");
-
-  useEffect(() => {
-    const shuffled = [...EVENTS].sort(() => Math.random() - 0.5);
-    setLeftOption(shuffled[0]);
-    setRightOption(shuffled[1]);
-    setHoverTooltip(null);
-  }, [level]);
 
   const icons = {
     fight: fightIcon,
@@ -31,22 +23,25 @@ export default function PathChoice({ onChoose, level = 1 }) {
   };
 
   const tooltipText = {
-    fight: "Érzed, hogy harc közeleg...",
-    elite: "Valami nagy és erős közeleg az ösvényen!",
-    mystery: "A rejtélyes ösvény titokkal teli...",
-    rest: "Biztonságos pihenőhely. Itt gyógyulhatsz.",
+    fight: "Harccal teli ösvény",
+    elite: "Veszélyes erejű ellenfél",
+    mystery: "Ismeretlen esemény",
+    rest: "Megnyugvás és gyógyulás",
   };
 
-  function handleClick(type) {
-    onChoose({ type });
-  }
+  useEffect(() => {
+    const shuffled = [...EVENTS].sort(() => Math.random() - 0.5);
+    setLeftOption(shuffled[0]);
+    setRightOption(shuffled[1]);
+  }, [level]);
 
+  // Jumpscare intro logika - pont 400ms, hogy a 0.15s villanás után legyen sötét szünet
   const introWords = ["VÁLASSZ", "EGY", "ÖSVÉNYT"];
 
   useEffect(() => {
     if (!showIntro) return;
     if (currentWordIdx >= introWords.length) {
-      setTimeout(() => setShowIntro(false), 100);
+      setTimeout(() => setShowIntro(false), 150);
       return;
     }
     const timer = setTimeout(() => {
@@ -55,74 +50,67 @@ export default function PathChoice({ onChoose, level = 1 }) {
     return () => clearTimeout(timer);
   }, [currentWordIdx, showIntro]);
 
-  return (
-    <div className="path-choice-bg">
-      {showIntro ? (
-        <div className="intro-container robot-scale">
-          {introWords.map((word, idx) => (
+  if (showIntro) {
+    return (
+      <div className="intro-container"> 
+        {introWords.map((word, idx) => (
+          currentWordIdx === idx && (
             <span
               key={idx}
               className={`intro-word intro-word-${idx}`}
-              style={{ display: currentWordIdx === idx ? "inline" : "none" }}
             >
               {word}
             </span>
-          ))}
+          )
+        ))}
+      </div>
+    );
+  }
+
+  return (
+    <div className="path-choice-root">
+      <div className="path-bg base" style={{ backgroundImage: `url(${bg1})` }} />
+      
+      <div 
+        className={`path-bg left ${hoveredOption === leftOption ? "active" : ""}`} 
+        style={{ backgroundImage: `url(${bg1})` }} 
+      />
+      <div 
+        className={`path-bg right ${hoveredOption === rightOption ? "active" : ""}`} 
+        style={{ backgroundImage: `url(${bg1})` }} 
+      />
+
+      <h2 className="path-level-title pixelosvenyvalaszt">{level}/16</h2>
+
+      <div className="path-sides-container">
+        <div 
+          className="path-side"
+          onMouseEnter={() => setHoveredOption(leftOption)}
+          onMouseLeave={() => setHoveredOption(null)}
+          onClick={() => onChoose({ type: leftOption })}
+        >
+          <img src={icons[leftOption]} alt="icon" className="path-icon" />
+          {hoveredOption === leftOption && (
+            <div className="path-tooltip-wrapper">
+              <div className="path-tooltip">{tooltipText[leftOption]}</div>
+            </div>
+          )}
         </div>
-      ) : (
-        <>
-          <div className="path-bg base" style={{ backgroundImage: `url(${bg1})` }} />
 
-          <div
-            className={`path-bg left ${hoverTooltip === leftOption ? "active" : ""}`}
-            style={{ backgroundImage: `url(${bg1})` }}
-          />
-          <div
-            className={`path-bg right ${hoverTooltip === rightOption ? "active" : ""}`}
-            style={{ backgroundImage: `url(${bg1})` }}
-          />
-
-          <h2 className="pixelosvenyvalaszt path-title fade-in">
-            {`${level}/16`}
-          </h2>
-
-          <div className="path-choice-sides fade-in">
-            {/* BAL */}
-            <div
-              className="side"
-              onClick={() => handleClick(leftOption)}
-              onMouseEnter={() => setHoverTooltip(leftOption)}
-              onMouseLeave={() => setHoverTooltip(null)}
-            >
-              <img src={icons[leftOption]} alt={leftOption} className="icon" />
-
-              {hoverTooltip === leftOption && (
-  <div className="tooltip-wrapper">
-    <div className="tooltip">{tooltipText[leftOption]}</div>
-  </div>
-)}
-
+        <div 
+          className="path-side"
+          onMouseEnter={() => setHoveredOption(rightOption)}
+          onMouseLeave={() => setHoveredOption(null)}
+          onClick={() => onChoose({ type: rightOption })}
+        >
+          <img src={icons[rightOption]} alt="icon" className="path-icon" />
+          {hoveredOption === rightOption && (
+            <div className="path-tooltip-wrapper">
+              <div className="path-tooltip">{tooltipText[rightOption]}</div>
             </div>
-
-            {/* JOBB */}
-            <div
-              className="side"
-              onClick={() => handleClick(rightOption)}
-              onMouseEnter={() => setHoverTooltip(rightOption)}
-              onMouseLeave={() => setHoverTooltip(null)}
-            >
-              <img src={icons[rightOption]} alt={rightOption} className="icon" />
-
-              {hoverTooltip === rightOption && (
-  <div className="tooltip-wrapper">
-    <div className="tooltip">{tooltipText[rightOption]}</div>
-  </div>
-)}
-
-            </div>
-          </div>
-        </>
-      )}
+          )}
+        </div>
+      </div>
     </div>
   );
 }
