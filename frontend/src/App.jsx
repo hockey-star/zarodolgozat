@@ -13,15 +13,38 @@ import RestCampfire from "./components/RestCampfire.jsx";
 
 import TransitionOverlay from "./components/TransitionOverlay.jsx";
 import combatIntroVideo from "./assets/transitions/combat-intro.webm";
+
 import LoadingScreen from "./components/LoadingScreen.jsx";
+import EventView from "./components/EventView.jsx";
+import wizardBg from "./assets/pics/EVENT_WIZARD_PLACEHOLDER.png";
 
 import { defaultEnemies, bossEnemies } from "./components/enemyData.js";
 
-// ---- VFX preload (add your most common WEBMs here) ----
-// Példa: ha van warrior_slash, importáld és tedd be a listába
-// import warriorSlashFx from "./assets/vfx/warrior_slash.webm";
-
 const FINAL_BOSS_LEVEL = 16;
+
+
+// ===== INTRO-ONLY EVENT CONFIG =====
+const EVENT_CHANCE = 0.35; // teszt: mindig (később állítható)
+
+const EVENT_POOL = [
+  {
+    id: "wizard",
+    title: "Vándor varázsló",
+    story:
+      "Az út porában egy köpenyes varázsló lép eléd. Egy fiolát tart feléd.\n\n„Erőt ad… vagy elátkoz.”",
+    background: wizardBg,
+    choices: [
+      {
+        label: "Megiszom",
+        resolve: () => {
+          if (Math.random() < 0.7) return { dmgMult: 1.1, pathsLeft: 3 };
+          return { poisonTurns: 2, pathsLeft: 5 };
+        },
+      },
+      { label: "Elutasítom", resolve: () => null },
+    ],
+  },
+];
 
 // Lightweight WEBM preload + warmup (NO blob, less GC stutter)
 function preloadWebm(urls, { max = 6 } = {}) {
@@ -90,34 +113,52 @@ function preloadWebm(urls, { max = 6 } = {}) {
 }
 
 function AppInner() {
+  // screens:
+  // login | class | trailer | hub | loading | event | pathChoice | combat | restCampfire | adventure
   const [screen, setScreen] = useState("login");
+
   const [combatPath, setCombatPath] = useState(null);
   const [level, setLevel] = useState(1);
   const [combatFinished, setCombatFinished] = useState(false);
   const [pathRerollKey, setPathRerollKey] = useState(0);
   const [showTransition, setShowTransition] = useState(false);
 
+  // Intro-only travel + event
+  const [introTravelDone, setIntroTravelDone] = useState(false); // ✅ csak egyszer
+  const [loadingMode, setLoadingMode] = useState(null); // "intro" | null
+  const [activeEvent, setActiveEvent] = useState(null);
+
+  // Run effects (ha később CombatView kezeli)
+  const [runEffect, setRunEffect] = useState(null);
+
   const [deathScreenOpen, setDeathScreenOpen] = useState(false);
   const [pressed, setPressed] = useState(false);
 
   const { setPlayer } = usePlayer();
 
+
+  const introLoadingLockRef = React.useRef(false);
+
   // Preload only a few frequently used WEBMs (transition + top vfx)
   useEffect(() => {
-    preloadWebm(
-      [
-        combatIntroVideo,
-        // warriorSlashFx,
-        // ide még 2-5 gyakori VFX webm
-      ],
-      { max: 6 }
-    );
+    preloadWebm([combatIntroVideo], { max: 6 });
   }, []);
 
-  function handleGoAdventure() {
-    setScreen("pathChoice");
+  function goto(next) {
+    setScreen(next);
   }
 
+function handleGoAdventure() {
+  if (introTravelDone) {
+    // már volt az intro loading → mehet PathChoice
+    setScreen("pathChoice");
+    return;
+  }
+
+  // ha még nem volt intro loading
+  setLoadingMode("intro");
+  setScreen("loading");
+}
   async function handleLogin(username) {
     try {
       const res = await fetch(
@@ -136,11 +177,15 @@ function AppInner() {
     }
   }
 
-  function goto(next) {
-    setScreen(next);
+  function startCombatWithPath(path) {
+    setCombatPath(path);
+    setCombatFinished(false);
+    setScreen("combat");
+    setShowTransition(true);
   }
 
   function handleStartPath(path) {
+    // REST ág változatlan
     if (path.type === "rest") {
       setPlayer((prev) => {
         if (!prev) return prev;
@@ -148,11 +193,7 @@ function AppInner() {
         const currentHp = prev.hp ?? maxHp;
         const healAmount = Math.floor(maxHp * 0.4);
         const newHp = Math.min(maxHp, currentHp + healAmount);
-
-        return {
-          ...prev,
-          hp: newHp,
-        };
+        return { ...prev, hp: newHp };
       });
 
       setCombatPath(null);
@@ -160,10 +201,39 @@ function AppInner() {
       return;
     }
 
-    setCombatPath(path);
-    setCombatFinished(false);
-    setScreen("combat");
-    setShowTransition(true);
+    // ✅ PathChoice után NINCS loading/event — azonnal combat
+    startCombatWithPath(path);
+  }
+  
+const handleLoadingDone = React.useCallback(() => {
+  // Ha már lefutott, VAGY épp nincs loading módban (védőháló)
+  if (loadingMode !== "intro" || introTravelDone) return;
+
+  setLoadingMode(null);
+  setIntroTravelDone(true); // Ez az állapotváltozás megakadályozza a jövőbeli futást
+
+  const chance = Number(EVENT_CHANCE);
+  const roll = Math.random();
+  const shouldEvent = chance >= 1 || roll < chance;
+
+  if (shouldEvent) {
+    // Itt a random eventet állítjuk be
+    const ev = EVENT_POOL[Math.floor(Math.random() * EVENT_POOL.length)];
+    setActiveEvent(ev);
+    setScreen("event");
+  } else {
+    setScreen("pathChoice");
+  }
+}, [loadingMode, introTravelDone]);
+
+  function handleEventChoose(choice) {
+    const effect = choice.resolve();
+    if (effect) setRunEffect(effect);
+
+    setActiveEvent(null);
+
+    // ✅ event után PathChoice jön (mert még nem választottál ösvényt)
+    setScreen("pathChoice");
   }
 
   function handleCombatEnd(playerHP, victory) {
@@ -180,7 +250,6 @@ function AppInner() {
           : prev
       );
 
-      // no alert, show death screen
       setDeathScreenOpen(true);
       return;
     }
@@ -231,8 +300,10 @@ function AppInner() {
 
       {screen === "hub" && <Hub onGoAdventure={handleGoAdventure} />}
 
-      {screen === "loading" && (
-        <LoadingScreen onDone={() => setScreen("pathChoice")} />
+      {screen === "loading" && <LoadingScreen onDone={handleLoadingDone} />}
+
+      {screen === "event" && activeEvent && (
+        <EventView event={activeEvent} onChoose={handleEventChoose} />
       )}
 
       {screen === "adventure" && (
@@ -262,6 +333,7 @@ function AppInner() {
           boss={isFinalBoss}
           background={`/backgrounds/3.jpg`}
           pathType={combatPath.type}
+          // runEffect={runEffect} // ha a CombatView támogatja
           onEnd={handleCombatEnd}
         />
       )}
@@ -302,22 +374,22 @@ function AppInner() {
                 transform: pressed ? "translateY(5px)" : "translateY(0px)",
                 boxShadow: pressed
                   ? `
-                    0px 5px black,
-                    0px -5px black,
-                    5px 0px black,
-                    -5px 0px black,
-                    inset 0px 5px #00000038
-                  `
+                      0px 5px black,
+                      0px -5px black,
+                      5px 0px black,
+                      -5px 0px black,
+                      inset 0px 5px #00000038
+                    `
                   : `
-                    0px 5px black,
-                    0px -5px black,
-                    5px 0px black,
-                    -5px 0px black,
-                    0px 10px #00000038,
-                    5px 5px #00000038,
-                    -5px 5px #00000038,
-                    inset 0px 5px #ffffff36
-                  `,
+                      0px 5px black,
+                      0px -5px black,
+                      5px 0px black,
+                      -5px 0px black,
+                      0px 10px #00000038,
+                      5px 5px #00000038,
+                      -5px 5px #00000038,
+                      inset 0px 5px #ffffff36
+                    `,
               }}
             >
               Vissza a hubba
@@ -326,7 +398,7 @@ function AppInner() {
         </div>
       )}
 
-       {showTransition && (
+      {showTransition && (
         <TransitionOverlay
           src={combatIntroVideo}
           onEnd={() => setShowTransition(false)}

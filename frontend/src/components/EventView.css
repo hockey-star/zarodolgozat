@@ -1,0 +1,133 @@
+@import url('https://fonts.googleapis.com/css2?family=Jersey+10&display=swap');
+
+.event-root {
+  position: fixed;
+  inset: 0;
+  background: black;
+  overflow: hidden;
+  font-family: "Jersey 10", sans-serif;
+}
+
+/* ===== HÁTTÉR RÉTEGEK ===== */
+.event-bg {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  transition: opacity 0.4s ease, transform 0.4s ease;
+}
+
+/* BLUROS, SZÜRKE ALAP PULZÁLÁS */
+@keyframes eventBgPulse {
+  0% { transform: scale(1.03); filter: grayscale(100%) blur(4px); }
+  50% { transform: scale(1.06); filter: grayscale(100%) blur(4px); }
+  100% { transform: scale(1.03); filter: grayscale(100%) blur(4px); }
+}
+
+.event-bg.base {
+  z-index: 1;
+  animation: eventBgPulse 4s ease-in-out infinite;
+}
+
+/* ÉLES OLDALAK */
+.event-bg.left, .event-bg.right {
+  z-index: 2;
+  opacity: 0;
+  transform: scale(1.03);
+}
+
+.event-bg.left { clip-path: inset(0 50% 0 0); }
+.event-bg.right { clip-path: inset(0 0 0 50%); }
+
+.event-bg.active {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* ===== UI ELEMEK ===== */
+.event-ui-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  pointer-events: none; /* Átengedi a kattintást a side-oknak */
+}
+
+.event-main-title {
+  margin-top: 50px;
+  font-size: 80px;
+  color: white;
+  text-shadow: 0 0 10px rgba(0,0,0,0.8);
+  text-transform: uppercase;
+}
+
+.event-story-box {
+  background: rgba(0, 0, 0, 0.7);
+  padding: 20px 40px;
+  margin-top: 20px;
+  max-width: 800px;
+  text-align: center;
+  color: #ccc;
+  font-size: 24px;
+  border: 1px solid rgba(255,255,255,0.1);
+}
+
+/* ===== OLDALAK (GOMBOK) ===== */
+.event-sides-container {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  pointer-events: auto; /* Itt már kell a kattintás */
+}
+
+.event-side {
+  width: 50%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  position: relative;
+}
+
+.event-choice-label {
+  font-size: 45px;
+  color: white;
+  text-transform: uppercase;
+  text-align: center;
+  padding: 20px;
+  background: rgba(0,0,0,0.4);
+  border: 2px solid transparent;
+  transition: all 0.3s ease;
+  z-index: 20;
+}
+
+.event-side:hover .event-choice-label {
+  background: rgba(0,0,0,0.8);
+  border-color: white;
+  transform: scale(1.1);
+}
+
+/* ===== TOOLTIP (A te kódodból) ===== */
+.event-tooltip-wrapper {
+  position: absolute;
+  top: calc(50% + 100px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 50;
+  animation: tooltipStretch 0.18s cubic-bezier(0.2, 0, 0.4, 1) forwards;
+}
+
+.event-tooltip {
+  color: #ec0707;
+  font-size: 24px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+@keyframes tooltipStretch {
+  0% { opacity: 0; transform: translateX(-50%) scaleX(0.1); }
+  100% { opacity: 1; transform: translateX(-50%) scaleX(1); }
+}
