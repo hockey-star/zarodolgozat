@@ -15,7 +15,11 @@ import "./Inv.css";
 /* ==============================
    HELPERS
    ============================== */
-
+const CLASS_CONFIG = {
+  6: { key: "warrior", displayName: "Harcos", sprite: "/ui/player/warriorsquare.png" },
+  7: { key: "mage", displayName: "Varázsló", sprite: "/ui/player/magesquare.png" },
+  8: { key: "archer", displayName: "Íjász", sprite: "/ui/player/ijasz.png" },
+};
 
 const RARITY_UI = {
   common:    { border: "border-gray-500",    ring: "ring-gray-400",    text: "text-gray-300" },
@@ -450,13 +454,23 @@ export default function Inv({ onClose }) {
                 </div>
 
                 <div className="col-span-6 flex flex-col min-h-0">
-                  <div className="invCharacterText">
-                    {player.username}
-                  </div>
-                  <div className="invCharacterImg mt-3 flex-1 min-h-0 flex items-center justify-center">
-                    <div className="">(placeholder)</div>
-                  </div>
+                <div className="invCharacterText">
+                  {player.username}
                 </div>
+
+                <div className="invCharacterImg mt-3 flex-1 min-h-0 flex items-center justify-center overflow-hidden">
+                  {player.class_id && CLASS_CONFIG[player.class_id] ? (
+                    <img
+                      src={CLASS_CONFIG[player.class_id].sprite}
+                      alt={CLASS_CONFIG[player.class_id].displayName}
+                      className="w-full h-full object-cover" // <<< kitölti a teljes divet
+                    />
+                  ) : (
+                    <div className="text-gray-400">(Nincs kép)</div>
+                  )}
+                </div>
+              </div>
+
 
                 <div className="col-span-4 flex flex-col gap-4 min-h-0">
                   <div className="invStatsBorder p-4 ">

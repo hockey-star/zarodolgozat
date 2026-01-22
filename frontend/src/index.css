@@ -15,6 +15,11 @@ html, body, #root {
   overflow: hidden; /* ne lehessen görgetni */
   background-color: black;
   /*cursor: url("/cursors/glove_cursor_64.png") 10 4, auto;*/
+
+  user-select: none;       /* Alapértelmezett modern böngészők SZÖVEG KIJELÖLÉS LEHETŐSÉGÉNEK MEGSZÜNTETÉSE */
+  -webkit-user-select: none; /* Safari/Chrome */
+  -moz-user-select: none;    /* Firefox */
+  -ms-user-select: none;     /* IE/Edge régi verziók */
 }
 
 * {

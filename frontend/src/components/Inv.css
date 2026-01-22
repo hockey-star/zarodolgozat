@@ -75,7 +75,7 @@
 }
 
 .invCharacterImg{
-    box-shadow: 0px 5px black, 0px -5px black, 5px 0px black, -5px 0px black,inset 0px 5px #00000038;
+    box-shadow: 0px 10px black, 0px -10px black, 10px 0px black, -10px 0px black,inset 0px 10px #00000038;
     background-color: #460809;
     
 }
