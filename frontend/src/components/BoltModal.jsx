@@ -7,7 +7,7 @@ export default function ShopModal({ onClose }) {
   const [inventoryItems, setInventoryItems] = useState([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
-
+  const [showError, setShowError] = useState(false);
   const [mode, setMode] = useState("buy"); // buy | sell
   const [activeCategory, setActiveCategory] = useState("weapon");
 
@@ -19,6 +19,26 @@ export default function ShopModal({ onClose }) {
     { type: "accessory", icon: "💍" },
     { type: "potion", icon: "🧪" }
   ];
+
+  useEffect(() => {
+  if (!error) return; // nincs error → semmi
+
+  setShowError(true); // animáció indul: felúszik
+
+  const timer = setTimeout(() => {
+    setShowError(false); // animáció indul: visszacsúszik
+  }, 3000); // mennyi ideig marad látható
+
+  const cleanup = setTimeout(() => {
+    setError(null); // végül törlődik
+  }, 3350); // kicsit hosszabb, hogy animáció befejeződjön
+
+  return () => {
+    clearTimeout(timer);
+    clearTimeout(cleanup);
+  };
+}, [error]);
+
 
   useEffect(() => {
     if (!userId) return;
@@ -60,7 +80,10 @@ export default function ShopModal({ onClose }) {
       const data = await res.json();
       if (!res.ok || !data.success) {
         setError(data.error || "Sikertelen vásárlás");
-      } else {
+        setShowError(true);
+      }
+
+      else {
         await refreshAll();
       }
     } finally {
@@ -80,7 +103,9 @@ export default function ShopModal({ onClose }) {
       const data = await res.json();
       if (!res.ok || !data.success) {
         setError(data.error || "Sikertelen eladás");
-      } else {
+        setShowError(true);
+      }
+      else {
         await refreshAll();
       }
     } finally {
@@ -94,7 +119,7 @@ export default function ShopModal({ onClose }) {
       : inventoryItems.filter(i => i.type === activeCategory);
 
   return (
-    <div className="fixed inset-0 bg-white/80 z-50 flex items-center justify-center">
+    <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center">
       <div
         className="shopBorder relative w-[90%] h-[90%] overflow-hidden"
         style={{
@@ -112,22 +137,20 @@ export default function ShopModal({ onClose }) {
         </button>
 
         {/* STATS */}
-        <div className="Stats absolute bg-white/60 text-white p-4 w-64 z-20">
-          <div className="">SZINT: {playerData?.level ?? "-"}</div>
-          <div>XP: {playerData?.xp ?? "-"}</div>
-          <div>ARANY: {playerData?.gold ?? "-"}</div>
+        <div className="Stats space-y-2 absolute/60 p-4 w-64 z-20">
+          <div className="StatsStatsName flex justify-between">SZINT: <span className="StatsStats">{playerData?.level ?? "-"}</span> </div>
+          <div className="StatsStatsName flex justify-between">XP: <span className="StatsStats">{playerData?.xp ?? "-"}</span> </div>
+          <div className="StatsStatsName flex justify-between">ARANY: <span className="StatsStats">{playerData?.gold ?? "-"}</span> </div>
         </div>
 
         {/* KATEGÓRIA GOMBOK – BAL */}
-        <div className="absolute bottom-[30%] left-4 flex gap-3 bg-black/60 px-4 py-2 rounded z-20">
+        <div className="kategoriakBorder absolute bottom-[30%] left-4 flex gap-3 px-4 py-2 z-20">
           {CATEGORIES.map(cat => (
             <button
               key={cat.type}
               onClick={() => setActiveCategory(cat.type)}
-              className={`text-2xl ${
-                activeCategory === cat.type
-                  ? "scale-110"
-                  : "opacity-50 hover:opacity-100"
+              className={`kategoriakButton ${
+                activeCategory === cat.type ? "active" : ""
               }`}
             >
               {cat.icon}
@@ -135,36 +158,42 @@ export default function ShopModal({ onClose }) {
           ))}
         </div>
 
+
         {/* VESZ / ELAD – JOBB */}
-        <div className="absolute bottom-[30%] right-4 flex bg-black/60 rounded z-20">
+        <div className="veszeladGombDiv gap-3 absolute bottom-[30%] right-4 flex z-20">
           <button
             onClick={() => setMode("buy")}
-            className={`px-6 py-2 text-white ${
-              mode === "buy" ? "bg-yellow-700" : "opacity-60"
+            className={`veszButton px-6 py-2 ${
+              mode === "buy" ? "active" : ""
             }`}
           >
             VESZ
           </button>
+
           <button
             onClick={() => setMode("sell")}
-            className={`px-6 py-2 text-white ${
-              mode === "sell" ? "bg-yellow-700" : "opacity-60"
+            className={`eladButton px-6 py-2 ${
+              mode === "sell" ? "active" : ""
             }`}
           >
             ELAD
           </button>
         </div>
 
+
         {/* ALSÓ ITEM SÁV */}
-        <div className="absolute bottom-0 left-0 right-0 h-[28%] bg-black/70 p-4 z-20">
-          <div className="h-full overflow-y-auto">
+        <div className="alsoSav absolute bottom-0 left-0 right-0 h-[28%] p-4 z-20">
+          <div className="h-full">
             <div className="grid grid-cols-9 gap-3">
               {itemsToShow.map(item => (
                 <div
                   key={item.id || item.item_id}
-                  className="bg-black/60 border border-yellow-700 p-2 text-xs text-white flex flex-col justify-between hover:bg-black/80 transition"
+                  className="targyDiv p-2 flex flex-col"
                 >
-                  <div className="text-center font-medium truncate">
+                  {/* ITEM NÉV – RARITY SZÍNEZÉS */}
+                  <div
+                    className={`targyNev text-center truncate rarity-${item.rarity}`}
+                  >
                     {item.name}
                   </div>
 
@@ -178,7 +207,7 @@ export default function ShopModal({ onClose }) {
                     <button
                       onClick={() => buy(item.id)}
                       disabled={busy}
-                      className="mt-1 border border-yellow-600 py-1 hover:bg-yellow-800/40 disabled:opacity-50"
+                      className="targyBuyButton py-1"
                     >
                       {item.prize}
                     </button>
@@ -186,7 +215,7 @@ export default function ShopModal({ onClose }) {
                     <button
                       onClick={() => sell(item.item_id)}
                       disabled={busy}
-                      className="mt-1 border border-red-700 py-1 hover:bg-red-800/40 disabled:opacity-50"
+                      className="targySellButton Button py-1"
                     >
                       {Math.floor(item.prize * 0.9)}
                     </button>
@@ -197,11 +226,15 @@ export default function ShopModal({ onClose }) {
           </div>
         </div>
 
-        {error && (
-          <div className="absolute bottom-[32%] left-1/2 -translate-x-1/2 bg-red-900/80 text-white px-4 py-2 rounded z-20">
-            {error}
-          </div>
-        )}
+
+        <div
+          className={`shopAlert ${showError ? "shopAlert-show" : "shopAlert-hide"}`}
+        >
+          {error}
+        </div>
+
+
+
       </div>
     </div>
   );

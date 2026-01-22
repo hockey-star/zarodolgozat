@@ -468,7 +468,7 @@ export default function Inv({ onClose }) {
                       {stats.map((s) => (
                         <div
                           key={s.label}
-                          className="invStatsDiv flex justify-between border-neutral-800 pb-1"
+                          className="invStatsDiv flex justify-between pb-1"
                         >
                           <span className="invStatName">{s.label}</span>
                           <span className="invStatNumber">{s.value}</span>

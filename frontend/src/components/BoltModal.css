@@ -21,5 +21,221 @@
 }
 
 .Stats{
-    
+    background-color: #460809;
+    box-shadow: 0px 5px black, 0px -5px black, 5px 0px black, -5px 0px black,inset 0px 5px #00000038;
+    margin: 10px;
+}
+
+.StatsStatsName{
+    font-family: "Jersey 10", sans-serif;
+    font-size: 15px;
+    color: #fef9c2;
+    letter-spacing: 3px;
+    text-shadow: 2px 2px 0px #290f0f;
+    background-color: #290f0f;
+}
+
+.StatsStats{
+    font-family: "Jersey 10", sans-serif;
+    color: #ffea00;
+    letter-spacing: 3px;
+    text-shadow: 2px 2px 0px #290f0f;
+}
+
+.kategoriakBorder{
+    background-color: #290f0f;
+    box-shadow: 0px 5px black, 0px -5px black, 5px 0px black, -5px 0px black,inset 0px 5px #00000038;
+    height: 60px;
+}
+
+.kategoriakButton {
+    color: #fef9c2;
+    background-color: #460809;
+    font-size: 20px;
+    font-family: "Jersey 10", sans-serif;
+    border: 0;
+    box-shadow:
+        0px 5px black,
+        0px -5px black,
+        5px 0px black,
+        -5px 0px black,
+        0px 10px #00000038,
+        5px 5px #00000038,
+        -5px 5px #00000038,
+        inset 0px 5px #ffffff36;
+    cursor: pointer;
+    padding: 10px;
+    transition: transform 0.01s ease;
+}
+
+.kategoriakButton:active {
+    transform: translateY(5px);
+    box-shadow:
+        0px 5px black,
+        0px -5px black,
+        5px 0px black,
+        -5px 0px black,
+        inset 0px 5px #00000038;
+}
+
+.kategoriakButton.active {
+    transform: translateY(5px);
+    box-shadow:
+        0px 5px black,
+        0px -5px black,
+        5px 0px black,
+        -5px 0px black,
+        inset 0px 5px #00000038;
+}
+
+.veszeladGombDiv{
+    background-color: #290f0f;
+    box-shadow: 0px 5px black, 0px -5px black, 5px 0px black, -5px 0px black,inset 0px 5px #00000038;
+    padding: 10px;
+}
+
+.veszButton,
+.eladButton{
+    color: #fef9c2;
+    background-color: #460809;
+    font-size: 20px;
+    font-family: "Jersey 10", sans-serif;
+    border: 0;
+    box-shadow:
+        0px 5px black,
+        0px -5px black,
+        5px 0px black,
+        -5px 0px black,
+        0px 10px #00000038,
+        5px 5px #00000038,
+        -5px 5px #00000038,
+        inset 0px 5px #ffffff36;
+    cursor: pointer;
+    padding: 10px;
+    transition: transform 0.01s ease;
+}
+
+.veszButton:active,
+.eladButton:active{
+    color: #e4d214;
+    box-shadow:
+        0px 5px black,
+        0px -5px black,
+        5px 0px black,
+        -5px 0px black,
+        inset 0px 5px #00000038;
+}
+
+.veszButton.active,
+.eladButton.active{
+    color: #e4d214;
+    box-shadow:
+        0px 5px black,
+        0px -5px black,
+        5px 0px black,
+        -5px 0px black,
+        inset 0px 5px #00000038;
+    transform: translateY(5px);
+}
+
+
+.alsoSav{
+    background-color: #290f0f;
+    box-shadow: 0px 5px black, 0px -5px black, 5px 0px black, -5px 0px black,inset 0px 5px #00000038;
+}
+
+.targyDiv{
+    font-family: "Jersey 10", sans-serif;
+    color: #fef9c2;
+    background-color: #460809;
+    box-shadow: 0px 5px black, 0px -5px black, 5px 0px black, -5px 0px black,inset 0px 5px #00000038;
+    margin: 5px;
+}
+
+
+.targyBuyButton{
+    background-color: #290f0f;
+    color: #e4d214;
+    box-shadow: 0px 4px black, 0px -4px black, 4px 0px black, -4px 0px black, 0px 10px #00000038, 4px 4px #00000038, -4px 4px #00000038, inset 0px 5px #ffffff36;
+    font-size: 20px;
+}
+
+.targyBuyButton:active {
+     transform: translateY(5px);
+     box-shadow: 0px 5px black, 0px -5px black, 5px 0px black, -5px 0px black,inset 0px 5px #00000038;
+}
+
+.targySellButton{
+    background-color: #290f0f;
+    color: #e4d214;
+    box-shadow: 0px 4px black, 0px -4px black, 4px 0px black, -4px 0px black, 0px 10px #00000038, 4px 4px #00000038, -4px 4px #00000038, inset 0px 5px #ffffff36;
+    font-size: 20px;
+}
+
+.targySellButton:active {
+     transform: translateY(5px);
+     box-shadow: 0px 5px black, 0px -5px black, 5px 0px black, -5px 0px black,inset 0px 5px #00000038;
+}
+
+
+
+.shopAlert {
+    position: absolute;
+    bottom: 0; /* indul a sáv alatt */
+    left: 50%;
+    transform: translateX(-50%) translateY(100%); /* teljesen a sáv mögött */
+    transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+
+    color: #fef9c2;
+    background-color: #460809;
+    font-size: 20px;
+    font-family: "Jersey 10", sans-serif;
+    border: 0;
+    padding: 10px;
+
+    box-shadow:
+        0px 5px black,
+        0px -5px black,
+        5px 0px black,
+        -5px 0px black,
+        0px 10px #00000038,
+        5px 5px #00000038,
+        -5px 5px #00000038,
+        inset 0px 5px #ffffff36;
+
+    pointer-events: none;
+    z-index: 30; /* alsó sáv z-index 20 volt, így fölé kerül */
+}
+
+.shopAlert-show {
+    transform: translateX(-50%) translateY(-20px); /* kicsit a sáv fölé */
+}
+
+.shopAlert-hide {
+    transform: translateX(-50%) translateY(110%); /* vissza a sáv mögé */
+}
+
+
+
+
+/* ===== ITEM RARITY TEXT COLORS ===== */
+
+.rarity-common {
+  color: #9ca3af; /* gray-400 */
+}
+
+.rarity-uncommon {
+  color: #4ade80; /* green-400 */
+}
+
+.rarity-rare {
+  color: #60a5fa; /* blue-400 */
+}
+
+.rarity-epic {
+  color: #c084fc; /* purple-400 */
+}
+
+.rarity-legendary {
+  color: #facc15; /* yellow-400 */
 }

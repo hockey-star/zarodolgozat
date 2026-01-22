@@ -723,9 +723,10 @@ app.post("/api/shop/buy", (req, res) => {
             (err, owned) => {
               if (err) return res.status(500).json({ error: "DB hiba" });
 
-              if (owned.length > 0 && type !== "potion") {
-                return res.status(400).json({ error: "Ez az item már megvan" });
+              if (owned.length > 0) {
+                return res.status(400).json({ error: "Ez a tárgy már megvan" });
               }
+
 
               pool.query(
                 "UPDATE players SET gold = gold - ? WHERE id = ?",
