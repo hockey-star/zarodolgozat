@@ -149,16 +149,15 @@ function AppInner() {
   }
 
 function handleGoAdventure() {
-  if (introTravelDone) {
-    // már volt az intro loading → mehet PathChoice
-    setScreen("pathChoice");
-    return;
-  }
+  // mindig induljon az utazás
+  setRunEffect(null);
+  setActiveEvent(null);
 
-  // ha még nem volt intro loading
+  setIntroTravelDone(false);  // hogy a handleLoadingDone biztos lefusson
   setLoadingMode("intro");
   setScreen("loading");
 }
+
   async function handleLogin(username) {
     try {
       const res = await fetch(
@@ -357,6 +356,10 @@ const handleLoadingDone = React.useCallback(() => {
               onClick={() => {
                 setPressed(false);
                 setDeathScreenOpen(false);
+
+                setIntroTravelDone(false);
+                setLoadingMode(null);
+
                 setScreen("hub");
                 setLevel(1);
                 setCombatPath(null);

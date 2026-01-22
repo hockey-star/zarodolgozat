@@ -20,8 +20,8 @@ const EVENT_POOL = [
       {
         label: "Megiszom",
         resolve: () => {
-          if (Math.random() < 0.7) return { dmgMult: 1.1, pathsLeft: 3 };
-          return { poisonTurns: 2, pathsLeft: 5 };
+          if (Math.random() < 0.7) return { dmgMult: 1.5, pathsLeft: 3 };
+          return { poisonTurns: 3, pathsLeft: 5 };
         },
       },
       { label: "Elutasítom", resolve: () => null },

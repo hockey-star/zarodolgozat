@@ -2,6 +2,7 @@
 import React, { useEffect, useState, useMemo, useRef } from "react";
 import { usePlayer } from "../context/PlayerContext.jsx";
 import { getRandomEnemy } from "./enemyData";
+import "./CombatView.css";
 import EnemyFrame from "./EnemyFrame";
 import HPPopup from "./HPPopup";
 import AbilityEffectLayer from "./AbilityEffectLayer";
@@ -553,6 +554,12 @@ export default function CombatView({
 
   // ✅ ANCHOR REF-ek a VFX-hez
   const combatRootRef = useRef(null);
+  // ✅ Megakadályozza, hogy reward miatti player-frissítés újrainitálja a wave-et
+  const hasInitializedWave = useRef(-1);
+  // ✅ runEffect később is megérkezhet (async), ezt külön kezeljük, ne az initBattle-t triggerelje
+    // ✅ runEffect alkalmazás guard: nem csak wave alapján, mert lehet ugyanazon a wave-en belül új "utazás"
+  // (pl. pihenés/halál után), illetve a runEffect érkezhet async.
+  const appliedRunEffectKeyRef = useRef(null);
   const playerAnchorRef = useRef(null);
   const enemyAnchorRef = useRef(null);
 
@@ -644,6 +651,8 @@ export default function CombatView({
   const [enemyHP, setEnemyHP] = useState(0);
   const [battleOver, setBattleOver] = useState(false);
   const [defending, setDefending] = useState(false);
+
+  const [pendingEnemies, setPendingEnemies] = useState([]); // chain battle queue
 
   // ✅ battleOver ref
   const battleOverRef = useRef(false);
@@ -978,8 +987,14 @@ export default function CombatView({
 
   useEffect(() => {
     if (!player) return;
+    // ✅ Ha ehhez a wave-hez már egyszer lefutott az init, ne induljon újra (pl. XP/gold refresh miatt)
+    if (hasInitializedWave.current === wave) return;
+
 
     async function initBattle() {
+      // megjelöljük, hogy ez a wave inicializálva van
+      hasInitializedWave.current = wave;
+      clearAllTimers();
       clearAllVfx();
       // ✅ RUN HP: ha van mentett HP (és >0), onnan indulunk, különben max HP
       // (mount/unmount esetén sem resetel maxra)
@@ -1034,32 +1049,56 @@ export default function CombatView({
           }
         }
 
-        const enemyData = getRandomEnemy({ level, boss, elite: isElite, allowedNames });
+        // ===== CHAIN BATTLE: több enemy egymás után ugyanabban a wave-ben (NEM boss, NEM elite) =====
+let enemyCount = 1;
 
-        const e = {
-          name: enemyData.name,
-          maxHp: enemyData.maxHp,
-          dmg: [enemyData.minDmg, enemyData.maxDmg],
-          rewards: {
-            goldMin: enemyData.goldRewardMin,
-            goldMax: enemyData.goldRewardMax,
-            xpMin: enemyData.xpRewardMin,
-            xpMax: enemyData.xpRewardMax,
-          },
-          role: enemyData.role,
-        };
+// csak sima fight path-on, és csak ha nincs kívülről fix enemies lista
+if (!boss && !isElite && pathType === "fight") {
+  const roll = Math.random();
+  if (roll > 0.80) enemyCount = 3;      // 20% esély 3 enemyre
+  else if (roll > 0.50) enemyCount = 2; // 30% esély 2 enemyre
+}
 
-        setEnemy(e);
-        setEnemyHP(e.maxHp);
-        enemyHPRef.current = e.maxHp;
+const generatedEnemies = [];
+for (let i = 0; i < enemyCount; i++) {
+  const enemyData = getRandomEnemy({ level, boss, elite: isElite, allowedNames });
 
-        battleOverRef.current = false;
-        setBattleOver(false);
-        setTurn("player");
-        setDefending(false);
-        setArcanePickerOpen(false);
+  generatedEnemies.push({
+    name: enemyData.name,
+    maxHp: enemyData.maxHp,
+    dmg: [enemyData.minDmg, enemyData.maxDmg],
+    rewards: {
+      goldMin: enemyData.goldRewardMin,
+      goldMax: enemyData.goldRewardMax,
+      xpMin: enemyData.xpRewardMin,
+      xpMax: enemyData.xpRewardMax,
+    },
+    role: enemyData.role,
+    _uniqueId: uid(),
+  });
+}
 
-        setLog([`⚔️ A ${e.name} kihívott téged!`]);
+const currentEnemy = generatedEnemies[0];
+const remainingEnemies = generatedEnemies.slice(1);
+console.log("DEBUG: Összes generált:", generatedEnemies.length); // Ennek 2-nek kell lennie
+console.log("DEBUG: Várakozók:", remainingEnemies.length); // Ennek 1-nek kell lennie
+setEnemy(currentEnemy);
+setEnemyHP(currentEnemy.maxHp);
+enemyHPRef.current = currentEnemy.maxHp;
+
+setPendingEnemies(remainingEnemies);
+
+battleOverRef.current = false;
+setBattleOver(false);
+setTurn("player");
+setDefending(false);
+setArcanePickerOpen(false);
+
+if (remainingEnemies.length > 0) {
+  setLog([`⚔️ ${currentEnemy.name} megtámadott! (ERŐSÍTÉS: +${remainingEnemies.length} ellenség közeleg...)`]);
+} else {
+  setLog([`⚔️ A ${currentEnemy.name} kihívott téged!`]);
+}
         setHPPopups([]);
         setPlayerDamaged(false);
         setEnemyDamaged(false);
@@ -1080,14 +1119,6 @@ export default function CombatView({
         setEnemyFrenzyTurnsSync(0);
         setPlayerWeakenTurnsSync(0);
         enemyUsesRef.current = {};
-
-        // ✅ RUN EVENT: POISON a combat elején (utazásból)
-        if (runEffect?.poisonTurns && runEffect.poisonTurns > 0) {
-          // nálad enemyPoison van, playerPoison NINCS – ezért kell egy új state
-          // 1) a state-et fent hozzuk létre (lent írom)
-          setPlayerPoison({ damagePerTurn: runEffect.poisonDmg ?? 3, remainingTurns: runEffect.poisonTurns });
-          pushLog(`☠️ Utazási event: megmérgeződtél (${runEffect.poisonTurns} kör).`);
-        }
 
         if (classKey === "archer") {
           const max = Math.floor(maxHPFromPlayer * PET_CFG.HP_RATIO);
@@ -1134,7 +1165,40 @@ export default function CombatView({
 
     initBattle();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [level, boss, pathType, enemies, player, classKey, maxHPFromPlayer]);
+  }, [level, boss, pathType, classKey, wave, player?.id]);
+
+  // ✅ RUN EFFECT: ne az initBattle-t resetelje, hanem külön fusson le akkor is, ha később érkezik meg.
+  // Tipikus bug: chain-battle + reward refresh frissíti a player-t, ezért wave guard van,
+  // de ettől még a runEffect async módon később bejöhet – ezt itt kapjuk el.
+  useEffect(() => {
+    if (!player) return;
+
+    // ha még nincs runEffect, várunk (pl. parent async setState)
+    if (!runEffect) return;
+
+    // ✅ Guard kulcs: wave + runEffect "aláírás"
+    let sig = runEffect?.id ?? runEffect?.key ?? null;
+    if (sig == null) {
+      try {
+        sig = JSON.stringify(runEffect);
+      } catch {
+        sig = String(runEffect);
+      }
+    }
+    const key = `${wave}:${sig}`;
+
+    if (appliedRunEffectKeyRef.current === key) return;
+    appliedRunEffectKeyRef.current = key;
+
+    // --- alkalmazás ---
+    if (runEffect?.poisonTurns && runEffect.poisonTurns > 0) {
+      setPlayerPoison({
+        damagePerTurn: runEffect.poisonDmg ?? 3,
+        remainingTurns: runEffect.poisonTurns,
+      });
+      pushLog(`☠️ Utazási event: megmérgeződtél (${runEffect.poisonTurns} kör).`);
+    }
+  }, [runEffect, wave, player]);
 
   useEffect(() => {
     if (classKey !== "warrior" || playerHP <= 0 || battleOver) {
@@ -1820,11 +1884,17 @@ export default function CombatView({
     return { xpGain, goldGain };
   }
 
-async function handleContinue() {
-  const victory = enemyHP <= 0 && playerHP > 0;
-  const isRunEnd = (!victory) || (wave >= maxWaves);
 
-   if (victory && player?.id) {
+async function handleContinue() {
+  const victory = enemyHPRef.current <= 0 && playerHPRef.current > 0;
+  const hasMoreEnemies = pendingEnemies.length > 0;
+  const isLastWave = wave >= maxWaves;
+
+  const fullMax = derivedStats?.max_hp ?? maxHPFromPlayer ?? player?.max_hp ?? 0;
+
+  async function awardReward({ hpAfterBattle } = {}) {
+    if (!victory || !player?.id) return;
+
     const { xpGain, goldGain } = rollRewards();
 
     try {
@@ -1835,31 +1905,26 @@ async function handleContinue() {
           playerId: player.id,
           xpGain,
           goldGain,
+          ...(hpAfterBattle != null ? { hpAfterBattle } : {}),
         }),
       });
 
-      // 🔑 FRONTEND PLAYER FRISSÍTÉS
-      await refreshFullStats(player.id);
+      // player/derived frissítés, hogy a következő stage-ben is jó legyen az XP/gold/szint
+      try {
+        await refreshFullStats?.(player.id);
+      } catch {}
     } catch (err) {
       console.error("Reward save failed", err);
     }
   }
 
-  // ✅ WAVE COMPLETE (nem run vége): vissza Path-ra, HP marad, storage marad
-  if (!isRunEnd) {
-    clearAllVfx();
-    onEnd?.(playerHPRef.current, true);
-    return;
-  }
-
-  // ✅ RUN END (defeat vagy utolsó wave victory): HUB előtt resetelünk
-  clearStoredHP();
-  clearAllVfx();
-
-  const fullMax = derivedStats?.max_hp ?? maxHPFromPlayer ?? player?.max_hp ?? 0;
-
-  // ===== DEFEAT: HUB + FULL HEAL (nincs reward) =====
+  // =========================================================
+  // DEFEAT -> Run End (Hub full heal)
+  // =========================================================
   if (!victory) {
+    clearStoredHP();
+    clearAllVfx();
+
     setPlayerHP(fullMax);
     playerHPRef.current = fullMax;
 
@@ -1871,101 +1936,151 @@ async function handleContinue() {
     return;
   }
 
-  // ===== VICTORY UTOLSÓ WAVE: reward + quest + HUB + FULL HEAL =====
+  // =========================================================
+  // ✅ CHAIN BATTLE: van még enemy a sorban -> reward + következő betöltése, maradunk CombatView-ban
+  // =========================================================
+  if (hasMoreEnemies) {
+    await awardReward();
 
-  // ha nincs player.id, akkor backend nélkül is mehetünk HUB-ba full HP-val
-  if (!player?.id) {
-    setPlayerHP(fullMax);
-    playerHPRef.current = fullMax;
+    // minden futó időzítő/VFX leáll
+    clearAllTimers();
+    clearAllVfx();
 
-    if (setPlayer) {
-      setPlayer((prev) => ({ ...(prev || {}), hp: fullMax }));
+    // battleOver UI flag reset
+    battleOverRef.current = false;
+    setBattleOver(false);
+
+    // alap UI reset
+    setArcanePickerOpen(false);
+    setDefending(false);
+    setTurn("player");
+    setLastRewards(null);
+
+    // következő enemy betöltése
+    const nextEnemy = pendingEnemies[0];
+    const rest = pendingEnemies.slice(1);
+    setPendingEnemies(rest);
+
+    setEnemy(nextEnemy);
+    setEnemyHP(nextEnemy.maxHp);
+    enemyHPRef.current = nextEnemy.maxHp;
+
+    // enemy-specifikus állapotok hard reset
+    setEnemyPoison(null);
+    setEnemyBurn(null);
+    setEnemyStun(0);
+    setEnemyVulnerability(null);
+    setEnemyBleed(null);
+    setEnemyGuardHitsSync(0);
+    setEnemyInvulnTurnsSync(0);
+    setEnemyFrenzyTurnsSync(0);
+    enemyUsesRef.current = {};
+
+    setHPPopups([]);
+    setEnemyDamaged(false);
+    setPlayerDamaged(false);
+    setPlayerHealed(false);
+
+    // ha volt pending replace (pl. kijátszott lap helye), pótoljuk
+    try {
+      resolvePendingReplaces();
+    } catch (e) {
+      console.error(e);
     }
 
-    onEnd?.(fullMax, true);
+    setLog((prev) => [
+      ...prev,
+      `💀 ${enemy?.name || "Ellenség"} legyőzve...`,
+      `⚠️ Új ellenfél lép a helyére: ${nextEnemy.name}!`,
+    ]);
+
+    // Fade/UI unlock
+    setFadeOpen(false);
+    continueLockRef.current = false;
+
+    return; // 🔴 nem hívunk onEnd-et, folytatjuk a harcot
+  }
+
+  // =========================================================
+  // ✅ WAVE COMPLETE (nem run vége): reward + vissza Path-ra, HP marad, storage marad
+  // =========================================================
+  if (!isLastWave) {
+    await awardReward();
+    clearAllVfx();
+    onEnd?.(playerHPRef.current, true);
     return;
   }
 
-  const { xpGain, goldGain } = rollRewards();
+  // =========================================================
+  // ✅ RUN END (utolsó wave victory): reward + quest + HUB + FULL HEAL
+  // =========================================================
+  clearStoredHP();
+  clearAllVfx();
 
-  // ✅ BACKEND REWARD -> ment + level up + statpont
-  // (FULL HP-t mentünk a DB-be, mert hubba megyünk)
-  let res, data;
-  try {
-    res = await fetch("http://localhost:3000/api/combat/reward", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        playerId: player.id,
-        xpGain,
-        goldGain,
-        hpAfterBattle: fullMax,
-      }),
-    });
+  // Backend reward (FULL HP mentés, mert hubba megyünk)
+  if (player?.id) {
+    const { xpGain, goldGain } = rollRewards();
 
-    data = await res.json();
-  } catch (err) {
-    console.error("combat/reward fetch error:", err);
-    // ha a mentés fail, attól még HUB-ba full heal
-    setPlayerHP(fullMax);
-    playerHPRef.current = fullMax;
-    setPlayer((prev) => ({ ...(prev || {}), hp: fullMax }));
-    onEnd?.(fullMax, true);
-    return;
+    try {
+      const res = await fetch("http://localhost:3000/api/combat/reward", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          playerId: player.id,
+          xpGain,
+          goldGain,
+          hpAfterBattle: fullMax,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok && data?.success) {
+        setPlayer?.((prev) => ({ ...(prev || {}), ...(data.player || {}), hp: fullMax }));
+        try {
+          await refreshFullStats?.(player.id);
+        } catch {}
+      } else {
+        console.error("combat/reward failed", data);
+      }
+    } catch (err) {
+      console.error("combat/reward fetch error:", err);
+    }
+
+    // quest progress (maradhat)
+    try {
+      const playerId = player.id;
+      const taskType = boss ? "boss" : "kill";
+
+      await fetch("http://localhost:3000/api/quests/progress", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ playerId, taskType }),
+      });
+
+      await fetch("http://localhost:3000/api/quests/progress", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ playerId, taskType: "custom" }),
+      });
+
+      await fetch("http://localhost:3000/api/quests/check", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ playerId }),
+      });
+    } catch (err) {
+      console.error("Quest progress frissítés hiba:", err);
+    }
   }
 
-  if (!res.ok || !data?.success) {
-    console.error("combat/reward failed", data);
-
-    // ha a reward mentés fail, attól még HUB-ba full heal
-    setPlayerHP(fullMax);
-    playerHPRef.current = fullMax;
-    setPlayer((prev) => ({ ...(prev || {}), hp: fullMax }));
-
-    onEnd?.(fullMax, true);
-    return;
-  }
-
-  // backend visszaad updated base player row-t
-  setPlayer((prev) => ({ ...(prev || {}), ...(data.player || {}), hp: fullMax }));
-
-  // ✅ frissítsük a derived statokat is (item bónuszok miatt)
-  try {
-    await refreshFullStats(player.id);
-  } catch {}
-
-  // quest progress (maradhat ahogy van)
-  try {
-    const playerId = player.id;
-    const taskType = boss ? "boss" : "kill";
-
-    await fetch("http://localhost:3000/api/quests/progress", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ playerId, taskType }),
-    });
-
-    await fetch("http://localhost:3000/api/quests/progress", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ playerId, taskType: "custom" }),
-    });
-
-    await fetch("http://localhost:3000/api/quests/check", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ playerId }),
-    });
-  } catch (err) {
-    console.error("Quest progress frissítés hiba:", err);
-  }
-
-  // ✅ HUB-ba megyünk full HP-val
+  // HUB-ba megyünk full HP-val
   setPlayerHP(fullMax);
   playerHPRef.current = fullMax;
 
   onEnd?.(fullMax, true);
 }
+
 
 
 
@@ -2002,6 +2117,45 @@ async function handleContinue() {
         <img src={bg} alt="bg" className="w-full h-full object-cover" />
       </div>
 
+{battleOver && pendingEnemies.length > 0 && playerHP > 0 && (
+  <div className="fixed inset-0 flex flex-col items-center justify-center z-[999] bg-black/75 backdrop-blur-sm xv2-container">
+    
+    {/* Felső sáv */}
+    <div className="xv2-bar w-full mb-6" />
+
+    <div className="flex flex-col items-center scale-125">
+      <h2 className="xv2-title-main text-8xl italic tracking-tighter">
+        ÚJ ELLENSÉG
+      </h2>
+      <h2 className="xv2-title-sub text-6xl italic tracking-widest mb-10">
+        KÖZELEDIK...
+      </h2>
+      
+      <div className="text-red-400 text-2xl mb-12 animate-pulse font-mono">
+        MARADÉK ELLENSÉGEK: {pendingEnemies.length}
+      </div>
+
+     <button
+  onClick={() => {
+    if (continueLockRef.current) return;
+    continueLockRef.current = true;
+
+    // Csak a fade-et nyitjuk meg.
+    // A FadeOverlay onMid callback-je majd meghívja a handleContinue()-t,
+    // ami intézi a következő enemy betöltését és a reseteket.
+    setFadeOpen(true);
+  }}
+  className="skip"
+>
+  HARC ⚔️
+</button>
+
+    </div>
+
+    {/* Alsó sáv */}
+    <div className="xv2-bar w-full mt-6" />
+  </div>
+)}
       <div className="absolute inset-0 flex items-center justify-center">
         <div
           ref={combatRootRef}
@@ -2138,6 +2292,7 @@ async function handleContinue() {
                   </span>
                 </div>
               )}
+             
 
               <EnemyFrame
                 name={player.username || "Player"}

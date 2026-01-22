@@ -6,3 +6,40 @@
 .card-hover-glow:hover {
   animation: glowPulse 1s infinite;
 }
+
+/* Xenoverse "New Challenger" Animációk - Pulzáló verzió */
+@keyframes xenoverse-in {
+  0% { transform: scale(3); opacity: 0; filter: blur(10px); }
+  50% { transform: scale(0.9); opacity: 1; filter: blur(0px); }
+  70% { transform: scale(1.1); }
+  100% { transform: scale(1); }
+}
+
+/* Ez a pulzálás: enyhén nő a méret és erősödik az izzás */
+@keyframes xenoverse-pulse {
+  0% { transform: scale(1); text-shadow: 0 0 10px rgba(255, 0, 0, 0.7), 4px 4px 0px #000; }
+  50% { transform: scale(1.05); text-shadow: 0 0 30px rgba(255, 0, 0, 1), 4px 4px 0px #000; }
+  100% { transform: scale(1); text-shadow: 0 0 10px rgba(255, 0, 0, 0.7), 4px 4px 0px #000; }
+}
+
+@keyframes bar-expand {
+  0% { width: 0%; opacity: 0; }
+  100% { width: 100%; opacity: 1; }
+}
+
+.xv2-container {
+  font-family: 'Jersey 10', sans-serif;
+  text-transform: uppercase;
+}
+
+.xv2-title-main {
+  color: #ff0000;
+  /* Mindkettő 0.4s alatt ér be, és 0.4s után kezd el pulzálni egyszerre */
+  animation: xenoverse-in 0.4s ease-out forwards, xenoverse-pulse 0.8s infinite ease-in-out 0.4s;
+}
+
+.xv2-title-sub {
+  color: #ffffff;
+  /* Kivettük a 0.1s plusz késleltetést, így a főcímmel együtt mozog */
+  animation: xenoverse-in 0.4s ease-out forwards, xenoverse-pulse 0.8s infinite ease-in-out 0.4s;
+}
