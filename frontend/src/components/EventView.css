@@ -58,21 +58,69 @@
 .event-main-title {
   margin-top: 50px;
   font-size: 80px;
-  color: white;
-  text-shadow: 0 0 10px rgba(0,0,0,0.8);
+  color: #d31313;
   text-transform: uppercase;
+  text-shadow: 2px 2px 0px #460809;
 }
 
 .event-story-box {
+  position: relative; /* kell a pseudo-elementhez */
+
   background: rgba(0, 0, 0, 0.7);
   padding: 20px 40px;
   margin-top: 20px;
-  max-width: 800px;
+  max-width: 1000px;
   text-align: center;
-  color: #ccc;
+
+  color: #d31313;
   font-size: 24px;
-  border: 1px solid rgba(255,255,255,0.1);
+
+  border: 1px solid rgba(255,255,255,0.1); /* fallback */
 }
+
+/* ========================= */
+/* ANIMÁLT BORDER            */
+/* ========================= */
+.event-story-box::before {
+  content: "";
+  position: absolute;
+  inset: 0;                 /* 👉 pontosan körbeöleli */
+  padding: 1px;             /* 👉 BORDER VASTAGSÁG */
+
+  /* PIROSAS SHINE BORDER */
+  background: linear-gradient(
+    90deg,
+    transparent,
+    #ff2a2a,
+    transparent
+  );
+
+  background-size: 300% 300%; /* 👉 mozgás simasága */
+
+  /* CSAK A KERET LÁTSZÓDJON */
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+
+  animation: borderLoop 4s linear infinite; /* 👉 SEBESSÉG */
+
+  pointer-events: none;
+}
+
+/* ========================= */
+/* BORDER LOOP ANIMÁCIÓ      */
+/* ========================= */
+@keyframes borderLoop {
+  0% {
+    background-position: 0% 50%;
+  }
+  100% {
+    background-position: 300% 50%;
+  }
+}
+
 
 /* ===== OLDALAK (GOMBOK) ===== */
 .event-sides-container {
@@ -94,20 +142,25 @@
 
 .event-choice-label {
   font-size: 45px;
-  color: white;
+  color: #fef9c2;
   text-transform: uppercase;
   text-align: center;
   padding: 20px;
-  background: rgba(0,0,0,0.4);
+  background: #290f0f;
   border: 2px solid transparent;
+  letter-spacing: 1px;
   transition: all 0.3s ease;
   z-index: 20;
+  box-shadow: 0px 5px black, 0px -5px black, 5px 0px black, -5px 0px black, 0px 10px #00000038, 5px 5px #00000038, -5px 5px #00000038, inset 0px 5px #ffffff36;
 }
 
 .event-side:hover .event-choice-label {
-  background: rgba(0,0,0,0.8);
-  border-color: white;
+  color: #ec0707;
+  
+  background: #331A1F;
+  /*border-color: #fef9c2;*/
   transform: scale(1.1);
+  letter-spacing: 3px;
 }
 
 /* ===== TOOLTIP (A te kódodból) ===== */

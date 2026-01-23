@@ -30,8 +30,9 @@ export default function EventView({ event, onChoose }) {
       <div className="event-ui-overlay">
         <h2 className="event-main-title">{event.title}</h2>
         <div className="event-story-box">
-          <p>{event.story}</p>
-        </div>
+  <p>{event.story}</p>
+</div>
+
 
         {/* A KÉT HATALMAS INTERAKTÍV OLDAL */}
         <div className="event-sides-container">
