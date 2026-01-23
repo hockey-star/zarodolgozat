@@ -27,13 +27,7 @@ export function PlayerProvider({ children }) {
   });
 
   // ✅ final statok (base + item) – CombatView / StatModal használja
-  const [derivedStats, setDerivedStats] = useState({
-    strength: 0,
-    intellect: 0,
-    defense: 0,
-    hp: 0,
-    max_hp: 0,
-  });
+const [derivedStats, setDerivedStats] = useState(null);
 
   // ===== Mage mana (CombatView használja) =====
   const MAGE_MANA_MAX = 6;
@@ -48,39 +42,28 @@ export function PlayerProvider({ children }) {
   }, []);
 
   // ✅ effectiveStats: ha derived még nincs, fallback a player base-re
-  const effectiveStats = useMemo(() => {
-    if (!player) return null;
+ const effectiveStats = useMemo(() => {
+  if (!player) return null;
 
-    const baseStr = safeNum(player.strength, 0);
-    const baseInt = safeNum(player.intellect, 0);
-    const baseDef = safeNum(player.defense, 0);
-    const baseHp = safeNum(player.hp, 0);
-    const baseMaxHp = safeNum(player.max_hp, 0);
-
-    const hasDerived =
-      derivedStats &&
-      (typeof derivedStats.strength === "number" ||
-        typeof derivedStats.intellect === "number" ||
-        typeof derivedStats.defense === "number");
-
-    if (!hasDerived) {
-      return {
-        strength: baseStr,
-        intellect: baseInt,
-        defense: baseDef,
-        hp: baseHp,
-        max_hp: baseMaxHp,
-      };
-    }
-
+  if (!derivedStats) {
     return {
-      strength: safeNum(derivedStats.strength, baseStr),
-      intellect: safeNum(derivedStats.intellect, baseInt),
-      defense: safeNum(derivedStats.defense, baseDef),
-      hp: safeNum(derivedStats.hp, baseHp),
-      max_hp: safeNum(derivedStats.max_hp, baseMaxHp),
+      strength: safeNum(player.strength, 0),
+      intellect: safeNum(player.intellect, 0),
+      defense: safeNum(player.defense, 0),
+      hp: safeNum(player.hp, 0),
+      max_hp: safeNum(player.max_hp, 0),
     };
-  }, [player, derivedStats]);
+  }
+
+  return {
+    strength: safeNum(derivedStats.strength, safeNum(player.strength, 0)),
+    intellect: safeNum(derivedStats.intellect, safeNum(player.intellect, 0)),
+    defense: safeNum(derivedStats.defense, safeNum(player.defense, 0)),
+    hp: safeNum(derivedStats.hp, safeNum(player.hp, 0)),
+    max_hp: safeNum(derivedStats.max_hp, safeNum(player.max_hp, 0)),
+  };
+}, [player, derivedStats]);
+
 
   // ✅ FULL STATS FRISSÍTÉS BACKENDRŐL
   // Backend válasz: { playerMeta, base, bonus, final }
@@ -92,51 +75,25 @@ const refreshFullStats = useCallback(async (playerId) => {
   if (!res.ok) throw new Error("full-stats fetch error");
   const data = await res.json();
 
-  // ✅ támogatjuk mindkét formátumot:
-  // 1) új: { player, base, bonus, final } vagy { playerMeta, base, bonus, final }
-  // 2) régi: { strength, intellect, defense, hp, max_hp, bonuses }
-  const final = data?.final ?? data ?? {};
-  const bonus = data?.bonus ?? data?.bonuses ?? {};
+  const final = data?.final ?? {};
+  const bonus = data?.bonus ?? {};
 
-  const finalStr = Number(final?.strength ?? 0);
-  const finalInt = Number(final?.intellect ?? 0);
-  const finalDef = Number(final?.defense ?? 0);
-  const finalHp  = Number(final?.hp ?? 0);
-  const finalMaxHp = Number(final?.max_hp ?? 0);
+  setDerivedStats({
+    strength: Number(final?.strength ?? 0),
+    intellect: Number(final?.intellect ?? 0),
+    defense: Number(final?.defense ?? 0),
+    hp: Number(final?.hp ?? 0),
+    max_hp: Number(final?.max_hp ?? 0),
+  });
 
- setDerivedStats({
-  strength: finalStr,
-  intellect: finalInt,
-  defense: finalDef,
-  hp: safeNum(player?.hp, 0), // ✅ current HP csak playerből
-  max_hp: Number.isFinite(finalMaxHp) ? finalMaxHp : safeNum(player?.max_hp, 0)
-});
-
-  // ✅ bonus: ha backend küldi, azt használjuk
-  const backendBonuses = {
+  setItemBonuses({
     strength: Number(bonus?.strength ?? 0) || 0,
     intellect: Number(bonus?.intellect ?? 0) || 0,
     defense: Number(bonus?.defense ?? 0) || 0,
     hp: Number(bonus?.hp ?? 0) || 0,
-  };
-
-  setItemBonuses(backendBonuses);
-
-  // ✅ playerben csak HP/max_hp-t szinkronizálunk,
-  // és itt prev-ből számoljuk a "fallback" bónuszt ha kellene
-  setPlayer((prev) => {
-    if (!prev) return prev;
-
-    // ha a backend valamiért nem küldött bonus-t, itt tudnánk számolni prev alapján,
-    // de most a backendBonuses-t használjuk.
-
-    return {
-      ...prev,
-      max_hp: Number.isFinite(finalMaxHp) ? finalMaxHp : prev.max_hp,
-     
-    };
   });
 }, []);
+
   // ✅ amikor player.id megvan, kérjük le a full-stats-ot
   useEffect(() => {
     if (!player?.id) return;

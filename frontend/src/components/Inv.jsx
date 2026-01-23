@@ -11,7 +11,6 @@ import HAZImg from "../assets/pics/HAZ.jpg";
 import StatModal from "./StatModal.jsx";
 import "./Inv.css";
 
-
 /* ==============================
    HELPERS
    ============================== */
@@ -49,9 +48,10 @@ const EQUIP_SLOTS = [
   { key: "weapon", label: "Fegyver" },
   { key: "armor", label: "Mellvért" },
   { key: "helmet", label: "Sisak" },
-  { key: "accessory", label: "Kiegészítő 1" },
-  { key: "accessory", label: "Kiegészítő 2" },
+  { key: "accessory1", label: "Kiegészítő 1" },
+  { key: "accessory2", label: "Kiegészítő 2" },
 ];
+
 
 function mapItemTypeToSlot(type) {
   const t = (type || "").toLowerCase();
@@ -74,7 +74,6 @@ function formatWithBonus(finalValue, bonus) {
 }
 
 export default function Inv({ onClose }) {
-  // ✅ effectiveStats-et is kérjük, mert az a "final" stat (base + item)
   const {
     player,
     setPlayer,
@@ -164,97 +163,125 @@ export default function Inv({ onClose }) {
   }, [showInventory, player?.id]);
 
   /* ==============================
-     EQUIP / UNEQUIP
+     EQUIP / UNEQUIP  (owned_id alapú!)
      ============================== */
-  function equipItem(itemId) {
-    if (!player?.id) return;
+function equipItem(ownedId, slotKey) {
+  if (!player?.id || !ownedId) return;
 
-    fetch("http://localhost:3000/api/inventory/equip", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        playerId: player.id,
-        itemId,
-      }),
+  fetch("http://localhost:3000/api/inventory/equip", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      playerId: player.id,
+      ownedId,
+      slotKey, // "accessory1" | "accessory2" | undefined
+    }),
+  })
+    .then((res) => {
+      if (!res.ok) throw new Error("Equip failed");
+      return res.json();
     })
-      .then((res) => {
-        if (!res.ok) throw new Error("Equip failed");
-        return res.json();
-      })
-      .then(async () => {
-        setInventoryItems((prev) => {
-          const newItem = prev.find((p) => p.item_id === itemId);
-          const newSlot = newItem ? mapItemTypeToSlot(newItem.type) : null;
+    .then(async () => {
+      setInventoryItems((prev) => {
+        const chosen = prev.find((p) => p.owned_id === ownedId);
+        const chosenType = (chosen?.type || "").toLowerCase();
 
-          return prev.map((it) => {
-            const itSlot = mapItemTypeToSlot(it.type);
-            if (!itSlot || it.type === "potion") return it;
+        // accessory slot kiválasztás
+        const slotNum =
+          chosenType === "accessory"
+            ? (slotKey === "accessory2" ? 2 : 1)
+            : 1;
 
-            if (itSlot === newSlot) {
-              return {
-                ...it,
-                is_equipped: it.item_id === itemId,
-              };
+        return prev.map((it) => {
+          const itType = (it.type || "").toLowerCase();
+          if (itType === "potion") return it;
+
+          // ✅ ACCESSORY: csak az adott slotot cseréljük
+          if (itType === "accessory") {
+            const itSlotNum = Number(it.equip_slot) || 1;
+
+            // ha nem ebbe a slotba tartozik, hagyjuk békén
+            if (itSlotNum !== slotNum && it.owned_id !== ownedId) return it;
+
+            // ha ez a kiválasztott item, beállítjuk a slotot is
+            if (it.owned_id === ownedId) {
+              return { ...it, is_equipped: 1, equip_slot: slotNum };
             }
+
+            // ugyanazon slotban minden más accessory le
+            if (itSlotNum === slotNum) {
+              return { ...it, is_equipped: 0 };
+            }
+
             return it;
-          });
+          }
+
+          // ✅ WEAPON / ARMOR / HELMET: típuson belül 1 lehet
+          if (itType === chosenType) {
+            return {
+              ...it,
+              is_equipped: it.owned_id === ownedId ? 1 : 0,
+              equip_slot: 1,
+            };
+          }
+
+          return it;
         });
-
-        setSelectedItem((prev) =>
-          prev && prev.item_id === itemId ? { ...prev, is_equipped: true } : prev
-        );
-
-        // ✅ STATOK FRISSÍTÉSE BACKENDRŐL
-        try {
-          await refreshFullStats?.(player.id);
-        } catch (e) {
-          console.error(e);
-        }
-      })
-      .catch((err) => {
-        console.error(err);
-        alert("Hiba az equip során");
       });
-  }
-
-  function unequipItem(itemId) {
-    if (!player?.id) return;
-
-    fetch("http://localhost:3000/api/inventory/unequip", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        playerId: player.id,
-        itemId,
-      }),
+      try {
+        await refreshFullStats?.(player.id);
+      } catch (e) {
+        console.error(e);
+      }
     })
-      .then((res) => {
-        if (!res.ok) throw new Error("Unequip failed");
-        return res.json();
-      })
-      .then(async () => {
-        setInventoryItems((prev) =>
-          prev.map((it) =>
-            it.item_id === itemId ? { ...it, is_equipped: false } : it
-          )
-        );
+    .catch((err) => {
+      console.error(err);
+      alert("Hiba az equip során");
+    });
+}
 
-        setSelectedItem((prev) =>
-          prev && prev.item_id === itemId ? { ...prev, is_equipped: false } : prev
-        );
+function unequipItem(ownedId) {
+  if (!player?.id || !ownedId) return;
 
-        // ✅ STATOK FRISSÍTÉSE BACKENDRŐL
-        try {
-          await refreshFullStats?.(player.id);
-        } catch (e) {
-          console.error(e);
-        }
-      })
-      .catch((err) => {
-        console.error(err);
-        alert("Hiba az unequip során");
-      });
-  }
+  fetch("http://localhost:3000/api/inventory/unequip", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      playerId: player.id,
+      ownedId,
+    }),
+  })
+    .then((res) => {
+      if (!res.ok) throw new Error("Unequip failed");
+      return res.json();
+    })
+    .then(async () => {
+      setInventoryItems((prev) =>
+        prev.map((it) =>
+          it.owned_id === ownedId
+            ? { ...it, is_equipped: 0 } // equip_slot maradhat, jó ha emlékszik
+            : it
+        )
+      );
+
+      setSelectedItem((prev) =>
+        prev && prev.owned_id === ownedId
+          ? { ...prev, is_equipped: 0 }
+          : prev
+      );
+
+      try {
+        await refreshFullStats?.(player.id);
+      } catch (e) {
+        console.error(e);
+      }
+    })
+    .catch((err) => {
+      console.error(err);
+      alert("Hiba az unequip során");
+    });
+}
+
 
   /* ==============================
      DECK HANDLERS
@@ -315,28 +342,36 @@ export default function Inv({ onClose }) {
      EQUIPPED LOOKUP (UI-hoz)
      ============================== */
   const equippedBySlot = useMemo(() => {
-    const map = {
-      weapon: null,
-      armor: null,
-      helmet: null,
-      accessory: null,
-    };
+  const map = {
+    weapon: null,
+    armor: null,
+    helmet: null,
+    accessory1: null,
+    accessory2: null,
+  };
 
-    for (const it of inventoryItems) {
-      if (!it.is_equipped) continue;
-      const slot = mapItemTypeToSlot(it.type);
-      if (!slot) continue;
-      if (it.type === "potion") continue;
-      map[slot] = it;
+  for (const it of inventoryItems) {
+    if (!it.is_equipped) continue;
+    const type = (it.type || "").toLowerCase();
+    if (type === "potion") continue;
+
+    if (type === "accessory") {
+      const slotNum = Number(it.equip_slot) || 1;
+      map[slotNum === 2 ? "accessory2" : "accessory1"] = it;
+      continue;
     }
-    return map;
-  }, [inventoryItems]);
 
+    const slot = mapItemTypeToSlot(type); // weapon/armor/helmet
+    if (!slot) continue;
+    map[slot] = it;
+  }
+
+  return map;
+}, [inventoryItems]);
   /* ==============================
      STATOK (FINAL + zárójeles bonus)
      ============================== */
   const stats = useMemo(() => {
-    // ha nincs player, ne omoljon össze, de legyen valami
     if (!player) {
       return [
         { label: "Level", value: "-" },
@@ -348,7 +383,6 @@ export default function Inv({ onClose }) {
       ];
     }
 
-    // ✅ final statok a contextből, fallback a player base-re
     const finalStr = effectiveStats?.strength ?? (player.strength ?? 0);
     const finalInt = effectiveStats?.intellect ?? (player.intellect ?? 0);
     const finalDef = effectiveStats?.defense ?? (player.defense ?? 0);
@@ -388,10 +422,7 @@ export default function Inv({ onClose }) {
 
         {showStats && <StatModal onClose={() => setShowStats(false)} />}
 
-
         {/* INVENTORY */}
-
-
         {showInventory && (
           <div className="absolute inset-0 bg-black/85 flex items-center justify-center p-10 z-40">
             <div className="invMinden w-4/5 h-4/5 p-6">
@@ -408,9 +439,7 @@ export default function Inv({ onClose }) {
 
               <div className="h-full grid grid-cols-12 gap-6 min-h-0">
                 <div className="col-span-2 flex flex-col gap-3 min-h-0">
-                  <div className="invEquipmentText">
-                    Felszerelés
-                  </div>
+                  <div className="invEquipmentText">Felszerelés</div>
 
                   {EQUIP_SLOTS.map((slot) => {
                     const equipped = equippedBySlot[slot.key];
@@ -430,9 +459,7 @@ export default function Inv({ onClose }) {
                         ].join(" ")}
                         title={equipped ? "Kattints a részletekhez" : "Üres slot"}
                       >
-                        <div className="invEquipedItemType">
-                          {slot.label}
-                        </div>
+                        <div className="invEquipedItemType">{slot.label}</div>
 
                         <div className="invEquipedItemName">
                           {equipped ? equipped.name : "Üres"}
@@ -441,9 +468,7 @@ export default function Inv({ onClose }) {
                         <div
                           className={[
                             "invEquipedItemRarity uppercase text-[10px]",
-                            equipped
-                              ? `rarity-${equipped.rarity.toLowerCase()}`
-                              : "",
+                            equipped ? `rarity-${equipped.rarity.toLowerCase()}` : "",
                           ].join(" ")}
                         >
                           {equipped ? equipped.rarity : ""}
@@ -454,29 +479,24 @@ export default function Inv({ onClose }) {
                 </div>
 
                 <div className="col-span-6 flex flex-col min-h-0">
-                <div className="invCharacterText">
-                  {player.username}
-                </div>
+                  <div className="invCharacterText">{player.username}</div>
 
-                <div className="invCharacterImg mt-3 flex-1 min-h-0 flex items-center justify-center overflow-hidden">
-                  {player.class_id && CLASS_CONFIG[player.class_id] ? (
-                    <img
-                      src={CLASS_CONFIG[player.class_id].sprite}
-                      alt={CLASS_CONFIG[player.class_id].displayName}
-                      className="w-full h-full object-cover" // <<< kitölti a teljes divet
-                    />
-                  ) : (
-                    <div className="text-gray-400">(Nincs kép)</div>
-                  )}
+                  <div className="invCharacterImg mt-3 flex-1 min-h-0 flex items-center justify-center overflow-hidden">
+                    {player.class_id && CLASS_CONFIG[player.class_id] ? (
+                      <img
+                        src={CLASS_CONFIG[player.class_id].sprite}
+                        alt={CLASS_CONFIG[player.class_id].displayName}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="text-gray-400">(Nincs kép)</div>
+                    )}
+                  </div>
                 </div>
-              </div>
-
 
                 <div className="col-span-4 flex flex-col gap-4 min-h-0">
                   <div className="invStatsBorder p-4 ">
-                    <div className="invStatsText">
-                      Stats
-                    </div>
+                    <div className="invStatsText">Stats</div>
 
                     <div className="invStats space-y-2">
                       {stats.map((s) => (
@@ -492,9 +512,7 @@ export default function Inv({ onClose }) {
                   </div>
 
                   <div className="invInvBorder p-4 flex-1 min-h-0 flex flex-col">
-                    <div className="invInvText">
-                      Inventory
-                    </div>
+                    <div className="invInvText">Inventory</div>
 
                     <div className="invItemsBorder overflow-y-auto">
                       <div className="invInvGridItems grid grid-cols-3 gap-4">
@@ -505,48 +523,44 @@ export default function Inv({ onClose }) {
                         )}
 
                         {inventoryItems.map((item) => {
-                            const isSelected = selectedItem?.item_id === item.item_id;
-                            const ui = rarityUi(item.rarity);
-                            
+                          const isSelected = selectedItem?.owned_id === item.owned_id;
+                          const ui = rarityUi(item.rarity);
+
                           return (
                             <button
-                                key={item.item_id}
-                                onClick={() => setSelectedItem(item)}
+                              key={item.owned_id} // ✅
+                              onClick={() => setSelectedItem(item)}
+                              className={[
+                                "h-20 text-left px-3",
+                                "invInvItemGrids hover:bg-neutral-900",
+                                item.is_equipped ? "border-rose-950" : "border-neutral-700",
+                                isSelected ? "ring-2 ring-yellow-400" : "",
+                              ].join(" ")}
+                              title="Kattints a részletekhez"
+                            >
+                              <div className="truncate">{item.name}</div>
+
+                              <div
                                 className={[
-                                  "h-20 text-left px-3",
-                                  "invInvItemGrids hover:bg-neutral-900",
-                                  item.is_equipped
-                                    ? "border-rose-950"
-                                    : "border-neutral-700",
-                                  isSelected ? "ring-2 ring-yellow-400" : "",
+                                  "text-[10px] uppercase",
+                                  `rarity-${item.rarity?.toLowerCase() || "common"}`,
                                 ].join(" ")}
-                                title="Kattints a részletekhez"
                               >
-                                <div className="truncate">
-                                  {item.name}
+                                {item.type} • {item.rarity}
+                              </div>
+
+                              {item.upgrade_level > 0 && (
+                                <div className="text-[10px] text-yellow-300 uppercase mt-1">
+                                  +{item.upgrade_level}
                                 </div>
+                              )}
 
-                                <div
-                                  className={[
-                                    "text-[10px] uppercase",
-                                    `rarity-${item.rarity?.toLowerCase() || "common"}`,
-                                  ].join(" ")}
-                                >
-                                  {item.type} • {item.rarity}
+                              {item.is_equipped && (
+                                <div className="text-[10px] text-emerald-400 uppercase mt-1">
+                                  Equipped
                                 </div>
-
-                                {item.upgrade_level > 0 && (
-                                  <div className="text-[10px] text-yellow-300 uppercase mt-1">
-                                    +{item.upgrade_level}
-                                  </div>
-                                )}
-
-                                {item.is_equipped && (
-                                  <div className="text-[10px] text-emerald-400 uppercase mt-1">
-                                    Equipped
-                                  </div>
-                                )}
-                              </button>
+                              )}
+                            </button>
                           );
                         })}
                       </div>
@@ -557,9 +571,7 @@ export default function Inv({ onClose }) {
                     {selectedItem ? (
                       <div className="flex flex-col gap-3">
                         <div>
-                          <div className="invInvSelectedText">
-                            Selected
-                          </div>
+                          <div className="invInvSelectedText">Selected</div>
                           <div className="invInvSelectedItem">{selectedItem.name}</div>
                           <div className="invInvSelectedItemInfo">
                             {selectedItem.type} • {selectedItem.rarity}
@@ -576,31 +588,50 @@ export default function Inv({ onClose }) {
                           {formatBonusLine("Életerő", selectedItem.bonus_hp)}
                         </div>
 
-                        <div className="flex gap-2">
-                          {!selectedItem.is_equipped ? (
-                            <button
-                              className="invInvEquipBtn flex-1 py-2"
-                              onClick={() => equipItem(selectedItem.item_id)}
-                            >
-                              Felvétel
-                            </button>
-                          ) : (
-                            <button
-                              className="invInvUnEquipBtn flex-1 py-2"
-                              onClick={() => unequipItem(selectedItem.item_id)}
-                            >
-                              Levétel
-                            </button>
-                          )}
+<div className="flex gap-2">
+  {!selectedItem.is_equipped ? (
+    (selectedItem.type || "").toLowerCase() === "accessory" ? (
+      <>
+        <button
+          className="invInvEquipBtn flex-1 py-2"
+          onClick={() => equipItem(selectedItem.owned_id, "accessory1")}
+        >
+          Felvétel (1)
+        </button>
 
-                          <button
-                            className="invInvItemClear px-4 py-2"
-                            onClick={() => setSelectedItem(null)}
-                            title="Kijelölés törlése"
-                          >
-                            X
-                          </button>
-                        </div>
+        <button
+          className="invInvEquipBtn flex-1 py-2"
+          onClick={() => equipItem(selectedItem.owned_id, "accessory2")}
+        >
+          Felvétel (2)
+        </button>
+      </>
+    ) : (
+      <button
+        className="invInvEquipBtn flex-1 py-2"
+        onClick={() => equipItem(selectedItem.owned_id)}
+      >
+        Felvétel
+      </button>
+    )
+  ) : (
+    <button
+      className="invInvUnEquipBtn flex-1 py-2"
+      onClick={() => unequipItem(selectedItem.owned_id)}
+    >
+      Levétel
+    </button>
+  )}
+
+  <button
+    className="invInvItemClear px-4 py-2"
+    onClick={() => setSelectedItem(null)}
+    title="Kijelölés törlése"
+  >
+    X
+  </button>
+</div>
+
 
                         {selectedItem.type === "potion" && (
                           <div className="text-[11px] text-neutral-500">
@@ -609,9 +640,7 @@ export default function Inv({ onClose }) {
                         )}
                       </div>
                     ) : (
-                      <div className="invInvValassz text-center">
-                        Válassz ki egy tárgyat
-                      </div>
+                      <div className="invInvValassz text-center">Válassz ki egy tárgyat</div>
                     )}
                   </div>
                 </div>
@@ -620,156 +649,145 @@ export default function Inv({ onClose }) {
           </div>
         )}
 
-        {/* SPELLBOOK / DECK MODAL: placeholder */}
+        {/* SPELLBOOK / DECK MODAL */}
         {showDeckEditor && (
-  <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-40">
-    <div className="relative text-white flex flex-col items-center">
+          <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-40">
+            <div className="relative text-white flex flex-col items-center">
+              <div className="w-full max-w-[1200px] flex justify-between items-center mb-2 px-2">
+                <h2 className="text-xl font-bold">
+                  Spellbook / Deck – {classKey?.toUpperCase()}
+                </h2>
+                <div className="text-sm text-gray-200">
+                  Deck mérete: {tempDeck.length} / {MAX_DECK_SIZE}
+                </div>
+              </div>
 
-      {/* FEJLÉC */}
-      <div className="w-full max-w-[1200px] flex justify-between items-center mb-2 px-2">
-        <h2 className="text-xl font-bold">
-          Spellbook / Deck – {classKey?.toUpperCase()}
-        </h2>
-        <div className="text-sm text-gray-200">
-          Deck mérete: {tempDeck.length} / {MAX_DECK_SIZE}
-        </div>
-      </div>
+              <div className="relative w-[68vw] max-w-[1000px] aspect-[870/704] flex items-center justify-center">
+                <img
+                  src={spellbookImg}
+                  alt="Spellbook"
+                  className="absolute inset-0 w-full h-full object-contain pointer-events-none select-none"
+                />
 
-      {/* SPELLBOOK KÉP */}
-      <div
-        className="relative w-[68vw] max-w-[1000px] aspect-[870/704] flex items-center justify-center"
-      >
-        <img
-          src={spellbookImg}
-          alt="Spellbook"
-          className="absolute inset-0 w-full h-full object-contain pointer-events-none select-none"
-        />
+                <div
+                  className="absolute flex pointer-events-none"
+                  style={{
+                    width: "78%",
+                    height: "52%",
+                    top: "37%",
+                    left: "50%",
+                    transform: "translate(-50%, -50%)",
+                    gap: "3rem",
+                  }}
+                >
+                  <div className="flex-1 pointer-events-auto">
+                    <div className="font-semibold mb-1 text-sm text-yellow-100">
+                      Elérhető képességek
+                    </div>
 
-        {/* TARTALOM */}
-        <div
-          className="absolute flex pointer-events-none"
-          style={{
-            width: "78%",
-            height: "52%",
-            top: "37%",
-            left: "50%",
-            transform: "translate(-50%, -50%)",
-            gap: "3rem",
-          }}
-        >
-          {/* BAL OLDAL – ABILITIES */}
-          <div className="flex-1 pointer-events-auto">
-            <div className="font-semibold mb-1 text-sm text-yellow-100">
-              Elérhető képességek
-            </div>
-
-            <div className="h-full overflow-y-auto pr-1 pixel-scroll">
-              <div className="grid grid-cols-3 gap-2">
-                {abilityPool.map((ab) => {
-                  const imgSrc = resolveCardImageFromAbility(ab);
-                  return (
-                    <button
-                      key={ab.id}
-                      onClick={() => handleAddToDeck(ab.id)}
-                      className="relative aspect-[3/4] rounded-md overflow-hidden hover:brightness-110"
-                    >
-                      <img
-                        src={imgSrc}
-                        alt={ab.name}
-                        className="absolute inset-0 w-full h-full object-cover"
-                      />
-                      <div className="absolute bottom-0 w-full bg-black/75 px-1 py-[3px]">
-                        <div className="text-[9px] font-semibold text-center">
-                          {ab.name}
-                        </div>
-                        <div className="text-[8px] text-amber-200 uppercase text-center">
-                          {ab.type} • {ab.rarity}
-                        </div>
+                    <div className="h-full overflow-y-auto pr-1 pixel-scroll">
+                      <div className="grid grid-cols-3 gap-2">
+                        {abilityPool.map((ab) => {
+                          const imgSrc = resolveCardImageFromAbility(ab);
+                          return (
+                            <button
+                              key={ab.id}
+                              onClick={() => handleAddToDeck(ab.id)}
+                              className="relative aspect-[3/4] rounded-md overflow-hidden hover:brightness-110"
+                            >
+                              <img
+                                src={imgSrc}
+                                alt={ab.name}
+                                className="absolute inset-0 w-full h-full object-cover"
+                              />
+                              <div className="absolute bottom-0 w-full bg-black/75 px-1 py-[3px]">
+                                <div className="text-[9px] font-semibold text-center">
+                                  {ab.name}
+                                </div>
+                                <div className="text-[8px] text-amber-200 uppercase text-center">
+                                  {ab.type} • {ab.rarity}
+                                </div>
+                              </div>
+                            </button>
+                          );
+                        })}
                       </div>
-                    </button>
-                  );
-                })}
+                    </div>
+                  </div>
+
+                  <div className="flex-1 pointer-events-auto">
+                    <div className="font-semibold mb-1 text-sm text-yellow-100">
+                      Jelenlegi pakli
+                    </div>
+
+                    <div className="h-full overflow-y-auto pr-1 pixel-scroll">
+                      {uniqueDeckIds.length === 0 ? (
+                        <div className="text-sm text-amber-100/80">
+                          A pakli üres. Kattints bal oldalt egy képességre.
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-3 gap-2">
+                          {uniqueDeckIds.map((id) => {
+                            const ab = ABILITIES_BY_ID[id];
+                            if (!ab) return null;
+                            const count = deckCounts[id];
+                            const imgSrc = resolveCardImageFromAbility(ab);
+
+                            return (
+                              <button
+                                key={id}
+                                onClick={() => handleRemoveOneFromDeck(id)}
+                                className="relative aspect-[3/4] rounded-md overflow-hidden hover:brightness-110"
+                              >
+                                <img
+                                  src={imgSrc}
+                                  alt={ab.name}
+                                  className="absolute inset-0 w-full h-full object-cover"
+                                />
+                                <div className="absolute top-1 left-1 bg-black/80 text-[8px] px-1 rounded">
+                                  x{count}
+                                </div>
+                                <div className="absolute bottom-0 w-full bg-black/75 px-1 py-[3px]">
+                                  <div className="text-[9px] font-semibold text-center">
+                                    {ab.name}
+                                  </div>
+                                  <div className="text-[8px] text-amber-200 uppercase text-center">
+                                    {ab.type} • {ab.rarity}
+                                  </div>
+                                </div>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-4 w-full max-w-[1200px] flex justify-between items-center px-2">
+                <div className="text-xs text-gray-200">
+                  Tipp: bal oldalt hozzáadsz, jobb oldalt eltávolítasz.
+                </div>
+
+                <div className="space-x-2">
+                  <button
+                    className="px-4 py-2 bg-gray-800 rounded"
+                    onClick={() => setShowDeckEditor(false)}
+                  >
+                    Mégse
+                  </button>
+                  <button
+                    className="px-4 py-2 bg-emerald-600 rounded"
+                    onClick={handleSaveDeck}
+                  >
+                    Mentés
+                  </button>
+                </div>
               </div>
             </div>
           </div>
-
-          {/* JOBB OLDAL – DECK */}
-          <div className="flex-1 pointer-events-auto">
-            <div className="font-semibold mb-1 text-sm text-yellow-100">
-              Jelenlegi pakli
-            </div>
-
-            <div className="h-full overflow-y-auto pr-1 pixel-scroll">
-              {uniqueDeckIds.length === 0 ? (
-                <div className="text-sm text-amber-100/80">
-                  A pakli üres. Kattints bal oldalt egy képességre.
-                </div>
-              ) : (
-                <div className="grid grid-cols-3 gap-2">
-                  {uniqueDeckIds.map((id) => {
-                    const ab = ABILITIES_BY_ID[id];
-                    if (!ab) return null;
-                    const count = deckCounts[id];
-                    const imgSrc = resolveCardImageFromAbility(ab);
-
-                    return (
-                      <button
-                        key={id}
-                        onClick={() => handleRemoveOneFromDeck(id)}
-                        className="relative aspect-[3/4] rounded-md overflow-hidden hover:brightness-110"
-                      >
-                        <img
-                          src={imgSrc}
-                          alt={ab.name}
-                          className="absolute inset-0 w-full h-full object-cover"
-                        />
-                        <div className="absolute top-1 left-1 bg-black/80 text-[8px] px-1 rounded">
-                          x{count}
-                        </div>
-                        <div className="absolute bottom-0 w-full bg-black/75 px-1 py-[3px]">
-                          <div className="text-[9px] font-semibold text-center">
-                            {ab.name}
-                          </div>
-                          <div className="text-[8px] text-amber-200 uppercase text-center">
-                            {ab.type} • {ab.rarity}
-                          </div>
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* ALSÓ GOMBOK */}
-      <div className="mt-4 w-full max-w-[1200px] flex justify-between items-center px-2">
-        <div className="text-xs text-gray-200">
-          Tipp: bal oldalt hozzáadsz, jobb oldalt eltávolítasz.
-        </div>
-
-        <div className="space-x-2">
-          <button
-            className="px-4 py-2 bg-gray-800 rounded"
-            onClick={() => setShowDeckEditor(false)}
-          >
-            Mégse
-          </button>
-          <button
-            className="px-4 py-2 bg-emerald-600 rounded"
-            onClick={handleSaveDeck}
-          >
-            Mentés
-          </button>
-        </div>
-      </div>
-
-    </div>
-  </div>
-)}
-
+        )}
 
         {/* HOTSPOTOK A HÁZBAN */}
         <div className="flex justify-between flex-1">

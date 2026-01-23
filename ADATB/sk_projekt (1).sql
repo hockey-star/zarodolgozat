@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Gép: 127.0.0.1
--- Létrehozás ideje: 2025. Dec 11. 13:32
+-- Létrehozás ideje: 2026. Jan 23. 11:00
 -- Kiszolgáló verziója: 10.4.28-MariaDB
 -- PHP verzió: 8.2.4
 
@@ -52,38 +52,76 @@ CREATE TABLE `birtokol` (
   `player_id` int(11) NOT NULL,
   `item_id` int(11) NOT NULL,
   `quantity` int(11) DEFAULT 1,
-  `upgrade_level` int(11) DEFAULT 0
+  `upgrade_level` int(11) DEFAULT 0,
+  `is_equipped` tinyint(1) DEFAULT 0,
+  `equip_slot` tinyint(4) NOT NULL DEFAULT 1
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_hungarian_ci;
 
 --
 -- A tábla adatainak kiíratása `birtokol`
 --
 
-INSERT INTO `birtokol` (`id`, `player_id`, `item_id`, `quantity`, `upgrade_level`) VALUES
-(10, 19, 4, 1, 0),
-(11, 19, 3, 1, 0),
-(12, 19, 3, 1, 0),
-(13, 19, 3, 1, 0),
-(14, 19, 4, 1, 0),
-(15, 19, 4, 1, 0),
-(16, 19, 5, 1, 6),
-(17, 19, 5, 1, 0),
-(18, 19, 6, 1, 0),
-(19, 19, 6, 1, 0),
-(20, 19, 5, 1, 0),
-(21, 19, 5, 1, 0),
-(22, 19, 3, 1, 0),
-(23, 19, 3, 1, 0),
-(24, 19, 5, 1, 0),
-(25, 19, 4, 1, 0),
-(26, 19, 3, 1, 0),
-(27, 24, 3, 1, 0),
-(28, 24, 4, 1, 0),
-(29, 24, 5, 1, 0),
-(30, 24, 6, 1, 0),
-(31, 24, 3, 1, 0),
-(32, 25, 3, 1, 0),
-(33, 25, 4, 1, 0);
+INSERT INTO `birtokol` (`id`, `player_id`, `item_id`, `quantity`, `upgrade_level`, `is_equipped`, `equip_slot`) VALUES
+(10, 19, 4, 1, 0, 0, 1),
+(11, 19, 3, 1, 0, 0, 1),
+(16, 19, 5, 1, 6, 0, 1),
+(18, 19, 6, 1, 0, 0, 1),
+(27, 24, 3, 1, 0, 0, 1),
+(28, 24, 4, 1, 0, 0, 1),
+(29, 24, 5, 1, 0, 1, 1),
+(30, 24, 6, 1, 0, 0, 1),
+(32, 25, 3, 1, 0, 0, 1),
+(33, 25, 4, 1, 0, 0, 1),
+(34, 24, 15, 1, 0, 0, 1),
+(35, 24, 11, 1, 0, 0, 1),
+(36, 24, 7, 1, 0, 1, 1),
+(39, 24, 28, 1, 0, 0, 1),
+(40, 24, 25, 1, 0, 0, 1),
+(41, 26, 8, 1, 0, 1, 1),
+(42, 26, 5, 1, 0, 0, 1),
+(43, 26, 4, 1, 0, 0, 1),
+(45, 26, 13, 1, 0, 0, 1),
+(46, 26, 14, 1, 0, 0, 1),
+(48, 26, 12, 1, 0, 0, 1),
+(49, 26, 15, 1, 0, 0, 1),
+(51, 26, 16, 1, 0, 0, 1),
+(52, 26, 17, 1, 0, 0, 1),
+(54, 26, 18, 1, 0, 0, 1),
+(55, 26, 9, 1, 0, 0, 1),
+(56, 26, 10, 1, 0, 0, 1),
+(57, 26, 19, 1, 0, 0, 1),
+(58, 26, 11, 1, 0, 0, 1),
+(59, 26, 20, 1, 0, 0, 1),
+(60, 26, 29, 1, 0, 0, 1),
+(61, 26, 28, 1, 0, 0, 1),
+(62, 26, 27, 1, 0, 0, 1),
+(63, 26, 26, 1, 0, 0, 1),
+(65, 26, 25, 1, 0, 0, 1),
+(67, 26, 24, 1, 0, 0, 1),
+(68, 26, 22, 1, 0, 0, 1),
+(69, 26, 30, 1, 0, 0, 1),
+(70, 27, 3, 1, 31, 0, 1),
+(71, 27, 8, 1, 30, 0, 1),
+(72, 27, 9, 1, 0, 0, 1),
+(73, 27, 14, 1, 29, 0, 1),
+(75, 27, 28, 1, 30, 0, 1),
+(76, 27, 26, 1, 20, 0, 1),
+(77, 28, 8, 1, 0, 0, 1),
+(78, 28, 9, 1, 1, 0, 1),
+(79, 28, 14, 1, 0, 1, 1),
+(80, 28, 28, 1, 0, 1, 1),
+(81, 28, 30, 1, 0, 1, 1),
+(82, 29, 9, 1, 2, 1, 1),
+(83, 29, 14, 1, 28, 1, 1),
+(84, 31, 8, 1, 5, 1, 1),
+(85, 31, 14, 1, 1, 1, 1),
+(86, 31, 28, 1, 0, 1, 1),
+(87, 31, 31, 1, 0, 1, 1),
+(88, 32, 5, 1, 29, 0, 1),
+(89, 32, 27, 1, 0, 0, 2),
+(90, 32, 26, 1, 11, 0, 1),
+(91, 32, 28, 1, 0, 0, 1),
+(92, 32, 29, 1, 0, 0, 2);
 
 -- --------------------------------------------------------
 
@@ -142,7 +180,32 @@ INSERT INTO `items` (`id`, `name`, `type`, `min_dmg`, `max_dmg`, `intellect_bonu
 (3, 'Vas Kard', 'weapon', 3, 5, 0, 0, 0, 'common', 2, 0, 0, 0, 0),
 (4, 'Varázspálca', 'weapon', 1, 4, 0, 0, 0, 'rare', 0, 3, 0, 0, 0),
 (5, 'Vérteli Páncél', 'armor', 0, 0, 0, 0, 0, 'common', 0, 0, 3, 0, 0),
-(6, 'Gyógyital', 'potion', 0, 0, 0, 0, 0, 'common', 0, 0, 0, 20, 0);
+(6, 'Gyógyital', 'potion', 0, 0, 0, 0, 0, 'common', 0, 0, 0, 20, 0),
+(7, 'Fa Kard', 'weapon', 2, 4, 0, 0, 0, 'common', 1, 0, 0, 0, 5),
+(8, 'Acél Kard', 'weapon', 5, 8, 0, 0, 0, 'uncommon', 3, 0, 0, 0, 15),
+(9, 'Hosszú Kard', 'weapon', 6, 10, 0, 0, 0, 'rare', 4, 0, 0, 0, 25),
+(10, 'Mágikus Kard', 'weapon', 4, 7, 2, 0, 0, 'rare', 2, 2, 0, 0, 30),
+(11, 'Tőr', 'weapon', 3, 6, 0, 0, 0, 'common', 2, 0, 0, 0, 8),
+(12, 'Bőr Páncél', 'armor', 0, 0, 0, 2, 0, 'common', 0, 0, 2, 0, 10),
+(13, 'Láncing', 'armor', 0, 0, 0, 4, 0, 'uncommon', 0, 0, 4, 0, 20),
+(14, 'Acél Páncél', 'armor', 0, 0, 0, 6, 0, 'rare', 0, 0, 6, 0, 35),
+(15, 'Mágikus Köpeny', 'armor', 0, 0, 3, 2, 0, 'rare', 0, 3, 2, 0, 40),
+(16, 'Ősi Páncél', 'armor', 0, 0, 1, 8, 20, 'epic', 0, 1, 8, 20, 80),
+(17, 'Kis Gyógyital', 'potion', 0, 0, 0, 0, 20, 'common', 0, 0, 0, 20, 10),
+(18, 'Közepes Gyógyital', 'potion', 0, 0, 0, 0, 50, 'uncommon', 0, 0, 0, 50, 25),
+(19, 'Nagy Gyógyital', 'potion', 0, 0, 0, 0, 100, 'rare', 0, 0, 0, 100, 50),
+(20, 'Mana Ital', 'potion', 0, 0, 30, 0, 0, 'uncommon', 0, 30, 0, 0, 30),
+(21, 'Erő Ital', 'potion', 0, 0, 0, 0, 0, 'uncommon', 5, 0, 0, 0, 30),
+(22, 'Varázskönyv', 'weapon', 2, 5, 5, 0, 0, 'rare', 0, 5, 0, 0, 45),
+(23, 'Ősi Bot', 'weapon', 4, 9, 6, 0, 0, 'epic', 0, 6, 0, 0, 70),
+(24, 'Pajzs', 'armor', 0, 0, 0, 5, 0, 'uncommon', 0, 0, 5, 0, 25),
+(25, 'Mágikus Pajzs', 'armor', 0, 0, 3, 7, 0, 'epic', 0, 3, 7, 0, 60),
+(26, 'Gyűrű az Erőhöz', 'accessory', 0, 0, 0, 0, 0, 'rare', 4, 0, 0, 0, 40),
+(27, 'Gyűrű az Intelligenciához', 'accessory', 0, 0, 4, 0, 0, 'rare', 0, 4, 0, 0, 40),
+(28, 'Élet Amulett', 'accessory', 0, 0, 0, 0, 50, 'rare', 0, 0, 0, 50, 45),
+(29, 'Ősi Amulett', 'accessory', 0, 0, 3, 3, 30, 'epic', 2, 3, 3, 30, 90),
+(30, 'Legendás Kard', 'weapon', 10, 15, 3, 0, 0, 'legendary', 6, 3, 0, 0, 150),
+(31, 'Jakab Kalapja', 'helmet', 0, 0, 0, 0, 0, 'legendary', 99, 99, 99, 99, 1);
 
 -- --------------------------------------------------------
 
@@ -207,8 +270,15 @@ INSERT INTO `players` (`id`, `username`, `email`, `password_hash`, `class_id`, `
 (21, 'puszi123', 'pusz@gmail.com', '123', 6, 5, 97, 194, 100, 100, 7, 5, 2, '2025-12-02 12:57:16', 0),
 (22, '123123', 'asdqw@gmail.com', '123', 8, 1, 0, 100, 40, 40, 3, 2, 2, '2025-12-02 13:45:37', 0),
 (23, 'alesz123', 'alesz@gmail.com', '123', 6, 1, 0, 100, 50, 50, 5, 0, 3, '2025-12-02 13:49:54', 0),
-(24, 'Hunor', 'ceges@gamil.kum', 'fgh', 8, 1, 0, 100, 40, 40, 3, 2, 2, '2025-12-05 08:22:15', 0),
-(25, 'asd', 'asd@gmail.com', 'asd', 7, 51, 33, 10020, 120, 120, 0, 20, 1, '2025-12-09 09:10:58', 0);
+(24, 'Hunor', 'ceges@gamil.kum', 'fgh', 8, 1, 10000, 9895, 40, 40, 3, 2, 2, '2025-12-05 08:22:15', 0),
+(25, 'asd', 'asd@gmail.com', 'asd', 7, 51, 33, 10020, 120, 120, 0, 20, 1, '2025-12-09 09:10:58', 0),
+(26, 'warror', 'gma@gmao.com', '123', 6, 1, 0, 84068, 50, 50, 5, 0, 3, '2026-01-12 11:35:48', 0),
+(27, 'warror123', 'gasdma@gmadsasdo.com', '$2b$10$zEwOIrFQrGbmnil1TnbbY.CaP1/fX1iiqKk4LteVUE579jGAEZOX6', 6, 15, 79, 492854, 8000, 8000, 30, 0, 3, '2026-01-13 11:01:21', 3),
+(28, 'uasdusau123', 'sadmdsa@gmail.com', '$2b$10$9WKKSjgITWTK3HOL0s4XgOh/Ub3CCAJHRpFqmdyVmFbzbvGz31BCy', 6, 9, 39, 971, 425, 425, 21, 0, 3, '2026-01-14 11:42:06', 150),
+(29, 'asdasdasd123', 'asdasdasd123@gmail.com', '$2b$10$L8aUYJI/3O7OP/zlGtRg9uYf2ffpZ5t61R4Q2oMCgZLfYkBOMzTRa', 6, 1, 0, 500, 230, 230, 36, 0, 3, '2026-01-15 10:20:07', 83),
+(30, 'plsmukodj', 'asdsad@gmaic.com', '$2b$10$9SrbZq7CO/CotscAaPDRhe.vK0yFl89h2Ya6nSts67vO2AK8a/Hfu', 6, 1, 0, 100, 50, 50, 5, 0, 3, '2026-01-15 12:23:20', 0),
+(31, 'tesztelgetek', 'legelek@gmail.com', '$2b$10$rfMu9XbaZpbWVNnzJdHGfudlwsnfrCT1zhlwX/HZ2SRR9LD8Vz4jC', 6, 23, 161, 2130, 1799, 1799, 16, 0, 3, '2026-01-16 09:15:23', 33),
+(32, 'tesztelgetek123', '123@gmads.com', '$2b$10$ZwHWxClvUUtJnUuMzWm6VuVkBFBFF2VJp5Ua9I9eWdkfKVAv7NUcW', 6, 14, 168, 299785, 13230, 14930, 56, 16, 22, '2026-01-22 12:13:01', 177);
 
 -- --------------------------------------------------------
 
@@ -265,7 +335,7 @@ INSERT INTO `player_quests` (`id`, `player_id`, `quest_id`, `progress`, `status`
 (126, 23, 4, 0, 'locked'),
 (127, 23, 5, 0, 'locked'),
 (130, 23, 9, 0, 'locked'),
-(131, 24, 1, 1, 'in_progress'),
+(131, 24, 1, 2, 'in_progress'),
 (132, 24, 2, 0, 'locked'),
 (133, 24, 3, 0, 'locked'),
 (134, 24, 4, 0, 'locked'),
@@ -276,7 +346,49 @@ INSERT INTO `player_quests` (`id`, `player_id`, `quest_id`, `progress`, `status`
 (141, 25, 3, 0, 'locked'),
 (142, 25, 4, 0, 'locked'),
 (143, 25, 5, 0, 'locked'),
-(146, 25, 10, 0, 'locked');
+(146, 25, 10, 0, 'locked'),
+(147, 26, 1, 2, 'in_progress'),
+(148, 26, 2, 0, 'locked'),
+(149, 26, 3, 0, 'locked'),
+(150, 26, 4, 0, 'locked'),
+(151, 26, 5, 0, 'locked'),
+(154, 26, 9, 0, 'locked'),
+(155, 27, 1, 3, 'completed'),
+(156, 27, 2, 0, 'locked'),
+(157, 27, 3, 0, 'locked'),
+(158, 27, 4, 0, 'locked'),
+(159, 27, 5, 0, 'locked'),
+(162, 27, 9, 0, 'locked'),
+(163, 28, 1, 3, 'claimed'),
+(164, 28, 2, 7, 'claimed'),
+(165, 28, 3, 3, 'completed'),
+(166, 28, 4, 0, 'locked'),
+(167, 28, 5, 0, 'locked'),
+(170, 28, 9, 0, 'locked'),
+(171, 29, 1, 0, 'in_progress'),
+(172, 29, 2, 0, 'locked'),
+(173, 29, 3, 0, 'locked'),
+(174, 29, 4, 0, 'locked'),
+(175, 29, 5, 0, 'locked'),
+(178, 29, 9, 0, 'locked'),
+(179, 30, 1, 0, 'in_progress'),
+(180, 30, 2, 0, 'locked'),
+(181, 30, 3, 0, 'locked'),
+(182, 30, 4, 0, 'locked'),
+(183, 30, 5, 0, 'locked'),
+(186, 30, 9, 0, 'locked'),
+(187, 31, 1, 0, 'in_progress'),
+(188, 31, 2, 0, 'locked'),
+(189, 31, 3, 0, 'locked'),
+(190, 31, 4, 0, 'locked'),
+(191, 31, 5, 0, 'locked'),
+(194, 31, 9, 0, 'locked'),
+(195, 32, 1, 0, 'in_progress'),
+(196, 32, 2, 0, 'locked'),
+(197, 32, 3, 0, 'locked'),
+(198, 32, 4, 0, 'locked'),
+(199, 32, 5, 0, 'locked'),
+(202, 32, 9, 0, 'locked');
 
 -- --------------------------------------------------------
 
@@ -378,6 +490,7 @@ ALTER TABLE `achievements`
 --
 ALTER TABLE `birtokol`
   ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `uq_player_item` (`player_id`,`item_id`),
   ADD KEY `player_id` (`player_id`),
   ADD KEY `item_id` (`item_id`);
 
@@ -457,7 +570,7 @@ ALTER TABLE `achievements`
 -- AUTO_INCREMENT a táblához `birtokol`
 --
 ALTER TABLE `birtokol`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=34;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=93;
 
 --
 -- AUTO_INCREMENT a táblához `classes`
@@ -469,7 +582,7 @@ ALTER TABLE `classes`
 -- AUTO_INCREMENT a táblához `items`
 --
 ALTER TABLE `items`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=32;
 
 --
 -- AUTO_INCREMENT a táblához `paths`
@@ -481,13 +594,13 @@ ALTER TABLE `paths`
 -- AUTO_INCREMENT a táblához `players`
 --
 ALTER TABLE `players`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=26;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=33;
 
 --
 -- AUTO_INCREMENT a táblához `player_quests`
 --
 ALTER TABLE `player_quests`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=147;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=203;
 
 --
 -- AUTO_INCREMENT a táblához `quests_master`

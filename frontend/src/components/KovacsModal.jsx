@@ -102,21 +102,25 @@ export default function BlacksmithModal({ onClose }) {
     return r.json();
   }
 
-  const refreshAll = async () => {
-    if (!userId) return;
-    const [p, items] = await Promise.all([fetchPlayer(), fetchItems()]);
-    setPlayerData(p);
-    setPlayerItems(items || []);
+const refreshSeq = React.useRef(0);
 
-    if (items && items.length > 0) {
-      const keep =
-        items.find((i) => selectedItem && i.item_id === selectedItem.item_id) ||
-        items[0];
-      setSelectedItem(keep);
-    } else {
-      setSelectedItem(null);
+const refreshAll = async () => {
+  if (!userId) return;
+  const seq = ++refreshSeq.current;
+
+  const [p, items] = await Promise.all([fetchPlayer(), fetchItems()]);
+  if (seq !== refreshSeq.current) return; // elavult válasz
+
+  setPlayerData(p);
+  setPlayerItems(items || []);
+  setSelectedItem(prev => {
+    if (items?.length) {
+      return items.find(i => prev && Number(i.owned_id) === Number(prev.owned_id)) || items[0];
     }
-  };
+    return null;
+  });
+};
+
 
   useEffect(() => {
     if (!userId) {
@@ -150,8 +154,8 @@ export default function BlacksmithModal({ onClose }) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          playerId: Number(userId),
-          itemId: selectedItem.item_id,
+        playerId: Number(userId),
+        ownedId: selectedItem.owned_id,
         }),
       });
 
@@ -228,14 +232,14 @@ export default function BlacksmithModal({ onClose }) {
               ) : (
                 <select
                   className="itemSelect px-3 py-2"
-                  value={selectedItem?.item_id ?? ""}
+                  value={selectedItem?.owned_id ?? ""}
                   onChange={(e) => {
                     const id = Number(e.target.value);
-                    setSelectedItem(playerItems.find((i) => Number(i.item_id) === id));
+                    setSelectedItem(playerItems.find((i) => Number(i.owned_id) === id));
                   }}
                 >
                   {playerItems.map((item) => (
-                    <option key={item.item_id} value={item.item_id}>
+                    <option key={item.owned_id} value={item.owned_id}>
                       {item.name} +{num(item.upgrade_level, 0)}
                     </option>
                   ))}
