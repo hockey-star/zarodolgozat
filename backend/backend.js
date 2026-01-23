@@ -818,7 +818,7 @@ app.post("/api/blacksmith/upgrade", (req, res) => {
   }
 
   // költség-multiplikátor: összhangban a frontenddel (250)
-  const MULT = 250;
+  const MULT = 50;
 
   pool.getConnection((err, conn) => {
     if (err) {
