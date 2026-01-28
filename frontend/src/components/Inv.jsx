@@ -649,146 +649,162 @@ function unequipItem(ownedId) {
           </div>
         )}
 
-        {/* SPELLBOOK / DECK MODAL */}
-        {showDeckEditor && (
-          <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-40">
-            <div className="relative text-white flex flex-col items-center">
-              <div className="w-full max-w-[1200px] flex justify-between items-center mb-2 px-2">
-                <h2 className="text-xl font-bold">
-                  Spellbook / Deck – {classKey?.toUpperCase()}
-                </h2>
-                <div className="text-sm text-gray-200">
-                  Deck mérete: {tempDeck.length} / {MAX_DECK_SIZE}
-                </div>
-              </div>
+{/* SPELLBOOK / DECK MODAL */}
+{showDeckEditor && (
+  <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-[100] backdrop-blur-sm">
+    <style>
+      {`
+        .book-text { font-family: 'Jersey 10', sans-serif; }
+        .pixel-scroll::-webkit-scrollbar { width: 4px; }
+        .pixel-scroll::-webkit-scrollbar-track { background: rgba(0,0,0,0.1); }
+        .pixel-scroll::-webkit-scrollbar-thumb { background: #8a704a; border: 1px solid #000; }
+        
+        /* Rarity-alapú stílusok a pici kártyákhoz */
+        .rarity-common { border-color: #9ca3af; box-shadow: inset 0 0 5px rgba(156, 163, 175, 0.3); }
+        .rarity-rare { border-color: #3b82f6; box-shadow: inset 0 0 5px rgba(59, 130, 246, 0.3); }
+        .rarity-epic { border-color: #a855f7; box-shadow: inset 0 0 5px rgba(168, 85, 247, 0.3); }
+        .rarity-legendary { border-color: #eab308; box-shadow: inset 0 0 8px rgba(234, 179, 8, 0.4); }
 
-              <div className="relative w-[68vw] max-w-[1000px] aspect-[870/704] flex items-center justify-center">
-                <img
-                  src={spellbookImg}
-                  alt="Spellbook"
-                  className="absolute inset-0 w-full h-full object-contain pointer-events-none select-none"
-                />
+        .card-inner-label {
+          background: rgba(0,0,0,0.85);
+          border-top: 1px solid currentColor;
+        }
+      `}
+    </style>
 
-                <div
-                  className="absolute flex pointer-events-none"
-                  style={{
-                    width: "78%",
-                    height: "52%",
-                    top: "37%",
-                    left: "50%",
-                    transform: "translate(-50%, -50%)",
-                    gap: "3rem",
-                  }}
-                >
-                  <div className="flex-1 pointer-events-auto">
-                    <div className="font-semibold mb-1 text-sm text-yellow-100">
-                      Elérhető képességek
-                    </div>
+    <div className="relative text-white flex flex-col items-center w-full max-w-[1000px]">
+      
+      {/* HEADER */}
+      <div className="w-full max-w-[850px] flex justify-between items-end mb-2 px-6 book-text">
+        <h2 className="text-4xl tracking-tight text-amber-50 drop-shadow-md uppercase">
+          {classKey} Deck
+        </h2>
+        <div className="text-xl text-red-500">
+          Capacity: <span className={tempDeck.length > MAX_DECK_SIZE ? 'text-red-500' : 'text-white'}>
+            {tempDeck.length} / {MAX_DECK_SIZE}
+          </span>
+        </div>
+      </div>
 
-                    <div className="h-full overflow-y-auto pr-1 pixel-scroll">
-                      <div className="grid grid-cols-3 gap-2">
-                        {abilityPool.map((ab) => {
-                          const imgSrc = resolveCardImageFromAbility(ab);
-                          return (
-                            <button
-                              key={ab.id}
-                              onClick={() => handleAddToDeck(ab.id)}
-                              className="relative aspect-[3/4] rounded-md overflow-hidden hover:brightness-110"
-                            >
-                              <img
-                                src={imgSrc}
-                                alt={ab.name}
-                                className="absolute inset-0 w-full h-full object-cover"
-                              />
-                              <div className="absolute bottom-0 w-full bg-black/75 px-1 py-[3px]">
-                                <div className="text-[9px] font-semibold text-center">
-                                  {ab.name}
-                                </div>
-                                <div className="text-[8px] text-amber-200 uppercase text-center">
-                                  {ab.type} • {ab.rarity}
-                                </div>
-                              </div>
-                            </button>
-                          );
-                        })}
+      {/* BOOK CONTAINER */}
+      <div className="relative w-[75vw] max-w-[900px] aspect-[870/620] flex items-center justify-center">
+        <img
+          src={spellbookImg}
+          alt="Spellbook"
+          className="absolute inset-0 w-full h-full object-contain pointer-events-none select-none brightness-110 sepia-[0.1]"
+        />
+
+        <div
+          className="absolute flex"
+          style={{
+            width: "76%",
+            height: "58%",
+            top: "46%",
+            left: "50%",
+            transform: "translate(-50%, -50%)",
+            gap: "8%",
+          }}
+        >
+          {/* BAL OLDAL: ELÉRHETŐ */}
+          <div className="flex-1 flex flex-col min-w-0">
+            <div className="book-text text-xl text-[#2a2218] border-b border-[#2a2218]/30 mb-3 font-bold uppercase text-center">
+              Elérhető képességek
+            </div>
+
+            <div className="flex-1 overflow-y-auto pr-1 pixel-scroll pointer-events-auto">
+              <div className="grid grid-cols-3 gap-2">
+                {abilityPool.map((ab) => {
+                  const rarityClass = `rarity-${ab.rarity?.toLowerCase() || 'common'}`;
+                  const colorClass = 
+                    ab.rarity === 'rare' ? 'text-blue-400' : 
+                    ab.rarity === 'epic' ? 'text-purple-400' : 
+                    ab.rarity === 'legendary' ? 'text-yellow-400' : 'text-gray-300';
+
+                  return (
+                    <button
+                      key={ab.id}
+                      onClick={() => handleAddToDeck(ab.id)}
+                      className={`relative aspect-[3/4] rounded-sm overflow-hidden border-2 transition-transform hover:scale-105 active:scale-95 ${rarityClass}`}
+                    >
+                      <img src={resolveCardImageFromAbility(ab)} className="absolute inset-0 w-full h-full object-cover" />
+                      <div className="absolute bottom-0 w-full card-inner-label p-0.5 text-center">
+                        <div className={`book-text text-[9px] leading-tight truncate px-1 ${colorClass}`}>
+                          {ab.name}
+                        </div>
                       </div>
-                    </div>
-                  </div>
-
-                  <div className="flex-1 pointer-events-auto">
-                    <div className="font-semibold mb-1 text-sm text-yellow-100">
-                      Jelenlegi pakli
-                    </div>
-
-                    <div className="h-full overflow-y-auto pr-1 pixel-scroll">
-                      {uniqueDeckIds.length === 0 ? (
-                        <div className="text-sm text-amber-100/80">
-                          A pakli üres. Kattints bal oldalt egy képességre.
-                        </div>
-                      ) : (
-                        <div className="grid grid-cols-3 gap-2">
-                          {uniqueDeckIds.map((id) => {
-                            const ab = ABILITIES_BY_ID[id];
-                            if (!ab) return null;
-                            const count = deckCounts[id];
-                            const imgSrc = resolveCardImageFromAbility(ab);
-
-                            return (
-                              <button
-                                key={id}
-                                onClick={() => handleRemoveOneFromDeck(id)}
-                                className="relative aspect-[3/4] rounded-md overflow-hidden hover:brightness-110"
-                              >
-                                <img
-                                  src={imgSrc}
-                                  alt={ab.name}
-                                  className="absolute inset-0 w-full h-full object-cover"
-                                />
-                                <div className="absolute top-1 left-1 bg-black/80 text-[8px] px-1 rounded">
-                                  x{count}
-                                </div>
-                                <div className="absolute bottom-0 w-full bg-black/75 px-1 py-[3px]">
-                                  <div className="text-[9px] font-semibold text-center">
-                                    {ab.name}
-                                  </div>
-                                  <div className="text-[8px] text-amber-200 uppercase text-center">
-                                    {ab.type} • {ab.rarity}
-                                  </div>
-                                </div>
-                              </button>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="mt-4 w-full max-w-[1200px] flex justify-between items-center px-2">
-                <div className="text-xs text-gray-200">
-                  Tipp: bal oldalt hozzáadsz, jobb oldalt eltávolítasz.
-                </div>
-
-                <div className="space-x-2">
-                  <button
-                    className="px-4 py-2 bg-gray-800 rounded"
-                    onClick={() => setShowDeckEditor(false)}
-                  >
-                    Mégse
-                  </button>
-                  <button
-                    className="px-4 py-2 bg-emerald-600 rounded"
-                    onClick={handleSaveDeck}
-                  >
-                    Mentés
-                  </button>
-                </div>
+                    </button>
+                  );
+                })}
               </div>
             </div>
           </div>
-        )}
 
+          {/* JOBB OLDAL: PAKLI */}
+          <div className="flex-1 flex flex-col min-w-0">
+            <div className="book-text text-xl text-[#2a2218] border-b border-[#2a2218]/30 mb-3 font-bold uppercase text-center">
+              Aktív Deck
+            </div>
+
+            <div className="flex-1 overflow-y-auto pr-1 pixel-scroll pointer-events-auto">
+              {uniqueDeckIds.length === 0 ? (
+                <div className="h-full flex items-center justify-center opacity-40">
+                  <div className="book-text text-lg text-[#2a2218] italic underline decoration-dotted">Empty Deck</div>
+                </div>
+              ) : (
+                <div className="grid grid-cols-3 gap-2">
+                  {uniqueDeckIds.map((id) => {
+                    const ab = ABILITIES_BY_ID[id];
+                    if (!ab) return null;
+                    const count = deckCounts[id];
+                    const rarityClass = `rarity-${ab.rarity?.toLowerCase() || 'common'}`;
+                    const colorClass = 
+                      ab.rarity === 'rare' ? 'text-blue-400' : 
+                      ab.rarity === 'epic' ? 'text-purple-400' : 
+                      ab.rarity === 'legendary' ? 'text-yellow-400' : 'text-gray-300';
+
+                    return (
+                      <button
+                        key={id}
+                        onClick={() => handleRemoveOneFromDeck(id)}
+                        className={`relative aspect-[3/4] rounded-sm overflow-hidden border-2 transition-transform hover:scale-105 active:scale-95 ${rarityClass}`}
+                      >
+                        <img src={resolveCardImageFromAbility(ab)} className="absolute inset-0 w-full h-full object-cover" />
+                        <div className="absolute top-0 right-0 bg-black/90 border-b border-l border-white/20 text-white px-1 z-10 book-text text-[10px]">
+                          x{count}
+                        </div>
+                        <div className="absolute bottom-0 w-full card-inner-label p-0.5 text-center">
+                          <div className={`book-text text-[9px] leading-tight truncate px-1 ${colorClass}`}>
+                            {ab.name}
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* CONTROLS */}
+      <div className="mt-4 flex gap-6 book-text">
+        <button
+          className="px-6 py-2 invInvEquipBtn"
+          onClick={() => setShowDeckEditor(false)}
+        >
+          MÉGSE
+        </button>
+        <button
+          className="invInvEquipBtn px-10 py-2 "
+          onClick={handleSaveDeck}
+        >
+          DECK MENTÉS
+        </button>
+      </div>
+    </div>
+  </div>
+)}
         {/* HOTSPOTOK A HÁZBAN */}
         <div className="flex justify-between flex-1">
           <div style={{ width: "80%", height: "80%" }}>
