@@ -342,7 +342,7 @@ const handleLoadingDone = React.useCallback(() => {
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black">
           <div className="w-[420px] rounded-2xl bg-zinc-900 p-8 text-center shadow-2xl border border-zinc-700">
             <div className="text-4xl font-extrabold text-red-600 mb-4">
-              ☠️ ELBUKTÁL
+              ELBUKTÁL
             </div>
 
             <div className="text-zinc-300 mb-8">

@@ -43,3 +43,50 @@
   /* Kivettük a 0.1s plusz késleltetést, így a főcímmel együtt mozog */
   animation: xenoverse-in 0.4s ease-out forwards, xenoverse-pulse 0.8s infinite ease-in-out 0.4s;
 }
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fadeInUp {
+  animation: fadeInUp 180ms ease-out;
+}
+@keyframes flash {
+  0% { background: rgba(255,255,255,0.08); }
+  100% { background: transparent; }
+}
+.flash-on-update {
+  animation: flash 180ms ease-out;
+}
+/* Pixel-art specifikus szöveg simítás kikapcsolása */
+.pixel-text-sharp {
+  font-family: 'Jersey 10', sans-serif;
+  -webkit-font-smoothing: none;
+  -moz-osx-font-smoothing: grayscale;
+  font-smooth: never;
+  text-rendering: optimizeSpeed;
+  image-rendering: pixelated;
+}
+
+/* Egyedi görgetősáv a Dark Fantasy stílushoz */
+.dark-log-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+.dark-log-scroll::-webkit-scrollbar-track {
+  background: #050505;
+}
+.dark-log-scroll::-webkit-scrollbar-thumb {
+  background: #3d0a0a;
+  border: 1px solid #000;
+}
+.dark-log-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: #3d0a0a #050505;
+}

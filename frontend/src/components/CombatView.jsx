@@ -162,7 +162,7 @@ const ENEMY_KITS = {
             width: "1000px",
             height: "1000px",
           });
-          pushLog(`👻 Ghost: Phase – sebezhetetlen 1 körre!`);
+          pushLog(`Ghost: Phase – sebezhetetlen 1 körre!`);
           setEnemyInvulnTurns(1);
           return { consumesTurn: false }; // ✅ utility, utána még üthet
         },
@@ -184,7 +184,7 @@ const ENEMY_KITS = {
             width: "1000px",
             height: "1050px",
           });
-          pushLog(`❄️ Lich Mage: Ice Lance – Weaken (1 kör).`);
+          pushLog(`Lich Mage: Ice Lance – Weaken (1 kör).`);
           setPlayerWeakenTurns(1);
           return { consumesTurn: false }; // ✅ utility, utána még üthet
         },
@@ -202,7 +202,7 @@ const ENEMY_KITS = {
             width: "1000px",
             height: "1000px",
           });
-          pushLog(`🛡️ Lich Mage: Arcane Ward – a következő találat csökkentve!`);
+          pushLog(`Lich Mage: Arcane Ward – a következő találat csökkentve!`);
           setEnemyGuardHits(1);
           return { consumesTurn: false }; // ✅ utility, utána még üthet
         },
@@ -225,7 +225,7 @@ const ENEMY_KITS = {
             width: "950px",
             height: "950px",
           });
-          pushLog(`🛡️ Bandit: Guard – a következő találat csökkentve!`);
+          pushLog(`Bandit: Guard – a következő találat csökkentve!`);
           setEnemyGuardHits(1);
           return { consumesTurn: false }; // ✅ utility, utána még üthet
         },
@@ -812,13 +812,102 @@ export default function CombatView({
     legendary: { border: "border-yellow-500", glow: "hover:shadow-[0_0_35px_12px_rgba(234,179,8,1)]" },
   };
 
-  function pushLog(msg) {
-    setLog((prev) => {
-      const last = prev[prev.length - 1];
-      if (last === msg) return prev;
-      return [...prev, msg];
-    });
+// ✅ LOG BATCHING (smooth UI)
+const logBufferRef = useRef([]);
+const logFlushTimerRef = useRef(null);
+
+function flushLogBuffer() {
+  const batch = logBufferRef.current;
+  if (!batch.length) return;
+
+  logBufferRef.current = [];
+
+  setLog((prev) => {
+    // dupe guard (a batch első elemére a prev végével)
+    let next = prev;
+    for (const msg of batch) {
+      const last = next[next.length - 1];
+      if (last !== msg) next = [...next, msg];
+    }
+    // csak az utolsó N sor maradjon (stabil + gyors)
+    return next.slice(-30);
+  });
+}
+
+function pushLog(msg) {
+  // bufferbe rakjuk
+  logBufferRef.current.push(msg);
+
+  // egyszer ütemezünk flush-t
+  if (!logFlushTimerRef.current) {
+    logFlushTimerRef.current = setTimeout(() => {
+      logFlushTimerRef.current = null;
+      flushLogBuffer();
+    }, 180); // 150-250ms jó tartomány, ez smooth-olja
   }
+}
+function getLogColorClass(msg) {
+  if (!msg) return "text-[#d1c7a7]";
+  const m = msg.toLowerCase();
+
+  // --- KRITIKUS / KIVÉGZÉS (Arany) ---
+  if (m.includes("[crit]") || m.includes("crushing blow") || m.includes("győzelem")) {
+    return "text-[#facc15]";
+  }
+
+  // --- BERSERKER / RAGE / BATTLE CRY (Lila/Fukszia) ---
+  if (m.includes("berserker") || m.includes("rage") || m.includes("battle cry") || m.includes("rage") || m.includes("mortal strike")) {
+    return "text-[#d8b4fe]";
+  }
+
+  // --- SEBZÉS / HIT / BLEED (Élénkvörös) ---
+  if (m.includes("[hit]") || m.includes("sebzés") || m.includes("támad") || m.includes("slash") || m.includes("cleave")) {
+    return "text-[#ef4444]";
+  }
+
+  // --- MÁGIA / ARCANE / DRAIN (Lila-Kék) ---
+  if (m.includes("arcane") || m.includes("drain") || m.includes("mana") || m.includes("missiles")) {
+    return "text-[#a78bfa]";
+  }
+
+  // --- MÉREG / GYÓGYNÖVÉNYEK (Zöld) ---
+  if (m.includes("poison") || m.includes("méreg") || m.includes("herbs") || m.includes("mend")) {
+    return "text-[#84cc16]";
+  }
+
+  // --- ÉGÉS (Narancs) ---
+  if (m.includes("burn") || m.includes("fire") || m.includes("égés") || m.includes("fireball")) {
+    return "text-[#f97316]";
+  }
+
+  // --- FAGY / STUN / KITÉRÉS (Jégkék) ---
+  if (m.includes("ice") || m.includes("fagy") || m.includes("stun") || m.includes("evasion") || m.includes("snare") || m.includes("kábít")) {
+    return "text-[#22d3ee]";
+  }
+
+  // --- VÉDEKEZÉS / PAJZS (Kék) ---
+  if (m.includes("védekezés") || m.includes("shield") || m.includes("parry") || m.includes("ward")) {
+    return "text-[#60a5fa]";
+  }
+
+  // --- GYÓGYÍTÁS (Smaragd) ---
+  if (m.includes("heal") || m.includes("gyógy") || m.includes("restore") || m.includes("rallying")) {
+    return "text-[#10b981]";
+  }
+
+  // Alapértelmezett pergamen szín
+  return "text-[#d1c7a7]";
+}
+
+
+// unmount cleanup (nehogy lógjon timer)
+useEffect(() => {
+  return () => {
+    if (logFlushTimerRef.current) clearTimeout(logFlushTimerRef.current);
+    logFlushTimerRef.current = null;
+    logBufferRef.current = [];
+  };
+}, []);
 
   function canUseEnemyAbility(abilityId, maxUses) {
     const used = enemyUsesRef.current?.[abilityId] || 0;
@@ -977,7 +1066,7 @@ export default function CombatView({
       const next = Math.max(0, enemyFrenzyTurnsRef.current - 1);
       enemyFrenzyTurnsRef.current = next;
       setEnemyFrenzyTurns(next);
-      if (next <= 0) pushLog("😡 Frenzy elmúlt.");
+      if (next <= 0) pushLog("[HIT] Frenzy elmúlt.");
     }
 
     resolvePendingReplaces();
@@ -1041,7 +1130,7 @@ export default function CombatView({
               const bossName = CLASS_BOSS_MAP[classKey];
               if (bossName) {
                 allowedNames = [bossName];
-                pushLog(`🔥 Class quest boss közeleg: ${bossName} (kaszt: ${classKey})`);
+                pushLog(`Class quest boss közeleg: ${bossName} (kaszt: ${classKey})`);
               }
             }
           } catch (err) {
@@ -1093,9 +1182,9 @@ setDefending(false);
 setArcanePickerOpen(false);
 
 if (remainingEnemies.length > 0) {
-  setLog([`⚔️ ${currentEnemy.name} megtámadott! (ERŐSÍTÉS: +${remainingEnemies.length} ellenség közeleg...)`]);
+  setLog([`${currentEnemy.name} megtámadott! (ERŐSÍTÉS: +${remainingEnemies.length} ellenség közeleg...)`]);
 } else {
-  setLog([`⚔️ A ${currentEnemy.name} kihívott téged!`]);
+  setLog([`A ${currentEnemy.name} kihívott téged!`]);
 }
         setHPPopups([]);
         setPlayerDamaged(false);
@@ -1194,7 +1283,7 @@ if (remainingEnemies.length > 0) {
         damagePerTurn: runEffect.poisonDmg ?? 3,
         remainingTurns: runEffect.poisonTurns,
       });
-      pushLog(`☠️ Utazási event: megmérgeződtél (${runEffect.poisonTurns} kör).`);
+      pushLog(`Utazási event: megmérgeződtél (${runEffect.poisonTurns} kör).`);
     }
   }, [runEffect, wave, player]);
 
@@ -1260,7 +1349,7 @@ if (remainingEnemies.length > 0) {
       setEnemyHP((prev) => {
         const newHP = Math.max(0, prev - dmg);
         addHPPopup(-dmg, "enemy");
-        pushLog(`🔮 ${choice.name}: ${dmg} sebzés.`);
+        pushLog(`${choice.name}: ${dmg} sebzés.`);
         if (newHP <= 0) endBattle();
         return newHP;
       });
@@ -1272,7 +1361,7 @@ if (remainingEnemies.length > 0) {
       setPlayerHP(() => {
         const amount = Math.max(0, maxHPFromPlayer - playerHPRef.current);
         if (amount > 0) addHPPopup(+amount, "player");
-        pushLog(`✨ ${choice.name}: teljes gyógyítás.`);
+        pushLog(`${choice.name}: teljes gyógyítás.`);
         return maxHPFromPlayer;
       });
     }
@@ -1287,7 +1376,7 @@ if (remainingEnemies.length > 0) {
       setEnemyHP((prev) => {
         const newHP = Math.max(0, prev - dmg);
         addHPPopup(-dmg, "enemy", true);
-        pushLog(`☄️ ${choice.name}: ${dmg} brutális sebzés!`);
+        pushLog(`${choice.name}: ${dmg} brutális sebzés!`);
         if (newHP <= 0) endBattle();
         return newHP;
       });
@@ -1313,7 +1402,7 @@ if (remainingEnemies.length > 0) {
     setEnemyHP((prev) => {
       const newHP = Math.max(0, prev - bite);
       addHPPopup(-bite, "enemy", false, "pet-hit");
-      pushLog(`🐺 Pet Bite: ${bite} sebzés!`);
+      pushLog(`Pet Bite: ${bite} sebzés!`);
       if (newHP <= 0) endBattle();
       return newHP;
     });
@@ -1359,7 +1448,7 @@ if (remainingEnemies.length > 0) {
     if (card.type === "attack") {
       let blockedByPhase = false;
       if (enemyInvulnTurnsRef.current > 0 && enemyHPRef.current > 0) {
-        pushLog(`👻 ${enemy.name} Phase-ben van – a támadás lepattan!`);
+        pushLog(`${enemy.name} Phase-ben van – a támadás lepattan!`);
         setEnemyInvulnTurnsSync(0);
         blockedByPhase = true;
       }
@@ -1452,7 +1541,7 @@ if (remainingEnemies.length > 0) {
         if (playerWeakenTurnsRef.current > 0) {
           const WEAKEN_MULT = 0.75;
           finalRolls = finalRolls.map((r) => ({ ...r, amount: Math.max(1, Math.floor(r.amount * WEAKEN_MULT)) }));
-          pushLog("🧊 Weaken: csökkentett sebzés!");
+          pushLog("Weaken: csökkentett sebzés!");
         }
 
         if (classKey === "warrior") {
@@ -1460,7 +1549,7 @@ if (remainingEnemies.length > 0) {
           const outMult = warriorDamageOutMult(rage01);
           if (outMult > 1.001) {
             finalRolls = finalRolls.map((r) => ({ ...r, amount: Math.floor(r.amount * outMult) }));
-            pushLog(`🩸 Berserker Rage: +${Math.round((outMult - 1) * 100)}% sebzés (${playerHPRef.current}/${maxHPFromPlayer} HP).`);
+            pushLog(`Berserker Rage: +${Math.round((outMult - 1) * 100)}% sebzés (${playerHPRef.current}/${maxHPFromPlayer} HP).`);
           }
         }
 
@@ -1468,13 +1557,13 @@ if (remainingEnemies.length > 0) {
           const hpPercent = Math.floor((enemyHPRef.current / enemy.maxHp) * 100);
           if (hpPercent <= card.executeBelowPercent) {
             finalRolls = finalRolls.map((r) => ({ ...r, amount: r.amount * 2 }));
-            pushLog("☠️ Crushing Blow – kivégzés!");
+            pushLog("Crushing Blow – kivégzés!");
           }
         }
 
         if (playerDamageBuff && playerDamageBuff.multiplier) {
           finalRolls = finalRolls.map((r) => ({ ...r, amount: Math.floor(r.amount * playerDamageBuff.multiplier) }));
-          pushLog("🩸 A Rallying Shout erősíti a támadásod!");
+          pushLog("A Rallying Shout erősíti a támadásod!");
           const remaining = (playerDamageBuff.remainingAttacks ?? 1) - 1;
           if (remaining <= 0) setPlayerDamageBuff(null);
           else setPlayerDamageBuff((prev) => (prev ? { ...prev, remainingAttacks: remaining } : null));
@@ -1482,7 +1571,7 @@ if (remainingEnemies.length > 0) {
 
         if (enemyVulnerability && enemyVulnerability.multiplier) {
           finalRolls = finalRolls.map((r) => ({ ...r, amount: Math.floor(r.amount * enemyVulnerability.multiplier) }));
-          pushLog(`🔮 A korábbi Arcane Surge miatt ${enemy.name} több sebzést szenved el!`);
+          pushLog(`A korábbi Arcane Surge miatt ${enemy.name} több sebzést szenved el!`);
         }
 
         const runDmgMult = runEffect?.dmgMult ?? 1.0;
@@ -1492,7 +1581,7 @@ if (remainingEnemies.length > 0) {
             amount: Math.max(1, Math.floor(r.amount * runDmgMult)),
           }));
           // csak 1 log, nem hit-enként
-          pushLog(`✨ Utazási hatás: +${Math.round((runDmgMult - 1) * 100)}% sebzés`);
+          pushLog(`Utazási hatás: +${Math.round((runDmgMult - 1) * 100)}% sebzés`);
         }
 
         finalRolls.forEach((roll, index) => {
@@ -1507,7 +1596,7 @@ if (remainingEnemies.length > 0) {
                 dmg = Math.max(1, Math.floor(dmg * GUARD_MULT));
                 const nextHits = Math.max(0, enemyGuardHitsRef.current - 1);
                 setEnemyGuardHitsSync(nextHits);
-                pushLog(`🛡️ ${enemy.name} Guard: csökkentett találat!`);
+                pushLog(`${enemy.name} Guard: csökkentett találat!`);
               }
 
               setEnemyHP((prev) => {
@@ -1522,7 +1611,7 @@ if (remainingEnemies.length > 0) {
                 setPlayerHP((prev) => {
                   const newHP = Math.min(prev + card.heal, maxHPFromPlayer);
                   addHPPopup(+card.heal, "player");
-                  pushLog(`🧛 Drain Life gyógyít: +${card.heal} HP.`);
+                  pushLog(`Drain Life gyógyít: +${card.heal} HP.`);
                   return newHP;
                 });
               }
@@ -1532,7 +1621,7 @@ if (remainingEnemies.length > 0) {
 
         if (card.poison && card.poison.damagePerTurn > 0 && card.poison.turns > 0) {
           setEnemyPoison({ damagePerTurn: card.poison.damagePerTurn, remainingTurns: card.poison.turns });
-          pushLog(`☠️ ${enemy.name} megmérgezve: ${card.poison.damagePerTurn} sebzés ${card.poison.turns} körön át.`);
+          pushLog(`${enemy.name} megmérgezve: ${card.poison.damagePerTurn} sebzés ${card.poison.turns} körön át.`);
         }
 
         if (card.bleed) {
@@ -1544,27 +1633,27 @@ if (remainingEnemies.length > 0) {
               return { percent: nextPercent, remainingTurns: card.bleed.turns };
             });
           }
-          pushLog(`🩸 Vérzés! (${stacks} stack) ${enemy.name} minden körben sebződik.`);
+          pushLog(`Vérzés! (${stacks} stack) ${enemy.name} minden körben sebződik.`);
         }
 
         if (card.burn && card.burn.percent && card.burn.turns) {
           const totalHit = finalRolls.reduce((a, b) => a + b.amount, 0);
           const burnPerTurn = Math.max(1, Math.floor((totalHit * card.burn.percent) / 100));
           setEnemyBurn({ damagePerTurn: burnPerTurn, remainingTurns: card.burn.turns });
-          pushLog(`🔥 ${enemy.name} égni kezd: ${burnPerTurn} sebzés ${card.burn.turns} körön át.`);
+          pushLog(`${enemy.name} égni kezd: ${burnPerTurn} sebzés ${card.burn.turns} körön át.`);
         }
 
         if (card.stunTurns && card.stunTurns > 0) {
           spawnAbilityEffect({ src: stunFx, target: "enemy_stun", width: "500px", height: "500px" });
           setEnemyStun((prev) => prev + card.stunTurns);
-          pushLog(`❄️ ${enemy.name} elkábult, kihagyja a következő körét!`);
+          pushLog(`${enemy.name} elkábult, kihagyja a következő körét!`);
         }
 
         if (card.vulnerabilityDebuff && card.vulnerabilityDebuff.multiplier) {
           const mult = card.vulnerabilityDebuff.multiplier ?? 1.15;
           const turns = card.vulnerabilityDebuff.turns ?? 3;
           setEnemyVulnerability({ multiplier: mult, remainingTurns: turns });
-          pushLog(`🔮 ${enemy.name} sebezhetővé válik: +${Math.round((mult - 1) * 100)}% sebzést kap ${turns} körig!`);
+          pushLog(`${enemy.name} sebezhetővé válik: +${Math.round((mult - 1) * 100)}% sebzést kap ${turns} körig!`);
         }
       }
     }
@@ -1584,26 +1673,26 @@ if (remainingEnemies.length > 0) {
 
       if (card.evasionTurns && card.evasionTurns > 0) {
         setPlayerEvasionTurns((prev) => Math.max(prev, card.evasionTurns));
-        pushLog(`💨 ${card.name}: kitérés ${card.evasionTurns} körig!`);
+        pushLog(`${card.name}: kitérés ${card.evasionTurns} körig!`);
       }
 
       if (card.defenseTurns && card.defenseTurns > 1) {
         setDefending(card.defenseTurns);
-        pushLog(`🛡️ ${card.name}: védekezés aktiválva ${card.defenseTurns} körre!`);
+        pushLog(`${card.name}: védekezés aktiválva ${card.defenseTurns} körre!`);
       } else {
         setDefending(1);
-        pushLog("🛡️ Védekezés aktiválva – a következő ütés felezve.");
+        pushLog("Védekezés aktiválva – a következő ütés felezve.");
       }
 
       if (card.stunTurns && card.stunTurns > 0) {
         spawnAbilityEffect({ src: stunFx, target: "enemy_stun", width: "1000px", height: "1500px" });
         setEnemyStun((prev) => prev + card.stunTurns);
-        pushLog(`⚔️ Parry! ${enemy.name} elkábul, kihagyja a körét!`);
+        pushLog(`Parry! ${enemy.name} elkábul, kihagyja a körét!`);
       }
 
       if (classKey === "archer" && card.petTauntTurns && petHP > 0) {
         setPetTauntTurns((prev) => Math.max(prev, card.petTauntTurns));
-        pushLog(`🐺 Pet Taunt: a mob a petet üti (${card.petTauntTurns} kör).`);
+        pushLog(`Pet Taunt: a mob a petet üti (${card.petTauntTurns} kör).`);
       }
     }
 
@@ -1627,7 +1716,7 @@ if (remainingEnemies.length > 0) {
       setPlayerHP((prev) => {
         const newHP = Math.min(prev + healAmount, maxHPFromPlayer);
         addHPPopup(+healAmount, "player");
-        pushLog(`✨ ${card.name}: +${healAmount} HP (most ${newHP}/${maxHPFromPlayer})`);
+        pushLog(`${card.name}: +${healAmount} `);
         return newHP;
       });
 
@@ -1635,7 +1724,7 @@ if (remainingEnemies.length > 0) {
         const mult = card.damageBuff.multiplier ?? 1.5;
         const turns = card.damageBuff.turns ?? 1;
         setPlayerDamageBuff({ multiplier: mult, remainingAttacks: turns });
-        pushLog(`📣 ${card.name}: a következő ${turns} támadásod +${Math.round((mult - 1) * 100)}% sebzést okoz!`);
+        pushLog(`${card.name}: a következő ${turns} támadásod +${Math.round((mult - 1) * 100)}% sebzést okoz!`);
       }
 
       if (classKey === "archer" && card.petHeal && petHP > 0) {
@@ -1643,7 +1732,7 @@ if (remainingEnemies.length > 0) {
         setPetHP((prev) => {
           const newHP = Math.min(petMaxHP, prev + amount);
           addHPPopup(+amount, "pet");
-          pushLog(`🐺 Mend Pet: +${amount} HP (Pet: ${newHP}/${petMaxHP})`);
+          pushLog(`Mend Pet: +${amount} HP (Pet: ${newHP}/${petMaxHP})`);
           return newHP;
         });
       }
@@ -1660,7 +1749,7 @@ if (remainingEnemies.length > 0) {
     if (playerWeakenTurnsRef.current > 0) {
       const next = Math.max(0, playerWeakenTurnsRef.current - 1);
       setPlayerWeakenTurnsSync(next);
-      if (next <= 0) pushLog("🧊 Weaken elmúlt.");
+      if (next <= 0) pushLog("Weaken elmúlt.");
     }
   }
 
@@ -1694,7 +1783,7 @@ if (remainingEnemies.length > 0) {
     const addedStatPoints = levelsGained * 3;
 
     setLastRewards({ xpGain, goldGain, levelsGained, addedStatPoints, newXP, newLevel });
-    pushLog(`🏆 Győzelem! +${goldGain} arany, +${xpGain} XP.`);
+    pushLog(`Győzelem! +${goldGain} arany, +${xpGain} XP.`);
   }, [enemy, enemyHP, playerHP, player, lastRewards]);
 
   useEffect(() => {
@@ -1715,7 +1804,7 @@ if (remainingEnemies.length > 0) {
   if (pDmg > 0) {
     setPlayerHP(newHP);
     addHPPopup(-pDmg, "player");
-    pushLog(`☠️ Méreg sebzés: ${pDmg} (Te – ${newHP} HP).`);
+    pushLog(`Méreg sebzés: ${pDmg} (Te – ${newHP} HP).`);
   }
 
   const remaining = (playerPoison.remainingTurns ?? 1) - 1;
@@ -1732,7 +1821,7 @@ if (remainingEnemies.length > 0) {
         if (burnDmg > 0) {
           setEnemyHP(newHP);
           addHPPopup(-burnDmg, "enemy");
-          pushLog(`🔥 Égés sebzés: ${burnDmg} (${enemy.name} – ${newHP} HP).`);
+          pushLog(`Égés sebzés: ${burnDmg} (${enemy.name} – ${newHP} HP).`);
         }
 
         const remaining = (enemyBurn.remainingTurns ?? 1) - 1;
@@ -1749,7 +1838,7 @@ if (remainingEnemies.length > 0) {
         if (poisonDmg > 0) {
           setEnemyHP(newHP);
           addHPPopup(-poisonDmg, "enemy");
-          pushLog(`☠️ Méreg sebzés: ${poisonDmg} (${enemy.name} – ${newHP} HP).`);
+          pushLog(`Méreg sebzés: ${poisonDmg} (${enemy.name} – ${newHP} HP).`);
         }
 
         const remaining = (enemyPoison.remainingTurns ?? 1) - 1;
@@ -1765,7 +1854,7 @@ if (remainingEnemies.length > 0) {
 
         setEnemyHP(newHP);
         addHPPopup(-bleedDmg, "enemy");
-        pushLog(`🩸 Vérzés: ${bleedDmg} sebzés (${enemyBleed.percent}%).`);
+        pushLog(`Vérzés: ${bleedDmg} sebzés (${enemyBleed.percent}%).`);
 
         const remaining = (enemyBleed.remainingTurns ?? 1) - 1;
         if (remaining <= 0 || newHP <= 0) setEnemyBleed(null);
@@ -1776,12 +1865,12 @@ if (remainingEnemies.length > 0) {
 
       // ===== Stun / evasion =====
       if (enemyStun > 0 && enemyHP > 0) {
-        pushLog(`❄️ ${enemy.name} elkábulva marad, kihagyja a körét!`);
+        pushLog(`${enemy.name} elkábulva marad, kihagyja a körét!`);
         setEnemyStun((prev) => Math.max(0, prev - 1));
 
         if (enemyVulnerability && enemyVulnerability.remainingTurns != null) {
           const remaining = enemyVulnerability.remainingTurns - 1;
-          if (remaining <= 0) { setEnemyVulnerability(null); pushLog("🔮 Az Arcane Surge hatása elmúlt."); }
+          if (remaining <= 0) { setEnemyVulnerability(null); pushLog("Az Arcane Surge hatása elmúlt."); }
           else setEnemyVulnerability((prev) => (prev ? { ...prev, remainingTurns: remaining } : null));
         }
 
@@ -1790,7 +1879,7 @@ if (remainingEnemies.length > 0) {
       }
 
       if (playerEvasionTurns > 0 && enemyHP > 0) {
-        pushLog(`💨 Kitértél! ${enemy.name} mellé üt.`);
+        pushLog(`Kitértél! ${enemy.name} mellé üt.`);
         setPlayerEvasionTurns((prev) => Math.max(0, prev - 1));
         finishEnemyTurnToPlayer();
         return;
@@ -1833,7 +1922,7 @@ if (remainingEnemies.length > 0) {
         if (classKey === "archer" && petAliveNow && !taunting) {
           if (Math.random() < PET_CFG.GUARD_CHANCE) {
             final = Math.floor(final * PET_CFG.GUARD_REDUCE_MULT);
-            pushLog("🛡️🐺 Pet Guard! A pet tompította az ütést.");
+            pushLog("Pet Guard! A pet tompította az ütést.");
           }
         }
 
@@ -1841,7 +1930,7 @@ if (remainingEnemies.length > 0) {
           setPetHP((prev) => {
             const newHP = Math.max(0, prev - final);
             addHPPopup(-final, "pet");
-            pushLog(`💥 ${enemy.name} a petet üti (${final} sebzés). (Pet: ${newHP}/${petMaxHP})`);
+            pushLog(`${enemy.name} a petet üti (${final} sebzés). (Pet: ${newHP}/${petMaxHP})`);
             return newHP;
           });
           setPetTauntTurns((prev) => Math.max(0, prev - 1));
@@ -1849,7 +1938,7 @@ if (remainingEnemies.length > 0) {
           setPlayerHP((prev) => {
             const newHP = Math.max(0, prev - final);
             addHPPopup(-final, "player");
-            pushLog(`💥 ${enemy.name} támad (${final} sebzés).`);
+            pushLog(`${enemy.name} támad (${final} sebzés).`);
             if (newHP <= 0) endBattle();
             return newHP;
           });
@@ -1857,7 +1946,7 @@ if (remainingEnemies.length > 0) {
 
         if (enemyVulnerability && enemyVulnerability.remainingTurns != null) {
           const remaining = enemyVulnerability.remainingTurns - 1;
-          if (remaining <= 0) { setEnemyVulnerability(null); pushLog("🔮 Az Arcane Surge hatása elmúlt."); }
+          if (remaining <= 0) { setEnemyVulnerability(null); pushLog("Az Arcane Surge hatása elmúlt."); }
           else setEnemyVulnerability((prev) => (prev ? { ...prev, remainingTurns: remaining } : null));
         }
 
@@ -1988,8 +2077,8 @@ async function handleContinue() {
 
     setLog((prev) => [
       ...prev,
-      `💀 ${enemy?.name || "Ellenség"} legyőzve...`,
-      `⚠️ Új ellenfél lép a helyére: ${nextEnemy.name}!`,
+      `${enemy?.name || "Ellenség"} legyőzve...`,
+      `! Új ellenfél lép a helyére: ${nextEnemy.name} !`,
     ]);
 
     // Fade/UI unlock
@@ -2109,51 +2198,67 @@ async function handleContinue() {
 
   const petAlive = classKey === "archer" && petMaxHP > 0 && petHP > 0;
 
-  return (
+return (
     <div className="fixed inset-0 text-white overflow-hidden">
+      {/* 1. GLOBÁLIS PIXEL STÍLUSOK (Hogy ne legyen elmosódva) */}
+      <style>
+        {`
+          .pixel-text-sharp {
+            font-family: 'Jersey 10', sans-serif;
+            -webkit-font-smoothing: none;
+            -moz-osx-font-smoothing: grayscale;
+            font-smooth: never;
+            text-rendering: optimizeSpeed;
+            image-rendering: pixelated;
+          }
+          .dark-log-scroll::-webkit-scrollbar { width: 6px; }
+          .dark-log-scroll::-webkit-scrollbar-track { background: rgba(0,0,0,0.3); }
+          .dark-log-scroll::-webkit-scrollbar-thumb { background: #3d0a0a; border: 1px solid #000; }
+          
+          /* Kártya animációk */
+          .card-anim-draw { animation: cardDraw 0.4s ease-out; }
+          .card-anim-play { animation: cardPlay 0.5s forwards; }
+          @keyframes cardDraw {
+            from { transform: translateY(200px) scale(0.5); opacity: 0; }
+            to { transform: translateY(0) scale(1); opacity: 1; }
+          }
+          @keyframes cardPlay {
+            to { transform: translateY(-300px) scale(1.2); opacity: 0; }
+          }
+        `}
+      </style>
+
+      {/* HÁTTÉR */}
       <div className="absolute inset-0 -z-10">
         <img src={bg} alt="bg" className="w-full h-full object-cover" />
       </div>
 
-{battleOver && pendingEnemies.length > 0 && playerHP > 0 && (
-  <div className="fixed inset-0 flex flex-col items-center justify-center z-[999] bg-black/75 backdrop-blur-sm xv2-container">
-    
-    {/* Felső sáv */}
-    <div className="xv2-bar w-full mb-6" />
+      {/* ÚJ ELLENSÉG OVERLAY (V2 STÍLUS) */}
+      {battleOver && pendingEnemies.length > 0 && playerHP > 0 && (
+        <div className="fixed inset-0 flex flex-col items-center justify-center z-[999] bg-black/75 backdrop-blur-sm xv2-container">
+          <div className="xv2-bar w-full mb-6" />
+          <div className="flex flex-col items-center scale-125">
+            <h2 className="xv2-title-main text-8xl italic tracking-tighter">ÚJ ELLENSÉG</h2>
+            <h2 className="xv2-title-sub text-6xl italic tracking-widest mb-10">KÖZELEDIK...</h2>
+            <div className="text-red-400 text-2xl mb-12 animate-pulse font-mono">
+              MARADÉK ELLENSÉGEK: {pendingEnemies.length}
+            </div>
+            <button
+              onClick={() => {
+                if (continueLockRef.current) return;
+                continueLockRef.current = true;
+                setFadeOpen(true);
+              }}
+              className="skip"
+            >
+              HARC ⚔️
+            </button>
+          </div>
+          <div className="xv2-bar w-full mt-6" />
+        </div>
+      )}
 
-    <div className="flex flex-col items-center scale-125">
-      <h2 className="xv2-title-main text-8xl italic tracking-tighter">
-        ÚJ ELLENSÉG
-      </h2>
-      <h2 className="xv2-title-sub text-6xl italic tracking-widest mb-10">
-        KÖZELEDIK...
-      </h2>
-      
-      <div className="text-red-400 text-2xl mb-12 animate-pulse font-mono">
-        MARADÉK ELLENSÉGEK: {pendingEnemies.length}
-      </div>
-
-     <button
-  onClick={() => {
-    if (continueLockRef.current) return;
-    continueLockRef.current = true;
-
-    // Csak a fade-et nyitjuk meg.
-    // A FadeOverlay onMid callback-je majd meghívja a handleContinue()-t,
-    // ami intézi a következő enemy betöltését és a reseteket.
-    setFadeOpen(true);
-  }}
-  className="skip"
->
-  HARC ⚔️
-</button>
-
-    </div>
-
-    {/* Alsó sáv */}
-    <div className="xv2-bar w-full mt-6" />
-  </div>
-)}
+      {/* JÁTÉKTÉR (SKÁLÁZOTT) */}
       <div className="absolute inset-0 flex items-center justify-center">
         <div
           ref={combatRootRef}
@@ -2165,23 +2270,18 @@ async function handleContinue() {
             transformOrigin: "center center",
           }}
         >
-          {/* MANA */}
+          {/* MAGE MANA UI */}
           {classKey === "mage" && enemy && !battleOver && (
             <div className="absolute z-40" style={MANA_UI.wrapperStyle}>
               <div className="text-center text-xs font-mono mb-1 text-cyan-200 drop-shadow">
                 Mana {mageMana}/{CTX_MAGE_MANA_MAX}
               </div>
-
               <div className="h-3 w-full bg-black/60 rounded-full overflow-hidden border border-cyan-400/40">
                 <div className="h-full bg-cyan-400 transition-all duration-300" style={{ width: `${(mageMana / CTX_MAGE_MANA_MAX) * 100}%` }} />
               </div>
-
               {mageMana >= CTX_MAGE_MANA_MAX && turn === "player" && (
                 <div className="flex justify-center mt-2">
-                  <button
-                    className="px-4 py-2 rounded bg-cyan-500/80 hover:bg-cyan-400 text-black text-sm font-bold"
-                    onClick={() => setArcanePickerOpen(true)}
-                  >
+                  <button className="px-4 py-2 rounded bg-cyan-500/80 hover:bg-cyan-400 text-black text-sm font-bold" onClick={() => setArcanePickerOpen(true)}>
                     ARCANE READY
                   </button>
                 </div>
@@ -2189,25 +2289,13 @@ async function handleContinue() {
             </div>
           )}
 
-          {/* ARCANE PICKER */}
+          {/* ARCANE PICKER MODAL */}
           {arcanePickerOpen && !battleOver && (
             <div className="absolute inset-0 z-[999] flex items-center justify-center bg-black/70">
               <div className="flex gap-6">
                 {ARCANE_CHOICES.map((c) => (
-                  <button
-                    key={c.id}
-                    onClick={() => castArcane(c)}
-                    className="relative w-40 h-56 rounded-xl overflow-hidden border-2 border-cyan-400/60 bg-cyan-900/40 hover:scale-105 transition"
-                    title={c.desc}
-                  >
-                    {c.img ? (
-                      <img src={c.img} alt={c.name} className="absolute inset-0 w-full h-full object-cover" />
-                    ) : (
-                      <div className="absolute inset-0 flex items-center justify-center text-cyan-200/60 text-xs">
-                        (később kép)
-                      </div>
-                    )}
-
+                  <button key={c.id} onClick={() => castArcane(c)} className="relative w-40 h-56 rounded-xl overflow-hidden border-2 border-cyan-400/60 bg-cyan-900/40 hover:scale-105 transition">
+                    {c.img ? <img src={c.img} alt={c.name} className="absolute inset-0 w-full h-full object-cover" /> : <div className="absolute inset-0 flex items-center justify-center text-cyan-200/60 text-xs">(később kép)</div>}
                     <div className="absolute bottom-0 w-full bg-black/70 p-2 text-center">
                       <div className="font-bold text-sm">{c.name}</div>
                       <div className="text-xs text-gray-200">{c.desc}</div>
@@ -2215,53 +2303,23 @@ async function handleContinue() {
                   </button>
                 ))}
               </div>
-
-              <button className="absolute top-6 right-6 px-4 py-2 rounded bg-gray-800 hover:bg-gray-700" onClick={() => setArcanePickerOpen(false)}>
-                X
-              </button>
+              <button className="absolute top-6 right-6 px-4 py-2 rounded bg-gray-800 hover:bg-gray-700" onClick={() => setArcanePickerOpen(false)}>X</button>
             </div>
           )}
 
-          {/* PET FRAME BIG */}
+          {/* ARCHER PET BIG FRAME */}
           {classKey === "archer" && petMaxHP > 0 && (
             <div className="absolute z-[80] pointer-events-none" style={{ ...PET_UI.wrapperStyle, width: `${PET_SIZE}px` }}>
               <div className="relative" style={{ width: `${PET_SIZE}px` }}>
                 {hpPopups.filter((p) => p.target === "pet").map((p) => (
-                  <HPPopup
-                    key={p.id}
-                    value={p.value}
-                    isCrit={p.isCrit}
-                    variant="pet"
-                    onDone={() => setHPPopups((prev) => prev.filter((pp) => pp.id !== p.id))}
-                  />
+                  <HPPopup key={p.id} value={p.value} isCrit={p.isCrit} variant="pet" onDone={() => setHPPopups((prev) => prev.filter((pp) => pp.id !== p.id))} />
                 ))}
-
-                <div
-                  className="rounded-xl bg-black/50"
-                  style={{
-                    width: `${PET_SIZE}px`,
-                    height: `${PET_SIZE}px`,
-                    overflow: "hidden",
-                    opacity: petHP <= 0 ? 0.45 : 1,
-                    boxShadow: "0 0 14px rgba(0,0,0,0.7)",
-                  }}
-                >
+                <div className="rounded-xl bg-black/50" style={{ width: `${PET_SIZE}px`, height: `${PET_SIZE}px`, overflow: "hidden", opacity: petHP <= 0 ? 0.45 : 1, boxShadow: "0 0 14px rgba(0,0,0,0.7)" }}>
                   <img src="/ui/player/pet.png" alt="pet" className="w-full h-full object-cover" />
                 </div>
-
                 <div className="relative mt-2 rounded-full overflow-hidden" style={{ height: "14px", width: `${PET_SIZE}px`, background: "rgba(0,0,0,0.6)" }}>
-                  <div
-                    style={{
-                      height: "100%",
-                      width: `${petMaxHP > 0 ? (petHP / petMaxHP) * 100 : 0}%`,
-                      background: "red",
-                      transition: "width 200ms",
-                    }}
-                  />
-                  <div
-                    className="absolute inset-0 flex items-center justify-center font-mono text-xs"
-                    style={{ color: "white", textShadow: "1px 1px 3px rgba(0,0,0,0.9)", pointerEvents: "none" }}
-                  >
+                  <div style={{ height: "100%", width: `${petMaxHP > 0 ? (petHP / petMaxHP) * 100 : 0}%`, background: "red", transition: "width 200ms" }} />
+                  <div className="absolute inset-0 flex items-center justify-center font-mono text-xs" style={{ color: "white", textShadow: "1px 1px 3px rgba(0,0,0,0.9)", pointerEvents: "none" }}>
                     {petHP}/{petMaxHP}
                   </div>
                 </div>
@@ -2269,170 +2327,102 @@ async function handleContinue() {
             </div>
           )}
 
-          {/* PLAYER (anchor ref!) */}
-          <div
-            ref={playerAnchorRef}
-            className="absolute top-24 left-[20%] -translate-x-1/2 z-10 transition-all duration-500 ease-in-out"
-          >
-            <div className="relative inline-block rounded-xl overflow-hidden" style={warriorFrameStyle}>
-              {/* ENRAGE SZÖVEG - Csak ha aktív az aura */}
+          {/* PLAYER FRAME */}
+          <div ref={playerAnchorRef} className="absolute top-24 left-[20%] -translate-x-1/2 z-10 transition-all duration-500 ease-in-out">
+            <div className="relative inline-block rounded-xl overflow-hidden" style={typeof warriorFrameStyle !== 'undefined' ? warriorFrameStyle : {}}>
               {activeAuraId && (
-                <div
-                  className="absolute z-[60] whitespace-nowrap pointer-events-none"
-                  style={{
-                    top: "-30px",
-                    left: "-1000px",
-                  }}
-                >
-                  <span className="text-red-500 font-black text-2xl italic animate-pulse"
-                        style={{ textShadow: '2px 2px 0px #000, 0 0 10px rgba(255,0,0,0.8)' }}>
-                    💢 ENRAGED
-                  </span>
+                <div className="absolute z-[60] whitespace-nowrap pointer-events-none" style={{ top: "-30px", left: "0" }}>
+                  <span className="text-red-500 font-black text-2xl italic animate-pulse" style={{ textShadow: '2px 2px 0px #000, 0 0 10px rgba(255,0,0,0.8)' }}>💢 ENRAGED</span>
                 </div>
               )}
-             
-
-              <EnemyFrame
-                name={player.username || "Player"}
-                hp={playerHP}
-                maxHP={maxHPFromPlayer}
-                image={classConfig.sprite}
-                damaged={playerDamaged}
-                healed={playerHealed}
-              />
-
+              <EnemyFrame name={player.username || "Player"} hp={playerHP} maxHP={maxHPFromPlayer} image={classConfig.sprite} damaged={playerDamaged} healed={playerHealed} />
+              
               {hpPopups.filter((p) => p.target === "player").map((p) => (
-                <HPPopup
-                  key={p.id}
-                  value={p.value}
-                  isCrit={p.isCrit}
-                  variant={p.variant || "default"}
-                  onDone={() => setHPPopups((prev) => prev.filter((pp) => pp.id !== p.id))}
-                />
+                <HPPopup key={p.id} value={p.value} isCrit={p.isCrit} variant={p.variant || "default"} onDone={() => setHPPopups((prev) => prev.filter((pp) => pp.id !== p.id))} />
               ))}
 
+              {/* ARCHER MINI PET BAR */}
               {classKey === "archer" && petMaxHP > 0 && (
                 <div className="absolute -right-28 bottom-2 w-24" style={{ zIndex: 20 }}>
                   <div className="relative rounded-lg overflow-hidden border border-black/50 bg-black/40">
                     <img src={"/ui/player/player.png"} alt="pet" className="w-full h-16 object-cover opacity-95" />
-
                     <div className="px-1 pb-1">
-                      <div className="text-[10px] text-gray-100 font-mono">
-                        Pet {petHP}/{petMaxHP}
-                        {petTauntTurns > 0 ? ` • TAUNT ${petTauntTurns}` : ""}
-                      </div>
+                      <div className="text-[10px] text-gray-100 font-mono">Pet {petHP}/{petMaxHP} {petTauntTurns > 0 ? ` • TAUNT ${petTauntTurns}` : ""}</div>
                       <div className="h-2 w-full bg-black/60 rounded overflow-hidden border border-white/10">
-                        <div
-                          className="h-full bg-emerald-400 transition-all duration-200"
-                          style={{ width: `${petMaxHP > 0 ? (petHP / petMaxHP) * 100 : 0}%` }}
-                        />
+                        <div className="h-full bg-emerald-400 transition-all duration-200" style={{ width: `${petMaxHP > 0 ? (petHP / petMaxHP) * 100 : 0}%` }} />
                       </div>
                     </div>
-
-                    {!petAlive && (
-                      <div className="absolute inset-0 bg-black/60 flex items-center justify-center text-[10px]">
-                        DEAD
-                      </div>
-                    )}
+                    {petHP <= 0 && <div className="absolute inset-0 bg-black/60 flex items-center justify-center text-[10px]">DEAD</div>}
                   </div>
                 </div>
               )}
             </div>
           </div>
 
-          {/* ENEMY (anchor ref!) */}
+          {/* ENEMY FRAME */}
           <div ref={enemyAnchorRef} className="absolute top-24 left-[80%] -translate-x-1/2 z-10">
             <div className="relative">
-              <EnemyFrame
-                name={enemy?.name}
-                hp={enemyHP}
-                maxHP={enemy?.maxHp}
-                image={enemyImage(enemy?.name)}
-                damaged={enemyDamaged}
-              />
-
+              <EnemyFrame name={enemy?.name} hp={enemyHP} maxHP={enemy?.maxHp} image={enemyImage(enemy?.name)} damaged={enemyDamaged} />
               {hpPopups.filter((p) => p.target === "enemy").map((p) => (
-                <HPPopup
-                  key={p.id}
-                  value={p.value}
-                  isCrit={p.isCrit}
-                  variant={p.variant || "default"}
-                  onDone={() => setHPPopups((prev) => prev.filter((pp) => pp.id !== p.id))}
-                />
+                <HPPopup key={p.id} value={p.value} isCrit={p.isCrit} variant={p.variant || "default"} onDone={() => setHPPopups((prev) => prev.filter((pp) => pp.id !== p.id))} />
               ))}
             </div>
           </div>
 
-          {/* LOG */}
-          <div className="absolute top-[62%] left-1/2 -translate-x-1/2 w-3/4 max-w-2xl bg-black/50 rounded p-4 h-48 overflow-y-auto font-mono text-sm z-10">
-            {log.map((l, i) => (
-              <div key={i} className="mb-1">
-                {l}
-              </div>
-            ))}
-            <div ref={logEndRef} />
+          {/* ============================================================ */}
+          {/* ✅ DARK FANTASY PIXEL COMBAT LOG (A TELJES ÚJ RÉSZ) */}
+          {/* ============================================================ */}
+          <div
+            className="absolute top-[62%] left-1/2 -translate-x-1/2
+              w-3/4 max-w-2xl h-52
+              bg-[#080808] 
+              pixel-text-sharp
+              z-10
+              border-4 border-black
+              shadow-[0_0_0_2px_#3d0a0a,0_20px_50px_rgba(0,0,0,0.9)]
+              flex flex-col overflow-hidden"
+          >
+            {/* FEJLÉC: UTOLSÓ ÜZENET */}
+            <div className={`px-4 py-3 text-3xl uppercase tracking-widest border-b-4 border-black bg-[#120707] min-h-[64px] flex items-center ${getLogColorClass(log[log.length - 1] || "")}`}>
+              {log.length > 0 && <span className="mr-3 text-[#5e0a0a] animate-pulse text-4xl select-none">†</span>}
+              <span className="drop-shadow-[3px_3px_0px_rgba(0,0,0,1)]">
+                {log.length > 0 ? log[log.length - 1] : "THE RITUAL BEGINS..."}
+              </span>
+            </div>
+
+            {/* GÖRGETHETŐ LISTA */}
+            <div className="flex-1 px-4 py-2 overflow-y-auto dark-log-scroll space-y-1">
+              {log.slice(0, -1).map((l, i) => (
+                <div key={i} className={`flex items-start gap-2 text-xl opacity-60 hover:opacity-100 transition-opacity duration-300 ${getLogColorClass(l)}`}>
+                  <span className="text-[#3d0a0a] mt-1 select-none text-sm">»</span>
+                  <span className="drop-shadow-[2px_2px_0px_rgba(0,0,0,1)]">{l}</span>
+                </div>
+              ))}
+              <div ref={logEndRef} />
+            </div>
+            <div className="h-1 w-full bg-gradient-to-r from-transparent via-[#4d0a0a]/30 to-transparent" />
           </div>
 
-          {/* KÁRTYÁK */}
+          {/* KÁRTYÁK (HAND) */}
           {!battleOver && (
             <div className="absolute left-1/2 -translate-x-1/2 flex gap-4 z-50" style={{ bottom: "-80px" }}>
               {hand.map((card, slotIndex) => {
-                if (!card) {
-                  return <div key={`empty-${slotIndex}`} className="w-40 h-60 rounded-xl border-4 border-gray-700 bg-black/30" />;
-                }
-
+                if (!card) return <div key={`empty-${slotIndex}`} className="w-40 h-60 rounded-xl border-4 border-gray-700 bg-black/30" />;
                 const rs = rarityStyle[card.rarity] ?? rarityStyle.common;
-                const imgSrc = card.image;
-
-                const animClass =
-                  card._played ? "card-anim-play" : card._anim === "draw" ? "card-anim-draw" : "";
-
-                const allowHoverScale = turn === "player" && !card._played;
-
+                const animClass = card._played ? "card-anim-play" : card._anim === "draw" ? "card-anim-draw" : "";
                 return (
                   <button
                     key={card._instanceId}
                     onClick={() => playCardAt(slotIndex)}
                     disabled={turn !== "player" || card._played}
-                    className={[
-                      "relative w-40 h-60 rounded-xl overflow-hidden border-4",
-                      rs.border,
-                      rs.glow,
-                      "transform transition-transform duration-200",
-                      allowHoverScale ? "hover:scale-125" : "",
-                      card._played ? "pointer-events-none opacity-90" : turn !== "player" ? "opacity-90" : "",
-                      animClass,
-                    ].join(" ")}
+                    className={`relative w-40 h-60 rounded-xl overflow-hidden border-4 ${rs.border} ${rs.glow} transform transition-transform duration-200 ${turn === "player" && !card._played ? "hover:scale-125" : ""} ${animClass}`}
                   >
-                    <img src={imgSrc} alt={card.name} className="absolute inset-0 w-full h-full object-cover" />
-
-                    <div className="absolute bottom-0 w-full bg-black/70 text-center p-1 text-sm">
-                      <div className="font-bold">{card.name}</div>
-
-                      {card.type === "attack" && (
-                        <div>
-                          Damage: {card.dmg?.[0] ?? "?"}–{card.dmg?.[1] ?? "?"}
-                          {card.hits && card.hits > 1 ? ` x${card.hits}` : ""}
-                        </div>
-                      )}
-
-                      {card.type === "defend" && <div>Defense</div>}
-
-                      {card.type === "heal" && (
-                        <div>
-                          Heal: {card.heal}
-                          {card.damageBuff && " + DMG buff"}
-                          {card.petHeal ? ` • PetHeal ${card.petHeal}` : ""}
-                        </div>
-                      )}
-
-                      {card.petTauntTurns ? (
-                        <div className="text-[11px] text-emerald-200">Pet Taunt: {card.petTauntTurns} turn</div>
-                      ) : null}
-
-                      {card.evasionTurns ? (
-                        <div className="text-[11px] text-cyan-200">Evasion: {card.evasionTurns} turn</div>
-                      ) : null}
+                    <img src={card.image} alt={card.name} className="absolute inset-0 w-full h-full object-cover" />
+                    <div className="absolute bottom-0 w-full bg-black/70 text-center p-1 text-sm pixel-text-sharp">
+                      <div className="text-lg">{card.name}</div>
+                      {card.type === "attack" && <div className="text-xs">Dmg: {card.dmg?.[0]}–{card.dmg?.[1]} {card.hits > 1 ? `x${card.hits}` : ""}</div>}
+                      {card.type === "heal" && <div className="text-xs">Heal: {card.heal} {card.petHeal ? `(Pet:${card.petHeal})` : ""}</div>}
+                      {card.petTauntTurns > 0 && <div className="text-[10px] text-emerald-300 tracking-tighter">Taunt: {card.petTauntTurns} kör</div>}
                     </div>
                   </button>
                 );
@@ -2440,27 +2430,21 @@ async function handleContinue() {
             </div>
           )}
 
-          {/* END */}
-          {battleOver && (
+          {/* CSATA VÉGE (GYŐZELEM / VERESÉG) */}
+          {battleOver && pendingEnemies.length === 0 && (
             <div className="absolute inset-0 flex flex-col items-center justify-center z-50">
-              <div className="text-4xl mb-4">{playerHP <= 0 ? "☠️ Defeat..." : "🏆 Victory!"}</div>
-
-              {lastRewards && (
-                <div className="mb-2 text-sm text-gray-200">
-                  Jutalom: +{lastRewards.goldGain} arany, +{lastRewards.xpGain} XP
-                  {lastRewards.levelsGained > 0 && ` • +${lastRewards.levelsGained} szint, +${lastRewards.addedStatPoints} stat pont`}
-                </div>
-              )}
-
+              <div className="text-6xl mb-6 pixel-text-sharp drop-shadow-[0_0_15px_rgba(255,0,0,0.5)]">
+                {playerHP <= 0 ? "DEFEAT..." : "VICTORY!"}
+              </div>
               <button
                 onClick={() => {
                   if (continueLockRef.current) return;
                   continueLockRef.current = true;
                   setFadeOpen(true);
                 }}
-                className="px-8 py-3 rounded-lg bg-gray-800 hover:bg-gray-700 transition text-lg"
+                className="px-10 py-4 rounded-lg bg-[#2a0505] border-2 border-[#5e0a0a] hover:bg-[#3d0a0a] transition text-2xl pixel-text-sharp"
               >
-                Continue
+                CONTINUE
               </button>
             </div>
           )}
@@ -2470,7 +2454,7 @@ async function handleContinue() {
             onEffectDone={(id) => {
               setAbilityEffects((prev) => {
                 const eff = prev.find((e) => e.id === id);
-                if (eff && eff.loop) return prev; // ✅ loopoló aura marad
+                if (eff && eff.loop) return prev;
                 return prev.filter((e) => e.id !== id);
               });
             }}
@@ -2485,10 +2469,7 @@ async function handleContinue() {
           setFadeOpen(false);
           continueLockRef.current = false;
         }}
-        inMs={240}
-        holdMs={140}
-        outMs={280}
-        maxOpacity={1}
+        inMs={240} holdMs={140} outMs={280} maxOpacity={1}
       />
     </div>
   );
