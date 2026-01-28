@@ -48,7 +48,7 @@ app.post("/api/inventory/equip", (req, res) => {
     return res.status(400).json({ error: "Hiányzó adat" });
   }
 
-  // 0) owned item + type ellenõrzés
+  // 0) owned item + type ellenőrzés
   pool.query(
     `
     SELECT b.id, b.player_id, b.item_id, i.type
@@ -188,7 +188,7 @@ app.get("/api/inventory/:playerId", (req, res) => {
       b.quantity,
       b.is_equipped,
       b.upgrade_level,
-      b.equip_slot,          -- ?
+      b.equip_slot,          -- ✅
 
       i.name,
       i.type,
@@ -290,7 +290,7 @@ const final = {
             gold: r.gold,
             unspentStatPoints: r.unspentStatPoints ?? 0,
 
-            // ? BASE statok kerüljenek a playerbe
+            // ✅ BASE statok kerüljenek a playerbe
             strength: base.strength,
             intellect: base.intellect,
             defense: base.defense,
@@ -335,7 +335,7 @@ app.post("/api/register", (req, res) => {
           .json({ error: "Felhasználónév vagy email foglalt" });
       }
 
-      // ?? JELSZÓ HASH
+      // 🔐 JELSZÓ HASH
       bcrypt.hash(password, SALT_ROUNDS, (hashErr, hash) => {
         if (hashErr) {
           console.error("Bcrypt hash error:", hashErr);
@@ -353,7 +353,7 @@ app.post("/api/register", (req, res) => {
 
             const newPlayerId = insRes.insertId;
 
-            // ?? KÜLDETÉSEK LÉTREHOZÁSA AZ ÚJ JÁTÉKOSNAK
+            // 🔥 KÜLDETÉSEK LÉTREHOZÁSA AZ ÚJ JÁTÉKOSNAK
             pool.query(
               `
               INSERT INTO player_quests (player_id, quest_id, progress, status)
@@ -393,7 +393,7 @@ app.post("/api/login", (req, res) => {
   const { identifier, password } = req.body || {};
 
   if (!identifier || !password) {
-    return res.status(400).json({ error: "Adj meg minden mezõt!" });
+    return res.status(400).json({ error: "Adj meg minden mezőt!" });
   }
 
   pool.query(
@@ -416,7 +416,7 @@ app.post("/api/login", (req, res) => {
       bcrypt.compare(password, user.password_hash, (bcryptErr, isMatch) => {
         if (bcryptErr) {
           console.error("Bcrypt compare error:", bcryptErr);
-          return res.status(500).json({ error: "Jelszó ellenõrzési hiba" });
+          return res.status(500).json({ error: "Jelszó ellenőrzési hiba" });
         }
 
         if (!isMatch) {
@@ -425,7 +425,7 @@ app.post("/api/login", (req, res) => {
             .json({ error: "Hibás felhasználónév/email vagy jelszó" });
         }
 
-        // ?? JELSZÓT SOHA NEM KÜLDÜNK VISSZA
+        // ⚠️ JELSZÓT SOHA NEM KÜLDÜNK VISSZA
         delete user.password_hash;
 
         return res.json({
@@ -465,7 +465,7 @@ app.post("/api/set-class", (req, res) => {
   if (!username || !classId)
     return res.status(400).json({ error: "Hiányzó adatok (username,classId)" });
 
-  // class_id › class quest *ID* (quests_master.id)
+  // class_id → class quest *ID* (quests_master.id)
   const CLASS_QUEST_MAP = {
     6: 9, // warrior (Harcos) -> Trial of the Mountain King
     7: 10, // mage (Varázsló) -> Rite of the Arcane Lord
@@ -552,7 +552,7 @@ app.post("/api/set-class", (req, res) => {
                     console.error("Class quest select error:", cqErr);
                     return res.json({
                       message:
-                        "Kaszt beállítva, de a class quest ellenõrzés hibás.",
+                        "Kaszt beállítva, de a class quest ellenőrzés hibás.",
                     });
                   }
 
@@ -698,7 +698,7 @@ app.post("/api/combat/reward", (req, res) => {
       const gainXp = xpGain || 0;
       const gainGold = goldGain || 0;
 
-      // 2) XP › LEVEL logika
+      // 2) XP → LEVEL logika
       const {
         level: newLevel,
         xp: newXp,
@@ -786,7 +786,7 @@ app.post("/api/shop/buy", (req, res) => {
           if (players[0].gold < prize)
             return res.status(400).json({ error: "Nincs elég arany" });
 
-          // ?? CHECK: már van-e ilyen item
+          // 🔒 CHECK: már van-e ilyen item
           pool.query(
             "SELECT id FROM birtokol WHERE player_id = ? AND item_id = ?",
             [playerId, itemId],
@@ -831,7 +831,7 @@ app.post("/api/shop/buy", (req, res) => {
 app.post("/api/shop/sell", (req, res) => {
   const { playerId, itemId } = req.body;
 
-  // 1. Ellenõrizzük, hogy birtokolja-e
+  // 1. Ellenőrizzük, hogy birtokolja-e
   pool.query(
     "SELECT * FROM birtokol WHERE player_id = ? AND item_id = ?",
     [playerId, itemId],
@@ -1144,7 +1144,7 @@ app.post("/api/quests/check", (req, res) => {
             return res.json({ message: "Quest updated" });
           }
 
-          // 3) ha megvan az 5 alap quest › feloldjuk a class questet (class_required = player.class_id)
+          // 3) ha megvan az 5 alap quest → feloldjuk a class questet (class_required = player.class_id)
           pool.query(
             `
             UPDATE player_quests pq
@@ -1176,7 +1176,7 @@ app.post("/api/quests/check", (req, res) => {
   );
 });
 
-// reward claim + következõ quest + class quest unlock
+// reward claim + következő quest + class quest unlock
 app.post("/api/quests/claim", (req, res) => {
   const { playerId, questId } = req.body;
 
@@ -1210,7 +1210,7 @@ app.post("/api/quests/claim", (req, res) => {
       }
       if (results.length === 0) {
         console.warn("Claim: nincs completed quest ilyen paramokkal");
-        return res.status(400).json({ error: "Nem claimelhetõ" });
+        return res.status(400).json({ error: "Nem claimelhető" });
       }
 
       const row = results[0];
@@ -1221,7 +1221,7 @@ app.post("/api/quests/claim", (req, res) => {
       let xp    = row.player_xp   ?? 0;
       let unspent = row.unspentStatPoints ?? 0;
 
-      // ?? 2. XP hozzáadása + szintlépés kiszámítása BACKENDEN
+      // 🔥 2. XP hozzáadása + szintlépés kiszámítása BACKENDEN
       xp += reward_xp;
       let levelsGained = 0;
 
@@ -1269,7 +1269,7 @@ app.post("/api/quests/claim", (req, res) => {
 
               console.log(">>> CLAIM: quest státusz -> claimed");
 
-              // 5. Következõ ALAP quest aktiválása (class_required IS NULL)
+              // 5. Következő ALAP quest aktiválása (class_required IS NULL)
               pool.query(
                 `
                 SELECT qm.id
@@ -1290,14 +1290,14 @@ app.post("/api/quests/claim", (req, res) => {
                   const activateNextQuest = (cb) => {
                     if (!nextRows || nextRows.length === 0) {
                       console.log(
-                        ">>> CLAIM: nincs következõ locked alap quest"
+                        ">>> CLAIM: nincs következő locked alap quest"
                       );
                       return cb();
                     }
 
                     const nextQuestId = nextRows[0].id;
                     console.log(
-                      ">>> CLAIM: következõ alap quest aktiválása:",
+                      ">>> CLAIM: következő alap quest aktiválása:",
                       nextQuestId
                     );
 
@@ -1345,7 +1345,7 @@ app.post("/api/quests/claim", (req, res) => {
                           );
                           return res.json({
                             message:
-                              "Küldetés claimelve (class quest ellenõrzés hibás).",
+                              "Küldetés claimelve (class quest ellenőrzés hibás).",
                           });
                         }
 
@@ -1368,7 +1368,7 @@ app.post("/api/quests/claim", (req, res) => {
                           });
                         }
 
-                        // mind az 5 alap quest claimed › class quest unlock
+                        // mind az 5 alap quest claimed → class quest unlock
                         pool.query(
                           `
                           UPDATE player_quests pq
@@ -1404,7 +1404,7 @@ app.post("/api/quests/claim", (req, res) => {
 
                             return res.json({
                               message:
-                                "Küldetés claimelve, következõ quest / class quest frissítve!",
+                                "Küldetés claimelve, következő quest / class quest frissítve!",
                               level,
                               xp,
                               levelsGained,
@@ -1427,7 +1427,7 @@ app.post("/api/quests/claim", (req, res) => {
   );
 });
 
-// Végpont a tippek RAKTÁBAN történõ véletlenszerû lekéréséhez
+// Végpont a tippek RAKTÁBAN történő véletlenszerű lekéréséhez
 app.get("/api/tips", (req, res) => {
   pool.query("SELECT text FROM tips ORDER BY RAND()", (err, rows) => {
     if (err) {
