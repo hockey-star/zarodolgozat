@@ -716,6 +716,8 @@ export default function CombatView({
   const [activeAuraId, setActiveAuraId] = useState(null);
   const [currentAuraSrc, setCurrentAuraSrc] = useState(null);
   const logEndRef = useRef(null);
+  const enemyKillSentRef = useRef(false);
+
 
   // ✅ DOM-anchored VFX spawn (targetenként offsettel) + loop + RETURN ID
   function spawnAbilityEffect({ src, target = "center", width, height, loop = false }) {
@@ -1122,17 +1124,15 @@ useEffect(() => {
             const res = await fetch(`http://localhost:3000/api/quests/${player.id}`);
             const data = await res.json();
 
-            const activeClassQuest = Array.isArray(data)
-              ? data.find((q) => q.status === "in_progress" && q.class_required !== null && q.class_required !== "")
-              : null;
+          const activeClassQuest = data.find(
+            (q) => q.status === "in_progress" && q.class_required != null
+          );
 
-            if (activeClassQuest) {
-              const bossName = CLASS_BOSS_MAP[classKey];
-              if (bossName) {
-                allowedNames = [bossName];
-                pushLog(`Class quest boss közeleg: ${bossName} (kaszt: ${classKey})`);
-              }
-            }
+          if (activeClassQuest) {
+            const classId = activeClassQuest.class_required; // 6/7/8
+            const bossName = CLASS_BOSS_MAP[classId];        // MAP legyen int kulcsú
+            allowedNames = [bossName];
+          }
           } catch (err) {
             console.error("Class quest boss check error:", err);
           }
@@ -1753,11 +1753,36 @@ if (remainingEnemies.length > 0) {
     }
   }
 
-  useEffect(() => {
-    if (!enemy) return;
-    if (playerHP <= 0 || enemyHP <= 0) endBattle();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [playerHP, enemyHP, enemy]);
+useEffect(() => {
+  // ✅ új enemy -> új kill engedélyezése
+  enemyKillSentRef.current = false;
+}, [enemy]);
+
+useEffect(() => {
+  if (!enemy) return;
+
+  const victory = enemyHP <= 0 && playerHP > 0;
+  if (!victory) return;
+
+  if (enemyKillSentRef.current) return;
+  enemyKillSentRef.current = true;
+
+  let cancelled = false;
+
+  (async () => {
+    try {
+      await questEnemyDefeatedEvent();
+      if (!cancelled) endBattle();
+    } catch (e) {
+      console.error(e);
+      if (!cancelled) endBattle(); // opcionális: akkor is lépj tovább
+    }
+  })();
+
+  return () => {
+    cancelled = true;
+  };
+}, [enemyHP, playerHP, enemy]);
 
   useEffect(() => {
     if (!enemy) return;
@@ -1972,6 +1997,41 @@ if (remainingEnemies.length > 0) {
   }
 
 
+  async function questBattleWonEvent() {
+  if (!player?.id) return;
+  try {
+    await fetch("http://localhost:3000/api/quests/event", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        playerId: player.id,
+        event: "battle_won",
+      }),
+    });
+  } catch (e) {
+    console.error("Battle won quest event error:", e);
+  }
+}
+
+async function questEnemyDefeatedEvent() {
+  if (!player?.id) return;
+
+  try {
+    const isBossDefeated = enemy?.role === "boss"; // ez biztosabb, mint a boss flag
+    await fetch("http://localhost:3000/api/quests/event", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        playerId: player.id,
+        event: "enemy_defeated",
+        isBoss: isBossDefeated,
+      }),
+    });
+  } catch (e) {
+    console.error("Quest event error:", e);
+  }
+}
+
 async function handleContinue() {
   const victory = enemyHPRef.current <= 0 && playerHPRef.current > 0;
   const hasMoreEnemies = pendingEnemies.length > 0;
@@ -2004,6 +2064,9 @@ async function handleContinue() {
       console.error("Reward save failed", err);
     }
   }
+
+  
+
 
   // =========================================================
   // DEFEAT -> Run End (Hub full heal)
@@ -2092,6 +2155,7 @@ async function handleContinue() {
   // ✅ WAVE COMPLETE (nem run vége): reward + vissza Path-ra, HP marad, storage marad
   // =========================================================
   if (!isLastWave) {
+    await questBattleWonEvent();
     await awardReward();
     clearAllVfx();
     onEnd?.(playerHPRef.current, true);
@@ -2103,6 +2167,8 @@ async function handleContinue() {
   // =========================================================
   clearStoredHP();
   clearAllVfx();
+
+  await questBattleWonEvent();
 
   // Backend reward (FULL HP mentés, mert hubba megyünk)
   if (player?.id) {
@@ -2134,31 +2200,6 @@ async function handleContinue() {
       console.error("combat/reward fetch error:", err);
     }
 
-    // quest progress (maradhat)
-    try {
-      const playerId = player.id;
-      const taskType = boss ? "boss" : "kill";
-
-      await fetch("http://localhost:3000/api/quests/progress", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ playerId, taskType }),
-      });
-
-      await fetch("http://localhost:3000/api/quests/progress", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ playerId, taskType: "custom" }),
-      });
-
-      await fetch("http://localhost:3000/api/quests/check", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ playerId }),
-      });
-    } catch (err) {
-      console.error("Quest progress frissítés hiba:", err);
-    }
   }
 
   // HUB-ba megyünk full HP-val
@@ -2167,8 +2208,6 @@ async function handleContinue() {
 
   onEnd?.(fullMax, true);
 }
-
-
 
 
   const [fadeOpen, setFadeOpen] = useState(false);

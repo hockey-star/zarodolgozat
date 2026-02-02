@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Gép: 127.0.0.1
--- Létrehozás ideje: 2026. Jan 28. 10:09
+-- Létrehozás ideje: 2026. Feb 02. 12:02
 -- Kiszolgáló verziója: 10.4.28-MariaDB
 -- PHP verzió: 8.2.4
 
@@ -127,7 +127,8 @@ INSERT INTO `birtokol` (`id`, `player_id`, `item_id`, `quantity`, `upgrade_level
 (95, 30, 9, 1, 2, 1, 1),
 (97, 30, 26, 1, 0, 1, 1),
 (98, 30, 28, 1, 0, 1, 2),
-(99, 30, 16, 1, 0, 1, 1);
+(99, 30, 16, 1, 0, 1, 1),
+(100, 33, 9, 1, 1, 0, 1);
 
 -- --------------------------------------------------------
 
@@ -282,9 +283,13 @@ INSERT INTO `players` (`id`, `username`, `email`, `password_hash`, `class_id`, `
 (27, 'warror123', 'gasdma@gmadsasdo.com', '$2b$10$zEwOIrFQrGbmnil1TnbbY.CaP1/fX1iiqKk4LteVUE579jGAEZOX6', 6, 15, 79, 492854, 8000, 8000, 30, 0, 3, '2026-01-13 11:01:21', 3),
 (28, 'uasdusau123', 'sadmdsa@gmail.com', '$2b$10$9WKKSjgITWTK3HOL0s4XgOh/Ub3CCAJHRpFqmdyVmFbzbvGz31BCy', 6, 9, 39, 971, 425, 425, 21, 0, 3, '2026-01-14 11:42:06', 150),
 (29, 'asdasdasd123', 'asdasdasd123@gmail.com', '$2b$10$L8aUYJI/3O7OP/zlGtRg9uYf2ffpZ5t61R4Q2oMCgZLfYkBOMzTRa', 6, 1, 0, 500, 230, 230, 36, 0, 3, '2026-01-15 10:20:07', 83),
-(30, 'plsmukodj', 'asdsad@gmaic.com', '$2b$10$9SrbZq7CO/CotscAaPDRhe.vK0yFl89h2Ya6nSts67vO2AK8a/Hfu', 6, 5, 108, 55, 80, 80, 11, 0, 3, '2026-01-15 12:23:20', 0),
+(30, 'plsmukodj', 'asdsad@gmaic.com', '$2b$10$9SrbZq7CO/CotscAaPDRhe.vK0yFl89h2Ya6nSts67vO2AK8a/Hfu', 6, 10, 51, 844, 80, 80, 11, 0, 3, '2026-01-15 12:23:20', 15),
 (31, 'tesztelgetek', 'legelek@gmail.com', '$2b$10$rfMu9XbaZpbWVNnzJdHGfudlwsnfrCT1zhlwX/HZ2SRR9LD8Vz4jC', 6, 23, 161, 2130, 1799, 1799, 16, 0, 3, '2026-01-16 09:15:23', 33),
-(32, 'tesztelgetek123', '123@gmads.com', '$2b$10$ZwHWxClvUUtJnUuMzWm6VuVkBFBFF2VJp5Ua9I9eWdkfKVAv7NUcW', 6, 21, 315, 264039, 13230, 14930, 56, 16, 22, '2026-01-22 12:13:01', 198);
+(32, 'tesztelgetek123', '123@gmads.com', '$2b$10$ZwHWxClvUUtJnUuMzWm6VuVkBFBFF2VJp5Ua9I9eWdkfKVAv7NUcW', 6, 22, 9, 264154, 13230, 14930, 56, 16, 22, '2026-01-22 12:13:01', 201),
+(33, 'tesztelget321', 'asdasd@gmasd.com', '$2b$10$.TtoEeAQBp51kAvAq6sTx.CjXc9eAefMQGt1A.DRLFS9dN/r8kvG2', 6, 5, 68, 367, 50, 50, 5, 0, 3, '2026-01-28 10:38:24', 12),
+(34, 'tesztelgetnek123', '123123@gmail.com', '$2b$10$dZD9./1P2xq/5T.LSzqx.eZ1nfjeu2yXfC1Kq3FrMkcyN7k52Fgmm', 6, 9, 99, 1228, 50, 50, 5, 0, 3, '2026-02-02 09:42:17', 24),
+(35, 'tesztelgetnek321', '123214@gmail.com', '$2b$10$ZXhg4ZqcvvpemEwY7N4HMeJhxS1qMgQmAr9gsi/KYFa4FBDZYd3AG', 6, 7, 120, 871, 50, 50, 5, 0, 3, '2026-02-02 10:23:53', 18),
+(36, 'tesztelgethetek123', '123125512@gmail.com', '$2b$10$fqByP.992ytXzswdrfRBK.BxJa7QMLv336OlQXlYetDzYVQmCEDbi', 6, 4, 8, 281, 50, 50, 5, 0, 3, '2026-02-02 11:59:49', 9);
 
 -- --------------------------------------------------------
 
@@ -394,7 +399,37 @@ INSERT INTO `player_quests` (`id`, `player_id`, `quest_id`, `progress`, `status`
 (197, 32, 3, 0, 'locked'),
 (198, 32, 4, 0, 'locked'),
 (199, 32, 5, 0, 'locked'),
-(202, 32, 9, 0, 'locked');
+(202, 32, 9, 0, 'locked'),
+(203, 33, 1, 0, 'in_progress'),
+(204, 33, 2, 0, 'locked'),
+(205, 33, 3, 0, 'locked'),
+(206, 33, 4, 0, 'locked'),
+(207, 33, 5, 0, 'locked'),
+(210, 33, 9, 0, 'locked'),
+(211, 34, 1, 3, 'claimed'),
+(212, 34, 2, 7, 'claimed'),
+(213, 34, 3, 3, 'completed'),
+(214, 34, 4, 0, 'locked'),
+(215, 34, 5, 1, 'in_progress'),
+(216, 34, 9, 0, 'locked'),
+(217, 34, 10, 0, 'locked'),
+(218, 34, 11, 0, 'locked'),
+(226, 35, 1, 2, 'completed'),
+(227, 35, 2, 0, 'locked'),
+(228, 35, 3, 0, 'locked'),
+(229, 35, 4, 0, 'locked'),
+(230, 35, 5, 0, 'locked'),
+(231, 35, 9, 0, 'locked'),
+(232, 35, 10, 0, 'locked'),
+(233, 35, 11, 0, 'locked'),
+(241, 36, 1, 3, 'claimed'),
+(242, 36, 2, 0, 'in_progress'),
+(243, 36, 3, 0, 'locked'),
+(244, 36, 4, 0, 'locked'),
+(245, 36, 5, 0, 'locked'),
+(246, 36, 9, 0, 'locked'),
+(247, 36, 10, 0, 'locked'),
+(248, 36, 11, 0, 'locked');
 
 -- --------------------------------------------------------
 
@@ -410,7 +445,7 @@ CREATE TABLE `quests_master` (
   `target_amount` int(11) DEFAULT 1,
   `reward_xp` int(11) DEFAULT 0,
   `reward_gold` int(11) DEFAULT 0,
-  `class_required` varchar(20) DEFAULT NULL
+  `class_required` int(11) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_hungarian_ci;
 
 --
@@ -423,9 +458,9 @@ INSERT INTO `quests_master` (`id`, `title`, `description`, `task_type`, `target_
 (3, 'Apró győzelmek', 'Nyerj meg 3 csatát.', 'custom', 3, 40, 60, NULL),
 (4, 'Első találkozás a boss-szal', 'Győzz le egy bosst.', 'boss', 1, 80, 120, NULL),
 (5, 'Tapasztalt harcos', 'Nyerj meg 5 csatát.', 'custom', 5, 100, 150, NULL),
-(9, 'Trial of the Mountain King', 'Végezd el a Harcosok próbáját és győzd le a Mountain King-et.', 'boss', 1, 300, 400, 'warrior'),
-(10, 'Rite of the Arcane Lord', 'A mágusok végső tesztje: győzd le az Arcane Abomination-t.', 'boss', 1, 300, 400, 'mage'),
-(11, 'Hunt of the Forest Spirit', 'Az íjászok nagyvadja: öld meg a Forest Spirit Beast-et.', 'boss', 1, 300, 400, 'archer');
+(9, 'Trial of the Mountain King', 'Végezd el a Harcosok próbáját és győzd le a Mountain King-et.', 'boss', 1, 300, 400, NULL),
+(10, 'Rite of the Arcane Lord', 'A mágusok végső tesztje: győzd le az Arcane Abomination-t.', 'boss', 1, 300, 400, NULL),
+(11, 'Hunt of the Forest Spirit', 'Az íjászok nagyvadja: öld meg a Forest Spirit Beast-et.', 'boss', 1, 300, 400, NULL);
 
 -- --------------------------------------------------------
 
@@ -576,7 +611,7 @@ ALTER TABLE `achievements`
 -- AUTO_INCREMENT a táblához `birtokol`
 --
 ALTER TABLE `birtokol`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=100;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=101;
 
 --
 -- AUTO_INCREMENT a táblához `classes`
@@ -600,13 +635,13 @@ ALTER TABLE `paths`
 -- AUTO_INCREMENT a táblához `players`
 --
 ALTER TABLE `players`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=33;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=37;
 
 --
 -- AUTO_INCREMENT a táblához `player_quests`
 --
 ALTER TABLE `player_quests`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=203;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=256;
 
 --
 -- AUTO_INCREMENT a táblához `quests_master`

@@ -15,6 +15,12 @@ export const bossEnemies = [
   "Lich King",
 ];
 
+export const CLASS_BOSS_MAP = {
+  6: "Mountain King",          // warrior
+  7: "Arcane Abomination",     // mage
+  8: "Forest Spirit Beast",    // archer
+};
+
 // Lokális enemy sablonok – NEM DB-sek, csak frontendhez.
 const ENEMY_TEMPLATES = [
   // ---- Normál ellenfelek ----

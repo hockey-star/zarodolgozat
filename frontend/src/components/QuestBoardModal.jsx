@@ -1,5 +1,5 @@
 // frontend/src/components/QuestBoardModal.jsx
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import QuestDetailsModal from "./QuestDetailsModal.jsx";
 
 export default function QuestBoardModal({ playerId, playerClassId, onClose }) {
@@ -8,7 +8,6 @@ export default function QuestBoardModal({ playerId, playerClassId, onClose }) {
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState("");
 
-  // BAL OLDALI 5 QUEST
   const NORMAL_POS = [
     { top: "25%", left: "20%" },
     { top: "37%", left: "20%" },
@@ -17,23 +16,28 @@ export default function QuestBoardModal({ playerId, playerClassId, onClose }) {
     { top: "73%", left: "20%" },
   ];
 
-  // JOBB OLDALI CLASS QUEST
   const CLASS_POS = { top: "50%", left: "68%" };
 
-  async function loadQuests() {
+  const loadQuests = useCallback(async () => {
+    if (!playerId) return;
+
     try {
       setLoading(true);
-      const res = await fetch(
-        `http://localhost:3000/api/quests/${playerId}`
-      );
+      const res = await fetch(`http://localhost:3000/api/quests/${playerId}`);
       const data = await res.json();
 
-      // normál + saját class quest
-      const filtered = data.filter(
+      const filtered = (data || []).filter(
         (q) => q.class_required === null || q.class_required === playerClassId
       );
 
       setQuests(filtered);
+
+      // ✅ frissítjük a nyitott questet is
+      setSelectedQuest((prev) => {
+        if (!prev) return null;
+        return filtered.find((x) => x.quest_id === prev.quest_id) || prev;
+      });
+
       setErrorMsg("");
     } catch (err) {
       console.error(err);
@@ -41,12 +45,11 @@ export default function QuestBoardModal({ playerId, playerClassId, onClose }) {
     } finally {
       setLoading(false);
     }
-  }
+  }, [playerId, playerClassId]);
 
   useEffect(() => {
-    if (!playerId) return;
     loadQuests();
-  }, [playerId, playerClassId]);
+  }, [loadQuests]);
 
   function statusColor(q) {
     if (q.status === "completed") return "text-green-300";
@@ -56,7 +59,6 @@ export default function QuestBoardModal({ playerId, playerClassId, onClose }) {
     return "text-white";
   }
 
-  // ESC bezárás (ha még nincs)
   useEffect(() => {
     function onKey(e) {
       if (e.key === "Escape") onClose();
@@ -67,51 +69,32 @@ export default function QuestBoardModal({ playerId, playerClassId, onClose }) {
 
   return (
     <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
-      <div
-        className="relative rounded-xl shadow-2xl overflow-hidden"
-        style={{
-          width: "70%",
-          height: "70%",
-        }}
-      >
-        {/* Questboard kép */}
+      <div className="relative rounded-xl shadow-2xl overflow-hidden" style={{ width: "70%", height: "70%" }}>
+        {/* ✅ háttér csak dísz, ne kattintható */}
         <div
-          className="w-full h-full bg-cover bg-center"
-          style={{
-            backgroundImage: 'url("./src/assets/pics/QUESTBOARD.png")',
-          }}
+          className="absolute inset-0 bg-cover bg-center pointer-events-none"
+          style={{ backgroundImage: 'url("./src/assets/pics/QUESTBOARD.png")' }}
         />
 
-        {/* X gomb */}
         <button
           onClick={onClose}
-          className="absolute top-3 right-5 text-white text-2xl font-bold drop-shadow-lg hover:text-red-400"
+          className="absolute top-3 right-5 z-30 text-white text-2xl font-bold drop-shadow-lg hover:text-red-400"
         >
           ✕
         </button>
 
-        {/* QUEST MARKEREK */}
-        <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute inset-0 z-20">
           {!loading &&
             quests.map((q, idx) => {
-              const pos =
-                q.class_required === null ? NORMAL_POS[idx] : CLASS_POS;
-
+              const pos = q.class_required === null ? NORMAL_POS[idx] : CLASS_POS;
               if (!pos) return null;
 
               return (
                 <button
-                  key={q.quest_id}
+                  key={q.pq_id ?? `${q.player_id}-${q.quest_id}`}
                   onClick={() => setSelectedQuest(q)}
-                  className={`absolute text-lg font-bold cursor-pointer font-serif hover:scale-110 transition ${statusColor(
-                    q
-                  )}`}
-                  style={{
-                    top: pos.top,
-                    left: pos.left,
-                    textShadow: "2px 2px 4px black",
-                    pointerEvents: "auto",
-                  }}
+                  className={`absolute z-20 text-lg font-bold cursor-pointer font-serif hover:scale-110 transition ${statusColor(q)}`}
+                  style={{ top: pos.top, left: pos.left, textShadow: "2px 2px 4px black" }}
                 >
                   ► {q.title}
                 </button>
@@ -119,14 +102,12 @@ export default function QuestBoardModal({ playerId, playerClassId, onClose }) {
             })}
         </div>
 
-        {/* ERROR */}
         {errorMsg && (
-          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-yellow-200 text-sm bg-black/60 px-4 py-2 rounded">
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-30 text-yellow-200 text-sm bg-black/60 px-4 py-2 rounded">
             {errorMsg}
           </div>
         )}
 
-        {/* QUEST MODAL */}
         {selectedQuest && (
           <QuestDetailsModal
             quest={selectedQuest}
@@ -134,7 +115,7 @@ export default function QuestBoardModal({ playerId, playerClassId, onClose }) {
             onClose={() => setSelectedQuest(null)}
             onClaimSuccess={() => {
               setSelectedQuest(null);
-              loadQuests(); // 🔥 újratöltjük a quest listát, nem reload
+              loadQuests();
             }}
           />
         )}
