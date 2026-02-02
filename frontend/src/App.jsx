@@ -20,6 +20,8 @@ import wizardBg from "./assets/pics/EVENT_WIZARD_PLACEHOLDER.png";
 
 import { defaultEnemies, bossEnemies } from "./components/enemyData.js";
 
+import "./App.css";
+
 const FINAL_BOSS_LEVEL = 16;
 
 
@@ -289,6 +291,29 @@ const handleLoadingDone = React.useCallback(() => {
     setScreen("hub");
   }
 
+  //TÖRÉS CONST
+  const [lampasBroken, setLampasBroken] = useState(false);
+const [impact, setImpact] = useState(false);
+
+
+useEffect(() => {
+  if (!deathScreenOpen) return;
+
+  setLampasBroken(false);
+  setImpact(false);
+
+  const timer = setTimeout(() => {
+    setImpact(true);        // 💥 csak a lámpásnál
+    setLampasBroken(true);
+
+    setTimeout(() => setImpact(false), 70); // ~1 frame
+  }, 1200);
+
+  return () => clearTimeout(timer);
+}, [deathScreenOpen]);
+
+
+
   return (
     <>
       {screen === "login" && <LoginScreen onLogin={handleLogin} />}
@@ -337,69 +362,54 @@ const handleLoadingDone = React.useCallback(() => {
         />
       )}
 
-      {/* DEATH SCREEN (solid black, blocks everything) */}
-      {deathScreenOpen && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black">
-          <div className="w-[420px] rounded-2xl bg-zinc-900 p-8 text-center shadow-2xl border border-zinc-700">
-            <div className="text-4xl font-extrabold text-red-600 mb-4">
-              ELBUKTÁL
-            </div>
+{/* DEATH SCREEN */}
+{/* A lampasBroken állapot vezérli a sötétséget és a szöveg átalakulását is */}
+{deathScreenOpen && (
+  <div className={`deathScreen Halal ${lampasBroken ? "is-dark" : ""}`}>
+    <div className="pixelGrain"></div>
 
-            <div className="text-zinc-300 mb-8">
-              A harc véget ért. Visszatérsz a hubba, és a HP-d feltöltődik.
-            </div>
+    {/* A text mostantól dinamikusan változik a lampasBroken alapján */}
+    <div className={`deathTitle ${lampasBroken ? "is-active" : ""}`}>
+      ELBUKTÁL
+    </div>
 
-            <button
-              onMouseDown={() => setPressed(true)}
-              onMouseUp={() => setPressed(false)}
-              onMouseLeave={() => setPressed(false)}
-              onClick={() => {
-                setPressed(false);
-                setDeathScreenOpen(false);
+    <div className="lampasContainer">
+      <div className="lampasSwingWrapper">
+        
+        {/* FÉNYEK: Csak akkor látszanak, ha NEM törött */}
+        <div className="lampasAura auraBack" />
+        <div className="lampasFloorLight" />
 
-                setIntroTravelDone(false);
-                setLoadingMode(null);
+        {/* IMPACT: Töréskor villan a lámpáson */}
+        {lampasBroken && <div className="lampasImpactOverlay" />}
 
-                setScreen("hub");
-                setLevel(1);
-                setCombatPath(null);
-              }}
-              style={{
-                color: "#fef9c2",
-                backgroundColor: "#460809",
-                padding: "15px 40px",
-                margin: "10px",
-                textAlign: "center",
-                fontSize: "20px",
-                fontFamily: '"Jersey 10", sans-serif',
-                border: 0,
-                cursor: "pointer",
-                transform: pressed ? "translateY(5px)" : "translateY(0px)",
-                boxShadow: pressed
-                  ? `
-                      0px 5px black,
-                      0px -5px black,
-                      5px 0px black,
-                      -5px 0px black,
-                      inset 0px 5px #00000038
-                    `
-                  : `
-                      0px 5px black,
-                      0px -5px black,
-                      5px 0px black,
-                      -5px 0px black,
-                      0px 10px #00000038,
-                      5px 5px #00000038,
-                      -5px 5px #00000038,
-                      inset 0px 5px #ffffff36
-                    `,
-              }}
-            >
-              Vissza a hubba
-            </button>
-          </div>
-        </div>
-      )}
+        <img
+          src={lampasBroken ? "/lampas/lampasTort.png" : "/lampas/lampas.png"}
+          className={`lampas ${lampasBroken ? "broken-shake" : ""}`}
+          alt="Lámpás"
+        />
+      </div>
+    </div>
+
+    <button
+      className="VisszaAHubbaButton"
+      onClick={() => {
+        setDeathScreenOpen(false);
+        setIntroTravelDone(false);
+        setLoadingMode(null);
+        setScreen("hub");
+        setLevel(1);
+        setCombatPath(null);
+      }}
+    >
+      Vissza a hubba
+    </button>
+  </div>
+)}
+
+
+
+
 
       {showTransition && (
         <TransitionOverlay
