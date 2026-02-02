@@ -1464,7 +1464,6 @@ app.post("/api/quests/claim", (req, res) => {
                             return res.json({
                               message:
                                 "Küldetés claimelve, következő quest / class quest frissítve!",
-                                "Küldetés claimelve, következő quest / class quest frissítve!",
                               level,
                               xp,
                               levelsGained,
