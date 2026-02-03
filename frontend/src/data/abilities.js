@@ -150,7 +150,7 @@ export const ALL_ABILITIES = [
   // 🔮 enemy vulnerability debuff – +15% sebzést kap
   vulnerabilityDebuff: {
     multiplier: 1.15, // +15% dmg
-    turns: 1,         // 3 körig tart
+    turns: 2,         // 3 körig tart
   },
 },
   
@@ -159,7 +159,7 @@ export const ALL_ABILITIES = [
   classKey: "mage",
   name: "Frost Nova",
   type: "attack",
-  dmg: [6, 10],
+  dmg: [3, 5],
   heal: null,
   rarity: "rare",
   image: "/cards/rare/mage_frost_nova.png",
@@ -363,7 +363,7 @@ export const ALL_ABILITIES = [
     classKey: "mage",
     name: "Lightning Bolt",
     type: "attack",
-    dmg: [11, 17],
+    dmg: [5, 7],
     heal: null,
     rarity: "epic",
     image: "/cards/epic/mage_lightning_bolt.png",

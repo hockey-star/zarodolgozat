@@ -10,14 +10,38 @@ export default function ShopModal({ onClose }) {
   const [showError, setShowError] = useState(false);
   const [mode, setMode] = useState("buy"); // buy | sell
   const [activeCategory, setActiveCategory] = useState("weapon");
+  const [fullStats, setFullStats] = useState(null);
 
+  
   const userId = localStorage.getItem("sk_current_user_id");
+
+// --- RUN HP (sessionStorage) + FULL STATS (final hp) összevetés ---
+const HEAL_COST = 100;
+
+const hpKey = userId ? `adventure_hp_${userId}` : null;
+
+const readRunHp = () => {
+  if (!hpKey) return null;
+  const raw = sessionStorage.getItem(hpKey);
+  const n = raw == null ? null : Number(raw);
+  return Number.isFinite(n) ? n : null;
+};
+
+// ezekhez kell majd a fullStats-ból:
+const finalHp = fullStats?.final?.hp ?? null;
+const finalMaxHp = fullStats?.final?.max_hp ?? null;
+
+const runHp = readRunHp();
+const currentHp = runHp ?? finalHp;      // ha van run hp, az dominál
+const maxHp = finalMaxHp;               // valós max HP itemekkel
+const isFull = currentHp != null && maxHp != null && currentHp >= maxHp;
 
   const CATEGORIES = [
     { type: "weapon", icon: "⚔️" },
+    { type: "helmet", icon: "🧪" },
     { type: "armor", icon: "🛡️" },
     { type: "accessory", icon: "💍" },
-    { type: "potion", icon: "🧪" }
+    
   ];
 
   useEffect(() => {
@@ -40,33 +64,29 @@ export default function ShopModal({ onClose }) {
 }, [error]);
 
 
-  useEffect(() => {
-    if (!userId) return;
+useEffect(() => {
+  if (!userId) return;
 
-    fetch(`http://localhost:3000/api/players/${userId}`)
-      .then(r => r.json())
-      .then(setPlayerData);
+  fetch(`http://localhost:3000/api/player/${userId}/full-stats`)
+    .then(r => r.json())
+    .then(setFullStats);
 
-    fetch("http://localhost:3000/api/items")
-      .then(r => r.json())
-      .then(setShopItems);
+  fetch("http://localhost:3000/api/items")
+    .then(r => r.json())
+    .then(setShopItems);
 
-    fetch(`http://localhost:3000/api/inventory/${userId}`)
-      .then(r => r.json())
-      .then(setInventoryItems);
-  }, [userId]);
+  fetch(`http://localhost:3000/api/inventory/${userId}`)
+    .then(r => r.json())
+    .then(setInventoryItems);
+}, [userId]);
 
-  const refreshAll = async () => {
-    const player = await fetch(
-      `http://localhost:3000/api/players/${userId}`
-    ).then(r => r.json());
-    setPlayerData(player);
+const refreshAll = async () => {
+  const stats = await fetch(`http://localhost:3000/api/player/${userId}/full-stats`).then(r => r.json());
+  setFullStats(stats);
 
-    const inv = await fetch(
-      `http://localhost:3000/api/inventory/${userId}`
-    ).then(r => r.json());
-    setInventoryItems(inv);
-  };
+  const inv = await fetch(`http://localhost:3000/api/inventory/${userId}`).then(r => r.json());
+  setInventoryItems(inv);
+};
 
   const buy = async (itemId) => {
     setBusy(true);
@@ -113,6 +133,81 @@ export default function ShopModal({ onClose }) {
     }
   };
 
+const clearRunHpCache = () => {
+  // ✅ biztosra megyünk: mindent törlünk ami HP-run cache lehet
+  Object.keys(sessionStorage)
+    .filter((k) => k.toLowerCase().includes("hp"))
+    .forEach((k) => sessionStorage.removeItem(k));
+};
+
+const healForGold = async () => {
+  if (!userId) return;
+  if (maxHp == null || currentHp == null) {
+    setError("Még tölt a stat (full-stats).");
+    return;
+  }
+  if (isFull) {
+    setError("Full HP-n vagy.");
+    return;
+  }
+
+  setBusy(true);
+  try {
+    const res = await fetch("http://localhost:3000/api/shop/heal", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ playerId: Number(userId) }),
+    });
+
+    const data = await res.json();
+    if (!res.ok || !data.success) {
+      setError(data.error || "Heal sikertelen");
+      return;
+    }
+
+    // ✅ EZ A LÉNYEG: a combat innen olvas
+    sessionStorage.setItem(hpKey, String(maxHp));
+
+    // opcionális: UI frissítés
+    await refreshAll();
+  } finally {
+    setBusy(false);
+  }
+};
+console.log("HEAL AFTER setItem", {
+  hpKey,
+  storedNow: sessionStorage.getItem(hpKey),
+  maxHp,
+});
+
+
+const heal = async () => {
+  setBusy(true);
+  try {
+    const res = await fetch("http://localhost:3000/api/shop/heal", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ playerId: Number(userId) }),
+    });
+
+    const data = await res.json();
+
+    if (!res.ok || !data.success) {
+      setError(data.error || "Sikertelen gyógyítás");
+      setShowError(true);
+      return;
+    }
+
+    // ✅ EZ A LÉNYEG – run HP cache törlés
+    sessionStorage.removeItem(`adventure_hp_${userId}`);
+
+    // opcionális, de jó: bolt UI frissítése
+    await refreshAll();
+  } finally {
+    setBusy(false);
+  }
+};
+
   const itemsToShow =
     mode === "buy"
       ? shopItems.filter(i => i.type === activeCategory)
@@ -138,9 +233,15 @@ export default function ShopModal({ onClose }) {
 
         {/* STATS */}
         <div className="Stats space-y-2 absolute/60 p-4 w-64 z-20">
-          <div className="StatsStatsName flex justify-between">SZINT: <span className="StatsStats">{playerData?.level ?? "-"}</span> </div>
-          <div className="StatsStatsName flex justify-between">XP: <span className="StatsStats">{playerData?.xp ?? "-"}</span> </div>
-          <div className="StatsStatsName flex justify-between">ARANY: <span className="StatsStats">{playerData?.gold ?? "-"}</span> </div>
+          <div className="StatsStatsName flex justify-between">
+          SZINT: <span className="StatsStats">{fullStats?.player?.level ?? "-"}</span>
+        </div>
+        <div className="StatsStatsName flex justify-between">
+          XP: <span className="StatsStats">{fullStats?.player?.xp ?? "-"}</span>
+        </div>
+        <div className="StatsStatsName flex justify-between">
+          ARANY: <span className="StatsStats">{fullStats?.player?.gold ?? "-"}</span>
+        </div>
         </div>
 
         {/* KATEGÓRIA GOMBOK – BAL */}
@@ -157,6 +258,19 @@ export default function ShopModal({ onClose }) {
             </button>
           ))}
         </div>
+<div className="mt-3 space-y-2">
+  <div className="text-white">
+    HP: <b>{currentHp ?? "-"}</b> / <b>{maxHp ?? "-"}</b>
+  </div>
+
+  <button
+    onClick={healForGold}
+    disabled={busy || isFull}
+    className="px-4 py-2 bg-green-700 rounded disabled:opacity-50"
+  >
+    Gyógyítás ({HEAL_COST} gold)
+  </button>
+</div>
 
 
         {/* VESZ / ELAD – JOBB */}

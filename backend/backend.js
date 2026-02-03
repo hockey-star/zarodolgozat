@@ -590,7 +590,7 @@ app.get("/api/players/:id", (req, res) => {
   const { id } = req.params;
 
   pool.query(
-    "SELECT id, username, level, xp, gold, class_id FROM players WHERE id = ?",
+    "SELECT id, username, level, xp, gold, class_id, hp, max_hp FROM players WHERE id = ?",
     [id],
     (err, result) => {
       if (err) return res.status(500).json({ error: "Adatbázis hiba" });
@@ -875,6 +875,26 @@ app.post("/api/shop/sell", (req, res) => {
   );
 });
 
+//SHOP HEAL
+app.post("/api/shop/heal", (req, res) => {
+  const { playerId } = req.body || {};
+  const COST = 100;
+
+  if (!playerId) return res.status(400).json({ success: false, error: "playerId hiányzik" });
+
+  pool.query("SELECT gold FROM players WHERE id = ?", [playerId], (err, rows) => {
+    if (err) return res.status(500).json({ success: false, error: "DB hiba" });
+    if (!rows || rows.length === 0) return res.status(404).json({ success: false, error: "Nincs ilyen játékos" });
+
+    const gold = Number(rows[0].gold) || 0;
+    if (gold < COST) return res.status(400).json({ success: false, error: "Nincs elég arany" });
+
+    pool.query("UPDATE players SET gold = gold - ? WHERE id = ?", [COST, playerId], (err2) => {
+      if (err2) return res.status(500).json({ success: false, error: "Gold levonás hiba" });
+      return res.json({ success: true, cost: COST });
+    });
+  });
+});
 
 /* fejleszt – GOLD alapú, nem XP – ownedId alapon */
 app.post("/api/blacksmith/upgrade", (req, res) => {
