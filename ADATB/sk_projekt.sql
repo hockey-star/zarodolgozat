@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Gép: 127.0.0.1
--- Létrehozás ideje: 2026. Feb 02. 12:02
+-- Létrehozás ideje: 2026. Feb 03. 13:17
 -- Kiszolgáló verziója: 10.4.28-MariaDB
 -- PHP verzió: 8.2.4
 
@@ -128,7 +128,12 @@ INSERT INTO `birtokol` (`id`, `player_id`, `item_id`, `quantity`, `upgrade_level
 (97, 30, 26, 1, 0, 1, 1),
 (98, 30, 28, 1, 0, 1, 2),
 (99, 30, 16, 1, 0, 1, 1),
-(100, 33, 9, 1, 1, 0, 1);
+(100, 33, 9, 1, 1, 0, 1),
+(101, 36, 30, 1, 1, 1, 1),
+(102, 37, 22, 1, 5, 1, 1),
+(103, 37, 25, 1, 3, 1, 1),
+(104, 37, 27, 1, 2, 1, 1),
+(105, 37, 29, 1, 5, 1, 2);
 
 -- --------------------------------------------------------
 
@@ -172,6 +177,7 @@ CREATE TABLE `items` (
   `defense_bonus` int(11) DEFAULT 0,
   `hp_bonus` int(11) DEFAULT 0,
   `rarity` varchar(10) DEFAULT 'common',
+  `class_required` int(11) DEFAULT NULL,
   `bonus_strength` int(11) DEFAULT 0,
   `bonus_intellect` int(11) DEFAULT 0,
   `bonus_defense` int(11) DEFAULT 0,
@@ -183,36 +189,62 @@ CREATE TABLE `items` (
 -- A tábla adatainak kiíratása `items`
 --
 
-INSERT INTO `items` (`id`, `name`, `type`, `min_dmg`, `max_dmg`, `intellect_bonus`, `defense_bonus`, `hp_bonus`, `rarity`, `bonus_strength`, `bonus_intellect`, `bonus_defense`, `bonus_hp`, `prize`) VALUES
-(3, 'Vas Kard', 'weapon', 3, 5, 0, 0, 0, 'common', 2, 0, 0, 0, 0),
-(4, 'Varázspálca', 'weapon', 1, 4, 0, 0, 0, 'rare', 0, 3, 0, 0, 0),
-(5, 'Vérteli Páncél', 'armor', 0, 0, 0, 0, 0, 'common', 0, 0, 3, 0, 0),
-(6, 'Gyógyital', 'potion', 0, 0, 0, 0, 0, 'common', 0, 0, 0, 20, 0),
-(7, 'Fa Kard', 'weapon', 2, 4, 0, 0, 0, 'common', 1, 0, 0, 0, 5),
-(8, 'Acél Kard', 'weapon', 5, 8, 0, 0, 0, 'uncommon', 3, 0, 0, 0, 15),
-(9, 'Hosszú Kard', 'weapon', 6, 10, 0, 0, 0, 'rare', 4, 0, 0, 0, 25),
-(10, 'Mágikus Kard', 'weapon', 4, 7, 2, 0, 0, 'rare', 2, 2, 0, 0, 30),
-(11, 'Tőr', 'weapon', 3, 6, 0, 0, 0, 'common', 2, 0, 0, 0, 8),
-(12, 'Bőr Páncél', 'armor', 0, 0, 0, 2, 0, 'common', 0, 0, 2, 0, 10),
-(13, 'Láncing', 'armor', 0, 0, 0, 4, 0, 'uncommon', 0, 0, 4, 0, 20),
-(14, 'Acél Páncél', 'armor', 0, 0, 0, 6, 0, 'rare', 0, 0, 6, 0, 35),
-(15, 'Mágikus Köpeny', 'armor', 0, 0, 3, 2, 0, 'rare', 0, 3, 2, 0, 40),
-(16, 'Ősi Páncél', 'armor', 0, 0, 1, 8, 20, 'epic', 0, 1, 8, 20, 80),
-(17, 'Kis Gyógyital', 'potion', 0, 0, 0, 0, 20, 'common', 0, 0, 0, 20, 10),
-(18, 'Közepes Gyógyital', 'potion', 0, 0, 0, 0, 50, 'uncommon', 0, 0, 0, 50, 25),
-(19, 'Nagy Gyógyital', 'potion', 0, 0, 0, 0, 100, 'rare', 0, 0, 0, 100, 50),
-(20, 'Mana Ital', 'potion', 0, 0, 30, 0, 0, 'uncommon', 0, 30, 0, 0, 30),
-(21, 'Erő Ital', 'potion', 0, 0, 0, 0, 0, 'uncommon', 5, 0, 0, 0, 30),
-(22, 'Varázskönyv', 'weapon', 2, 5, 5, 0, 0, 'rare', 0, 5, 0, 0, 45),
-(23, 'Ősi Bot', 'weapon', 4, 9, 6, 0, 0, 'epic', 0, 6, 0, 0, 70),
-(24, 'Nomád Harci Vért', 'armor', 0, 0, 0, 5, 0, 'uncommon', 0, 0, 5, 0, 25),
-(25, 'Mágikus Pajzs', 'armor', 0, 0, 3, 7, 0, 'epic', 0, 3, 7, 0, 60),
-(26, 'Gyűrű az Erőhöz', 'accessory', 0, 0, 0, 0, 0, 'rare', 4, 0, 0, 0, 40),
-(27, 'Gyűrű az Intelligenciához', 'accessory', 0, 0, 4, 0, 0, 'rare', 0, 4, 0, 0, 40),
-(28, 'Élet Amulett', 'accessory', 0, 0, 0, 0, 50, 'rare', 0, 0, 0, 50, 45),
-(29, 'Ősi Amulett', 'accessory', 0, 0, 3, 3, 30, 'epic', 2, 3, 3, 30, 90),
-(30, 'Legendás Kard', 'weapon', 10, 15, 3, 0, 0, 'legendary', 6, 3, 0, 0, 150),
-(31, 'Jakab Kalapja', 'helmet', 0, 0, 0, 0, 0, 'legendary', 99, 99, 99, 99, 1);
+INSERT INTO `items` (`id`, `name`, `type`, `min_dmg`, `max_dmg`, `intellect_bonus`, `defense_bonus`, `hp_bonus`, `rarity`, `class_required`, `bonus_strength`, `bonus_intellect`, `bonus_defense`, `bonus_hp`, `prize`) VALUES
+(3, 'Vas Kard', 'weapon', 3, 5, 0, 0, 0, 'common', 6, 2, 0, 0, 0, 100),
+(4, 'Varázspálca', 'weapon', 1, 4, 0, 0, 0, 'rare', 7, 0, 3, 0, 0, 400),
+(5, 'Vérteli Páncél', 'armor', 0, 0, 0, 0, 0, 'common', 6, 0, 0, 3, 0, 100),
+(6, 'Gyógyital', 'potion', 0, 0, 0, 0, 0, 'common', NULL, 0, 0, 0, 20, 0),
+(7, 'Fa Kard', 'weapon', 2, 4, 0, 0, 0, 'common', 6, 1, 0, 0, 0, 100),
+(8, 'Acél Kard', 'weapon', 5, 8, 0, 0, 0, 'uncommon', 6, 3, 0, 0, 0, 200),
+(9, 'Hosszú Kard', 'weapon', 6, 10, 0, 0, 0, 'rare', 6, 4, 0, 0, 0, 400),
+(10, 'Mágikus Kard', 'weapon', 4, 7, 2, 0, 0, 'rare', 6, 2, 2, 0, 0, 400),
+(11, 'Vasbárd', 'weapon', 3, 6, 0, 0, 0, 'common', 6, 2, 0, 0, 0, 100),
+(12, 'Bőr Páncél', 'armor', 0, 0, 0, 2, 0, 'common', 6, 0, 0, 2, 0, 100),
+(13, 'Láncing', 'armor', 0, 0, 0, 4, 0, 'uncommon', 6, 0, 0, 4, 0, 250),
+(14, 'Acél Páncél', 'armor', 0, 0, 0, 6, 0, 'rare', 6, 0, 0, 6, 0, 350),
+(15, 'Mágikus Köpeny', 'armor', 0, 0, 3, 2, 0, 'rare', 7, 0, 3, 2, 0, 350),
+(16, 'Ősi Páncél', 'armor', 0, 0, 1, 8, 20, 'epic', 6, 0, 1, 8, 20, 750),
+(17, 'Kis Gyógyital', 'potion', 0, 0, 0, 0, 20, 'common', NULL, 0, 0, 0, 20, 10),
+(18, 'Közepes Gyógyital', 'potion', 0, 0, 0, 0, 50, 'uncommon', NULL, 0, 0, 0, 50, 25),
+(19, 'Nagy Gyógyital', 'potion', 0, 0, 0, 0, 100, 'rare', NULL, 0, 0, 0, 100, 50),
+(20, 'Mana Ital', 'potion', 0, 0, 30, 0, 0, 'uncommon', NULL, 0, 30, 0, 0, 30),
+(21, 'Erő Ital', 'potion', 0, 0, 0, 0, 0, 'uncommon', NULL, 5, 0, 0, 0, 30),
+(22, 'Varázskönyv', 'weapon', 2, 5, 5, 0, 0, 'rare', 7, 0, 5, 0, 0, 400),
+(23, 'Ősi Bot', 'weapon', 4, 9, 6, 0, 0, 'epic', 7, 0, 6, 0, 0, 800),
+(24, 'Nomád Harci Vért', 'armor', 0, 0, 0, 5, 0, 'uncommon', 6, 0, 0, 5, 0, 100),
+(25, 'Mágikus Pajzs', 'armor', 0, 0, 3, 7, 0, 'epic', 7, 0, 3, 7, 0, 750),
+(26, 'Gyűrű az Erőhöz', 'accessory', 0, 0, 0, 0, 0, 'rare', NULL, 4, 0, 0, 0, 250),
+(27, 'Gyűrű az Intelligenciához', 'accessory', 0, 0, 4, 0, 0, 'rare', NULL, 0, 4, 0, 0, 250),
+(28, 'Élet Amulett', 'accessory', 0, 0, 0, 0, 50, 'rare', NULL, 0, 0, 0, 50, 250),
+(29, 'Ősi Amulett', 'accessory', 0, 0, 3, 3, 30, 'epic', NULL, 2, 3, 3, 30, 500),
+(30, 'Legendás Kard', 'weapon', 10, 15, 3, 0, 0, 'legendary', 6, 6, 3, 0, 0, 2000),
+(31, 'Jakab Kalapja', 'helmet', 0, 0, 0, 0, 0, 'legendary', NULL, 99, 99, 99, 99, 9999),
+(32, 'Kopott Vadászíj', 'weapon', 0, 0, 0, 0, 0, 'common', 8, 2, 0, 0, 0, 100),
+(33, 'Erősített Vadászíj', 'weapon', 0, 0, 0, 0, 0, 'uncommon', 8, 4, 0, 0, 0, 200),
+(34, 'Kompozit Íj', 'weapon', 0, 0, 0, 0, 0, 'rare', 8, 6, 0, 1, 20, 400),
+(35, 'Árnyerdő Íja', 'weapon', 0, 0, 0, 0, 0, 'epic', 8, 9, 0, 6, 20, 800),
+(36, 'Legendás Sólyomíj', 'weapon', 0, 0, 0, 0, 0, 'legendary', 8, 10, 0, 2, 50, 2500),
+(37, 'Kopott Bőr Mellvért', 'armor', 0, 0, 0, 0, 0, 'common', 8, 0, 0, 2, 0, 100),
+(38, 'Vadőr Kabát', 'armor', 0, 0, 0, 0, 0, 'uncommon', 8, 1, 0, 3, 5, 200),
+(39, 'Cserzett Bőrpáncél', 'armor', 0, 0, 0, 0, 0, 'rare', 8, 2, 0, 3, 25, 300),
+(40, 'Árnyerdő Vért', 'armor', 0, 0, 0, 0, 0, 'epic', 8, 3, 0, 7, 40, 700),
+(41, 'Szellemszarvas Páncél', 'armor', 0, 0, 0, 0, 0, 'legendary', 8, 6, 0, 10, 50, 1800),
+(42, 'Vadász Taliszmán', 'accessory', 0, 0, 0, 0, 0, 'common', 8, 1, 0, 0, 5, 100),
+(43, 'Feszítő Gyűrű', 'accessory', 0, 0, 0, 0, 0, 'uncommon', 8, 2, 0, 1, 0, 250),
+(44, 'Sólyomszem Medál', 'accessory', 0, 0, 0, 0, 0, 'rare', 8, 5, 0, 2, 20, 400),
+(45, 'Ősi Vadász Relikvia', 'accessory', 0, 0, 0, 0, 0, 'epic', 8, 7, 0, 2, 30, 800),
+(46, 'Rozsdás Sisak', 'helmet', 0, 0, 0, 0, 0, 'common', 6, 1, 0, 1, 10, 100),
+(47, 'Kopott Csuklya', 'helmet', 0, 0, 0, 0, 0, 'common', 7, 0, 1, 0, 0, 120),
+(48, 'Vadász Fejpánt', 'helmet', 0, 0, 0, 0, 0, 'common', 8, 1, 0, 0, 10, 100),
+(49, 'Vaskupak', 'helmet', 0, 0, 0, 0, 0, 'uncommon', 6, 2, 0, 2, 0, 200),
+(50, 'Runás Csuklya', 'helmet', 0, 0, 0, 0, 0, 'uncommon', 7, 0, 3, 0, 10, 200),
+(51, 'Vadőr Maszk', 'helmet', 0, 0, 0, 0, 0, 'uncommon', 8, 3, 0, 1, 5, 200),
+(52, 'Lovagi Sisak', 'helmet', 0, 0, 0, 0, 0, 'rare', 6, 4, 0, 3, 20, 400),
+(53, 'Arkán Tiara', 'helmet', 0, 0, 0, 0, 0, 'common', 7, 0, 4, 2, 10, 400),
+(54, 'Sólyomsisak', 'helmet', 0, 0, 0, 0, 0, 'rare', 8, 3, 0, 3, 10, 400),
+(55, 'Ősi Hadúr Sisakja', 'helmet', 0, 0, 0, 0, 0, 'epic', 6, 7, 0, 4, 30, 800),
+(56, 'Ősi Mágus Csuklya', 'helmet', 0, 0, 0, 0, 0, 'epic', 7, 0, 7, 2, 30, 800),
+(57, 'Árnyerdő Sisak', 'helmet', 0, 0, 0, 0, 0, 'epic', 8, 8, 0, 1, 35, 800);
 
 -- --------------------------------------------------------
 
@@ -289,7 +321,9 @@ INSERT INTO `players` (`id`, `username`, `email`, `password_hash`, `class_id`, `
 (33, 'tesztelget321', 'asdasd@gmasd.com', '$2b$10$.TtoEeAQBp51kAvAq6sTx.CjXc9eAefMQGt1A.DRLFS9dN/r8kvG2', 6, 5, 68, 367, 50, 50, 5, 0, 3, '2026-01-28 10:38:24', 12),
 (34, 'tesztelgetnek123', '123123@gmail.com', '$2b$10$dZD9./1P2xq/5T.LSzqx.eZ1nfjeu2yXfC1Kq3FrMkcyN7k52Fgmm', 6, 9, 99, 1228, 50, 50, 5, 0, 3, '2026-02-02 09:42:17', 24),
 (35, 'tesztelgetnek321', '123214@gmail.com', '$2b$10$ZXhg4ZqcvvpemEwY7N4HMeJhxS1qMgQmAr9gsi/KYFa4FBDZYd3AG', 6, 7, 120, 871, 50, 50, 5, 0, 3, '2026-02-02 10:23:53', 18),
-(36, 'tesztelgethetek123', '123125512@gmail.com', '$2b$10$fqByP.992ytXzswdrfRBK.BxJa7QMLv336OlQXlYetDzYVQmCEDbi', 6, 4, 8, 281, 50, 50, 5, 0, 3, '2026-02-02 11:59:49', 9);
+(36, 'tesztelgethetek123', '123125512@gmail.com', '$2b$10$fqByP.992ytXzswdrfRBK.BxJa7QMLv336OlQXlYetDzYVQmCEDbi', 6, 6, 59, 533, 70, 70, 10, 0, 3, '2026-02-02 11:59:49', 6),
+(37, 'magus', 'asdsadsa@gmail.com', '$2b$10$zZJ/KPUp59RNyYwsEhPwCeNKRib9vVOAzBhGI8ZypnPTyse2fobC6', 7, 22, 25, 866, 60, 60, 0, 8, 1, '2026-02-03 07:59:30', 51),
+(38, 'ijaszalex', 'asdas@gmail.com', '$2b$10$hhXWLddhE7slg89meMjBEO3Y2.qPX5DYNJYs30HizHfQZSk0P4Jla', 8, 1, 0, 100, 40, 40, 3, 2, 2, '2026-02-03 13:16:38', 0);
 
 -- --------------------------------------------------------
 
@@ -423,13 +457,29 @@ INSERT INTO `player_quests` (`id`, `player_id`, `quest_id`, `progress`, `status`
 (232, 35, 10, 0, 'locked'),
 (233, 35, 11, 0, 'locked'),
 (241, 36, 1, 3, 'claimed'),
-(242, 36, 2, 0, 'in_progress'),
-(243, 36, 3, 0, 'locked'),
+(242, 36, 2, 7, 'claimed'),
+(243, 36, 3, 0, 'in_progress'),
 (244, 36, 4, 0, 'locked'),
 (245, 36, 5, 0, 'locked'),
 (246, 36, 9, 0, 'locked'),
 (247, 36, 10, 0, 'locked'),
-(248, 36, 11, 0, 'locked');
+(248, 36, 11, 0, 'locked'),
+(249, 37, 1, 3, 'claimed'),
+(250, 37, 2, 7, 'claimed'),
+(251, 37, 3, 3, 'claimed'),
+(252, 37, 4, 1, 'completed'),
+(253, 37, 5, 0, 'locked'),
+(254, 37, 9, 0, 'locked'),
+(255, 37, 10, 0, 'locked'),
+(256, 37, 11, 0, 'locked'),
+(264, 38, 1, 0, 'in_progress'),
+(265, 38, 2, 0, 'locked'),
+(266, 38, 3, 0, 'locked'),
+(267, 38, 4, 0, 'locked'),
+(268, 38, 5, 0, 'locked'),
+(269, 38, 9, 0, 'locked'),
+(270, 38, 10, 0, 'locked'),
+(271, 38, 11, 0, 'locked');
 
 -- --------------------------------------------------------
 
@@ -546,7 +596,8 @@ ALTER TABLE `classes`
 -- A tábla indexei `items`
 --
 ALTER TABLE `items`
-  ADD PRIMARY KEY (`id`);
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_items_class_required` (`class_required`);
 
 --
 -- A tábla indexei `levels`
@@ -611,7 +662,7 @@ ALTER TABLE `achievements`
 -- AUTO_INCREMENT a táblához `birtokol`
 --
 ALTER TABLE `birtokol`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=101;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=106;
 
 --
 -- AUTO_INCREMENT a táblához `classes`
@@ -623,7 +674,7 @@ ALTER TABLE `classes`
 -- AUTO_INCREMENT a táblához `items`
 --
 ALTER TABLE `items`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=32;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=58;
 
 --
 -- AUTO_INCREMENT a táblához `paths`
@@ -635,13 +686,13 @@ ALTER TABLE `paths`
 -- AUTO_INCREMENT a táblához `players`
 --
 ALTER TABLE `players`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=37;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=39;
 
 --
 -- AUTO_INCREMENT a táblához `player_quests`
 --
 ALTER TABLE `player_quests`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=256;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=279;
 
 --
 -- AUTO_INCREMENT a táblához `quests_master`

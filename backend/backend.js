@@ -1031,12 +1031,23 @@ app.post("/api/blacksmith/upgrade", (req, res) => {
   });
 });
 app.get("/api/items", (req, res) => {
-  pool.query("SELECT * FROM items", (err, items) => {
+  const classId = Number(req.query.classId);
+
+  if (!Number.isFinite(classId)) {
+    pool.query("SELECT * FROM items", (err, items) => {
+      if (err) return res.status(500).json({ error: "DB error" });
+      res.json(items);
+    });
+    return;
+  }
+
+  const sql = "SELECT * FROM items WHERE class_required = ? OR class_required IS NULL";
+
+  pool.query(sql, [classId], (err, items) => {
     if (err) return res.status(500).json({ error: "DB error" });
     res.json(items);
   });
 });
-
 app.get("/api/player/:id/items", (req, res) => {
   const playerId = req.params.id;
 

@@ -38,7 +38,7 @@ const isFull = currentHp != null && maxHp != null && currentHp >= maxHp;
 
   const CATEGORIES = [
     { type: "weapon", icon: "⚔️" },
-    { type: "helmet", icon: "🧪" },
+    { type: "helmet", icon: "👑" },
     { type: "armor", icon: "🛡️" },
     { type: "accessory", icon: "💍" },
     
@@ -71,14 +71,18 @@ useEffect(() => {
     .then(r => r.json())
     .then(setFullStats);
 
-  fetch("http://localhost:3000/api/items")
-    .then(r => r.json())
-    .then(setShopItems);
-
   fetch(`http://localhost:3000/api/inventory/${userId}`)
     .then(r => r.json())
     .then(setInventoryItems);
 }, [userId]);
+useEffect(() => {
+  const classId = fullStats?.player?.class_id;
+  if (!userId || !classId) return;
+
+  fetch(`http://localhost:3000/api/items?classId=${classId}`)
+    .then(r => r.json())
+    .then(setShopItems);
+}, [userId, fullStats?.player?.class_id]);
 
 const refreshAll = async () => {
   const stats = await fetch(`http://localhost:3000/api/player/${userId}/full-stats`).then(r => r.json());
