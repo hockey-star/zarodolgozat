@@ -1,81 +1,3 @@
-/* LOADER DOBOZ */
-.loaderBox {
-  position: fixed;
-  bottom: 5%;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 500px;          /* ÁLLÍTSD AHOGY NEKED JÓ! */
-  height: auto;
-  z-index: 9999999;
-  pointer-events: none;
-}
-
-/* A PNG keret */
-.loaderFrame {
-  width: 100%;
-  height: auto;
-  display: block;
-  image-rendering: pixelated;
-  position: relative;
-  z-index: 3;
-}
-
-.hub-zooming {
-  filter: blur(1px) brightness(0.9);
-}
-
-/* A belső piros csík – KÖZÉPRE IGAZÍTVA */
-.loaderFill {
-  position: absolute;
-  top: 50%;               /* KÖZÉPEN FUT */
-  left: 15.5%;               /* belső csík bal kezdete (pixel alapján) */
-  width: 70%;             /* belső csík szélessége */
-  height: 7px;           /* BELTÉR TERÜLETE pixel alapján */
-  transform: translateY(-50%);
-
-  background: linear-gradient(90deg, #ff4d4d, #b30000);
-  box-shadow: 0 0 6px rgba(255, 20, 20, 0.8);
-
-  transform-origin: left;
-  animation: loadBarFill 5s linear forwards;
-  image-rendering: pixelated;
-
-  z-index: 2;
-}
-
-@keyframes loadBarFill {
-  from { transform: translateY(-50%) scaleX(0); }
-  to   { transform: translateY(-50%) scaleX(1); }
-}
-
-.hub-camera {
-  position: absolute;
-  inset: 0;
-  width: 100vw;
-  height: 100vh;
-  will-change: transform;
-}
-
-.hub-map {
-  position: absolute;
-  inset: 0;
-  background-size: cover;
-  background-position: center;
-}
-
-/* Ez az osztály kényszeríti a teljes sötétséget animáció nélkül */
-.hub-overlay.modal-active {
-  opacity: 1;
-  
-  transition: none; /* Ne legyen átmenet, amikor a modal megjelenik */
-}
-
-.overlay-black {
-  opacity: 1 !important;
-  
-}
-
-
 .hub-root {
   position: fixed;
   inset: 0;
@@ -83,25 +5,51 @@
   overflow: hidden;
 }
 
+/* Hub.css */
+
+.hub-overlay {
+  position: fixed;
+  inset: 0;
+  background: black;
+  z-index: 1;
+  pointer-events: none;
+  opacity: 0;
+  /* Ez garantálja, hogy minden opacity változás (0->1 és 1->0) lassú legyen */
+  transition: opacity 0.6s ease-in-out;
+}
+
+/* Ez az osztály felel a sötétítésért (nyitáskor ÉS bezáráskor is) */
+.hub-overlay.is-dark {
+  opacity: 1;
+}
+
+/* A fade-in-effect-et és dark-hold-ot törölheted, mert a transition megoldja */
+/* Amikor a modal aktív, a transition miatt szépen besötétedik */
+.hub-overlay.modal-active {
+  opacity: 1;
+}
+
+/* Bezáráskor ezen az osztályon keresztül tartjuk sötéten a HUB-ot */
+.hub-overlay.dark-hold {
+  opacity: 1;
+  transition: none; /* Ne villanjon meg, amíg a kamera resetel */
+}
+
+/* Kivilágosodás animáció */
+.fade-in-effect {
+  animation: fadeInScreen 0.8s ease-out forwards;
+}
+
+@keyframes fadeInScreen {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}
+
+/* Világ és Kamera */
 .camera {
   position: absolute;
   inset: 0;
   overflow: hidden;
-}
-
-.hub-image {
-  position: absolute;
-  width: 100vw;
-  height: 100vh;
-  object-fit: cover;
-  transform-origin: top left;
-  transition: transform 500ms ease-in-out;
-  will-change: transform;
-}
-
-.hotzone {
-  position: absolute;
-  cursor: pointer;
 }
 
 .world {
@@ -112,50 +60,27 @@
   will-change: transform;
 }
 
+.hub-image {
+  position: absolute;
+  width: 100vw;
+  height: 100vh;
+  object-fit: cover;
+}
+
+/* Hotzones & Player */
+.hotzone { position: absolute; cursor: pointer; z-index: 5; }
+.keret:hover {
+  background-color: rgba(0, 0, 0, 0.08);
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+}
+
 .player {
   position: absolute;
   width: 5%;
   transform: translate(-50%, -50%);
   transition: left 650ms ease-in-out, top 650ms ease-in-out;
+  z-index: 10;
 }
 
-.player.moving {
-  filter: brightness(1.25);
-}
-
-/* 🖱️ HOVER */
-.keret:hover {
-  background-color: rgba(0, 0, 0, 0.080);
-  box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
-  filter: brightness(0.95);
-}
-
-/* Fekete fedőréteg a teljes képernyőre */
-.hub-overlay {
-  position: fixed;
-  inset: 0;
-  background: black;
-  z-index: 1; /* Legyen minden felett */
-  pointer-events: none; /* Ne akadályozza a kattintást */
-  opacity: 1;
-}
-
-/* Kezdő kivilágosodás animáció */
-.fade-in-effect {
-  animation: fadeInScreen 1s ease-out forwards;
-}
-
-/* Sötétedés animáció zoomoláskor */
-.fade-out-effect {
-  animation: fadeOutScreen 1s ease-in-out forwards;
-}
-
-@keyframes fadeInScreen {
-  from { opacity: 1; }
-  to   { opacity: 0; }
-}
-
-@keyframes fadeOutScreen {
-  from { opacity: 0; }
-  to   { opacity: 1; }
-}
+.player.moving { filter: brightness(1.25); }
+.hub-zooming { filter: blur(1px) brightness(0.9); }
