@@ -1402,7 +1402,7 @@ if (choice.manaCost === "ALL") {
 
   if (choice.kind === "big_damage") {
     const base = Math.max(1, Math.floor((enemy?.maxHp ?? 1) * 1.0));
-    const extra = Math.floor(playerIntellect * 2.25);
+    const extra = Math.floor(playerIntellect * 1.7);
     const dmg = base + extra;
 
     spawnAbilityEffect({
