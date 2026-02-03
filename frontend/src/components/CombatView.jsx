@@ -44,15 +44,6 @@ import {
 
 const BASE_UI_SCALE = 0.8;
 
-const MANA_UI = {
-  wrapperStyle: {
-    top: "610px",
-    left: "50%",
-    transform: "translateX(-50%)",
-    width: "420px",
-  },
-};
-
 const PET_UI = {
   wrapperStyle: {
     left: "20px",
@@ -61,11 +52,32 @@ const PET_UI = {
 };
 
 const PET_SIZE = 300;
-
 const ARCANE_CHOICES = [
-  { id: "arcane_30pct", name: "Arcane Burst", desc: "50% DMG", kind: "damage_percent", percent: 0.5, img: "" },
-  { id: "arcane_full_heal", name: "Arcane Restore", desc: "100% HEAL", kind: "full_heal", img: "" },
-  { id: "arcane_big_dmg", name: "Arcane Cataclysm", desc: "VERY STRONG DMG", kind: "big_damage", img: "" },
+  {
+    id: "arcane_burst",
+    name: "Arcane Burst",
+    desc: "30% enemy maxHP",
+    kind: "damage_percent",
+    percent: 0.3,
+    manaCost: 5,
+    img: "/cards/common/spell_arcane_arcanepotency.jpg",
+  },
+  {
+    id: "arcane_restore",
+    name: "Arcane Restore",
+    desc: "100% HEAL",
+    kind: "full_heal",
+    manaCost: 8,
+    img: "/cards/common/spell_arcane_manatap.jpg",
+  },
+  {
+    id: "arcane_cataclysm",
+    name: "Arcane Cataclysm",
+    desc: "VERY STRONG DMG",
+    kind: "big_damage",
+    manaCost: "ALL", // ✅ ez legyen ALL
+    img: "/cards/common/ability_mage_firestarter.jpg",
+  },
 ];
 
 function xpToNextLevel(level) {
@@ -1329,62 +1341,92 @@ if (remainingEnemies.length > 0) {
     }
   }, [playerHP, maxHPFromPlayer, classKey, battleOver]);
 
-  // ===== ARCANE =====
-  function castArcane(choice) {
-    if (battleOverRef.current) return;
-    if (turn !== "player" || !enemy) return;
-    if (classKey !== "mage") return;
-    if (mageMana < CTX_MAGE_MANA_MAX) return;
+  
+ // ===== ARCANE =====
+function castArcane(choice) {
+  if (battleOverRef.current) return;
+  if (turn !== "player" || !enemy) return;
+  if (classKey !== "mage") return;
 
-    setArcanePickerOpen(false);
-    spendAllMageMana();
+ const currentMana = Number(mageMana ?? 0);
 
-    const playerIntellect = derivedStats?.intellect ?? player?.intellect ?? 0;
-    
+const requiredMana =
+  choice.manaCost === "ALL" ? CTX_MAGE_MANA_MAX : Number(choice.manaCost);
 
+if (!Number.isFinite(requiredMana) || requiredMana <= 0) return;
+if (currentMana < requiredMana) return; // ✅ ALL-nál 10 alatt nem engedi
 
-    if (choice.kind === "damage_percent") {
-      const dmg = Math.max(1, Math.floor((enemy?.maxHp ?? 1) * choice.percent));
-      spawnAbilityEffect({ src: arcaneSurgeFx, target: "enemy_aoe", width: "1200px", height: "1200px" });
-      setEnemyHP((prev) => {
-        const newHP = Math.max(0, prev - dmg);
-        addHPPopup(-dmg, "enemy");
-        pushLog(`${choice.name}: ${dmg} sebzés.`);
-        if (newHP <= 0) endBattle();
-        return newHP;
-      });
-    }
-    
+// ✅ levonás: ALL esetén mindent elköltünk
+if (choice.manaCost === "ALL") {
+  setMageMana(0);
+} else {
+  setMageMana(Math.max(0, currentMana - requiredMana));
+}
 
-    if (choice.kind === "full_heal") {
-      spawnAbilityEffect({ src: healFx, target: "player", width: "1000px", height: "1000px" });
-      setPlayerHP(() => {
-        const amount = Math.max(0, maxHPFromPlayer - playerHPRef.current);
-        if (amount > 0) addHPPopup(+amount, "player");
-        pushLog(`${choice.name}: teljes gyógyítás.`);
-        return maxHPFromPlayer;
-      });
-    }
+  // ✅ picker bezár (NE nyissa ki újra!)
+  setArcanePickerOpen(false);
 
-    if (choice.kind === "big_damage") {
-      const base = Math.max(1, Math.floor((enemy?.maxHp ?? 1) * 1.0));
-      const extra = Math.floor(playerIntellect * 2.25);
-      const dmg = base + extra;
+  const playerIntellect = derivedStats?.intellect ?? player?.intellect ?? 0;
 
-      spawnAbilityEffect({ src: arcaneSurgeFx, target: "enemy_aoe", width: "1400px", height: "1400px" });
-
-      setEnemyHP((prev) => {
-        const newHP = Math.max(0, prev - dmg);
-        addHPPopup(-dmg, "enemy", true);
-        pushLog(`${choice.name}: ${dmg} brutális sebzés!`);
-        if (newHP <= 0) endBattle();
-        return newHP;
-      });
-    }
-
-    gainMageMana(1);
-    trackTimeout(setTimeout(() => setTurn("enemy"), SMART_DRAW.PLAY_ANIM_MS));
+  if (choice.kind === "damage_percent") {
+    const dmg = Math.max(1, Math.floor((enemy?.maxHp ?? 1) * choice.percent));
+    spawnAbilityEffect({
+      src: arcaneSurgeFx,
+      target: "enemy_aoe",
+      width: "1200px",
+      height: "1200px",
+    });
+    setEnemyHP((prev) => {
+      const newHP = Math.max(0, prev - dmg);
+      addHPPopup(-dmg, "enemy");
+      pushLog(`${choice.name}: ${dmg} sebzés.`);
+      if (newHP <= 0) endBattle();
+      return newHP;
+    });
   }
+
+  if (choice.kind === "full_heal") {
+    spawnAbilityEffect({
+      src: healFx,
+      target: "player",
+      width: "1000px",
+      height: "1000px",
+    });
+    setPlayerHP(() => {
+      const amount = Math.max(0, maxHPFromPlayer - playerHPRef.current);
+      if (amount > 0) addHPPopup(+amount, "player");
+      pushLog(`${choice.name}: teljes gyógyítás.`);
+      return maxHPFromPlayer;
+    });
+  }
+
+  if (choice.kind === "big_damage") {
+    const base = Math.max(1, Math.floor((enemy?.maxHp ?? 1) * 1.0));
+    const extra = Math.floor(playerIntellect * 2.25);
+    const dmg = base + extra;
+
+    spawnAbilityEffect({
+      src: arcaneSurgeFx,
+      target: "enemy_aoe",
+      width: "1400px",
+      height: "1400px",
+    });
+
+    setEnemyHP((prev) => {
+      const newHP = Math.max(0, prev - dmg);
+      addHPPopup(-dmg, "enemy", true);
+      pushLog(`${choice.name}: ${dmg} brutális sebzés!`);
+      if (newHP <= 0) endBattle();
+      return newHP;
+    });
+  }
+
+  // ⚠️ Ha nem akarsz "cast után mana visszatöltést", ezt vedd ki:
+  // gainMageMana(1);
+
+  trackTimeout(setTimeout(() => setTurn("enemy"), SMART_DRAW.PLAY_ANIM_MS));
+}
+
 
   // ===== PET BITE =====
   function tryPetBite(extraBonus = 0) {
@@ -1592,7 +1634,7 @@ if (remainingEnemies.length > 0) {
               let dmg = roll.amount;
 
               if (enemyGuardHitsRef.current > 0) {
-                const GUARD_MULT = 0.5;
+                const GUARD_MULT = 0.7;
                 dmg = Math.max(1, Math.floor(dmg * GUARD_MULT));
                 const nextHits = Math.max(0, enemyGuardHitsRef.current - 1);
                 setEnemyGuardHitsSync(nextHits);
@@ -2309,42 +2351,184 @@ return (
             transformOrigin: "center center",
           }}
         >
-          {/* MAGE MANA UI */}
-          {classKey === "mage" && enemy && !battleOver && (
-            <div className="absolute z-40" style={MANA_UI.wrapperStyle}>
-              <div className="text-center text-xs font-mono mb-1 text-cyan-200 drop-shadow">
-                Mana {mageMana}/{CTX_MAGE_MANA_MAX}
-              </div>
-              <div className="h-3 w-full bg-black/60 rounded-full overflow-hidden border border-cyan-400/40">
-                <div className="h-full bg-cyan-400 transition-all duration-300" style={{ width: `${(mageMana / CTX_MAGE_MANA_MAX) * 100}%` }} />
-              </div>
-              {mageMana >= CTX_MAGE_MANA_MAX && turn === "player" && (
-                <div className="flex justify-center mt-2">
-                  <button className="px-4 py-2 rounded bg-cyan-500/80 hover:bg-cyan-400 text-black text-sm font-bold" onClick={() => setArcanePickerOpen(true)}>
-                    ARCANE READY
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
+{/* MAGE MANA UI - Ez marad a jól működő verzió */}
+{classKey === "mage" && enemy && !battleOver && (
+  <div className="absolute bottom-44 left-24 z-40 flex flex-col items-start scale-110 origin-bottom-left pointer-events-none">
+    <div className="flex justify-between items-end mb-2 px-1 w-72">
+      <div className="flex flex-col">
+        <span className="text-[10px] uppercase font-black text-cyan-400 tracking-[0.2em] drop-shadow-md">
+          Mana
+        </span>
+        <div className="h-[2px] w-12 bg-cyan-500/50 mt-0.5" />
+      </div>
+      <span className="text-sm font-mono text-white bg-slate-950/80 px-3 py-0.5 border-l-2 border-cyan-500 shadow-xl">
+        {mageMana} <span className="text-cyan-700 text-xs">/</span> {CTX_MAGE_MANA_MAX}
+      </span>
+    </div>
 
-          {/* ARCANE PICKER MODAL */}
-          {arcanePickerOpen && !battleOver && (
-            <div className="absolute inset-0 z-[999] flex items-center justify-center bg-black/70">
-              <div className="flex gap-6">
-                {ARCANE_CHOICES.map((c) => (
-                  <button key={c.id} onClick={() => castArcane(c)} className="relative w-40 h-56 rounded-xl overflow-hidden border-2 border-cyan-400/60 bg-cyan-900/40 hover:scale-105 transition">
-                    {c.img ? <img src={c.img} alt={c.name} className="absolute inset-0 w-full h-full object-cover" /> : <div className="absolute inset-0 flex items-center justify-center text-cyan-200/60 text-xs">(később kép)</div>}
-                    <div className="absolute bottom-0 w-full bg-black/70 p-2 text-center">
-                      <div className="font-bold text-sm">{c.name}</div>
-                      <div className="text-xs text-gray-200">{c.desc}</div>
+    <div className="h-8 w-72 bg-slate-950 border-2 border-slate-800 p-1 shadow-[0_0_30px_rgba(0,0,0,0.6)] relative overflow-hidden">
+      <div
+        className="h-full bg-cyan-500 transition-all duration-1000 ease-out shadow-[0_0_15px_rgba(6,182,212,0.5)]"
+        style={{ width: `${(mageMana / CTX_MAGE_MANA_MAX) * 100}%` }}
+      />
+    </div>
+
+    {turn === "player" && !arcanePickerOpen && (
+      <button
+        onClick={(e) => {
+          e.preventDefault();
+
+          // ✅ min cost gate: Burst = 5
+          const currentMana = Number(mageMana ?? 0);
+          const canOpen = currentMana >= 5;
+          if (!canOpen) return;
+
+          setArcanePickerOpen(true);
+        }}
+        className={[
+          "mt-6 flex items-center gap-4 group pointer-events-auto active:scale-95 transition-transform",
+          Number(mageMana ?? 0) >= 5 ? "cursor-pointer" : "cursor-not-allowed opacity-60",
+        ].join(" ")}
+      >
+        <div className="relative">
+          <div className="w-10 h-10 bg-cyan-500 rotate-45 animate-ping absolute opacity-20" />
+          <div className="w-10 h-10 bg-cyan-600 border-2 border-white rotate-45 flex items-center justify-center shadow-[0_0_20px_rgba(34,211,238,0.6)] group-hover:bg-cyan-400 transition-colors">
+            <span className="-rotate-45 text-white text-xl font-black italic">!</span>
+          </div>
+        </div>
+        <div className="flex flex-col text-left">
+          <span className="text-white font-black text-xs uppercase tracking-widest group-hover:text-cyan-400">
+            Mana Képességek
+          </span>
+          <span className="text-cyan-600 font-bold text-[9px] uppercase animate-pulse text-shadow">
+            Click to release
+          </span>
+        </div>
+      </button>
+    )}
+  </div>
+)}
+
+{/* ARCANE PICKER MODAL - A Visszatérő Fan Design */}
+{arcanePickerOpen && !battleOver && (
+  <div className="fixed inset-0 z-[1000] flex flex-col items-center justify-center">
+    {/* Sötétített háttér - Kattintásra bezár */}
+    <div
+      className="absolute inset-0 bg-slate-950/90 backdrop-blur-sm cursor-pointer"
+      onClick={() => setArcanePickerOpen(false)}
+    />
+
+    <div className="relative z-10 flex flex-col items-center w-full max-w-6xl">
+      {/* KÁRTYÁK LEGYEZŐJE */}
+      <div className="flex justify-center items-end h-[450px] w-full mb-4 px-20">
+        {ARCANE_CHOICES.map((c, idx) => {
+          const midIndex = Math.floor(ARCANE_CHOICES.length / 2);
+          const rotation = (idx - midIndex) * 10;
+          const translateY = Math.abs(idx - midIndex) * 20;
+
+         const currentMana = Number(mageMana ?? 0);
+
+          const requiredMana =
+            c.manaCost === "ALL" ? CTX_MAGE_MANA_MAX : Number(c.manaCost);
+
+          const canCast =
+            Number.isFinite(requiredMana) && requiredMana > 0 && currentMana >= requiredMana;
+          return (
+            <button
+              key={c.id}
+              disabled={!canCast}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (!canCast) return; // ✅ nincs elég mana → ne sül el UI-ból se
+                castArcane(c);
+                setArcanePickerOpen(false);
+              }}
+              style={{
+                /* transform-gpu és backface-visibility: segít a homályosodás ellen */
+                transform: `rotate(${rotation}deg) translateY(${translateY}px)`,
+                backfaceVisibility: "hidden",
+                WebkitBackfaceVisibility: "hidden",
+              }}
+              className={[
+                "group relative w-56 h-80 -ml-20 first:ml-0 transition-all duration-300 ease-out origin-bottom transform-gpu",
+                canCast
+                  ? "hover:z-50 hover:-translate-y-32 hover:scale-105 active:scale-95"
+                  : "opacity-50 cursor-not-allowed",
+              ].join(" ")}
+            >
+              {/* Kártya Visuals - Pixel-perfect renderelés kényszerítése */}
+              <div className="relative h-full w-full bg-[#080d16] border-2 border-cyan-500/60 rounded-xl overflow-hidden flex flex-col shadow-2xl ring-1 ring-white/5">
+                {/* Kép terület */}
+                <div className="h-40 bg-slate-900 border-b border-cyan-900/50 relative overflow-hidden">
+                  {c.img ? (
+                    <img
+                      src={c.img}
+                      alt={c.name}
+                      className={[
+                        "w-full h-full object-cover pixelated transition-opacity",
+                        canCast ? "opacity-80 group-hover:opacity-100" : "opacity-60",
+                      ].join(" ")}
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <div className="w-12 h-12 border-2 border-cyan-500/20 rotate-45 animate-pulse" />
                     </div>
-                  </button>
-                ))}
+                  )}
+                  {/* Belső ragyogás a kártya tetején */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-transparent" />
+                </div>
+
+                {/* Szöveg terület */}
+                <div className="p-4 flex-grow bg-slate-950 flex flex-col justify-center">
+                  <h4 className="font-bold text-cyan-400 text-sm uppercase tracking-tighter mb-1 group-hover:text-white transition-colors flex items-center gap-2">
+                    <span>{c.name}</span>
+
+                    {/* Mana cost badge */}
+                    <span className="text-xs text-cyan-100 font-black tracking-widest">
+                      {c.manaCost === "ALL" ? "10" : String(c.manaCost)}
+                    </span>
+                  </h4>
+
+                  <p className="text-[10px] text-slate-400 leading-tight italic">{c.desc}</p>
+
+                  {!canCast && (
+                    <p className="mt-2 text-[10px] text-red-400/80 italic">Nincs elég mana</p>
+                  )}
+                </div>
+
+                {/* Hover border glow */}
+                <div
+                  className={[
+                    "absolute inset-0 border-2 border-cyan-400 transition-opacity pointer-events-none",
+                    canCast ? "opacity-0 group-hover:opacity-100" : "opacity-0",
+                  ].join(" ")}
+                />
               </div>
-              <button className="absolute top-6 right-6 px-4 py-2 rounded bg-gray-800 hover:bg-gray-700" onClick={() => setArcanePickerOpen(false)}>X</button>
-            </div>
-          )}
+
+              {/* Külső Aura hover esetén */}
+              <div
+                className={[
+                  "absolute -inset-4 bg-cyan-500/20 blur-2xl transition-opacity -z-10",
+                  canCast ? "opacity-0 group-hover:opacity-100" : "opacity-0",
+                ].join(" ")}
+              />
+            </button>
+          );
+        })}
+      </div>
+
+      {/* MÉGSE GOMB */}
+      <button
+        className="px-10 py-3 bg-red-950/20 border-2 border-red-500/40 text-red-500 hover:bg-red-500 hover:text-white font-mono text-xs tracking-[0.3em] transition-all rounded-md uppercase shadow-lg z-20"
+        onClick={() => setArcanePickerOpen(false)}
+      >
+        Vissza
+      </button>
+    </div>
+  </div>
+)}
+
+
 
           {/* ARCHER PET BIG FRAME */}
           {classKey === "archer" && petMaxHP > 0 && (

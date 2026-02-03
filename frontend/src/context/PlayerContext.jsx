@@ -30,7 +30,7 @@ export function PlayerProvider({ children }) {
 const [derivedStats, setDerivedStats] = useState(null);
 
   // ===== Mage mana (CombatView használja) =====
-  const MAGE_MANA_MAX = 6;
+  const MAGE_MANA_MAX = 10;
   const [mageMana, setMageMana] = useState(0);
 
   const gainMageMana = useCallback((amount = 1) => {
