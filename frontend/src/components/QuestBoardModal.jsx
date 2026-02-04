@@ -2,7 +2,13 @@
 import React, { useEffect, useState, useCallback } from "react";
 import QuestDetailsModal from "./QuestDetailsModal.jsx";
 
-export default function QuestBoardModal({ playerId, playerClassId, onClose }) {
+export default function QuestBoardModal({
+  playerId,
+  playerClassId,
+  onClose,
+  onStartQuestBattle,
+}) {
+  const classIdNum = Number(playerClassId);
   const [quests, setQuests] = useState([]);
   const [selectedQuest, setSelectedQuest] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -15,24 +21,21 @@ export default function QuestBoardModal({ playerId, playerClassId, onClose }) {
     { top: "61%", left: "20%" },
     { top: "73%", left: "20%" },
   ];
-
   const CLASS_POS = { top: "50%", left: "68%" };
 
   const loadQuests = useCallback(async () => {
     if (!playerId) return;
-
     try {
       setLoading(true);
       const res = await fetch(`http://localhost:3000/api/quests/${playerId}`);
       const data = await res.json();
 
       const filtered = (data || []).filter(
-        (q) => q.class_required === null || q.class_required === playerClassId
+        (q) => q.class_required === null || Number(q.class_required) === classIdNum
       );
 
       setQuests(filtered);
 
-      // ✅ frissítjük a nyitott questet is
       setSelectedQuest((prev) => {
         if (!prev) return null;
         return filtered.find((x) => x.quest_id === prev.quest_id) || prev;
@@ -45,11 +48,15 @@ export default function QuestBoardModal({ playerId, playerClassId, onClose }) {
     } finally {
       setLoading(false);
     }
-  }, [playerId, playerClassId]);
+  }, [playerId, classIdNum]);
+
+  useEffect(() => { loadQuests(); }, [loadQuests]);
 
   useEffect(() => {
-    loadQuests();
-  }, [loadQuests]);
+    function onKey(e) { if (e.key === "Escape") onClose?.(); }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
 
   function statusColor(q) {
     if (q.status === "completed") return "text-green-300";
@@ -59,18 +66,12 @@ export default function QuestBoardModal({ playerId, playerClassId, onClose }) {
     return "text-white";
   }
 
-  useEffect(() => {
-    function onKey(e) {
-      if (e.key === "Escape") onClose();
-    }
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
-
   return (
     <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
-      <div className="relative rounded-xl shadow-2xl overflow-hidden" style={{ width: "70%", height: "70%" }}>
-        {/* ✅ háttér csak dísz, ne kattintható */}
+      <div
+        className="relative rounded-xl shadow-2xl overflow-hidden"
+        style={{ width: "90vw", height: "90vh", maxWidth: 1400, maxHeight: 900 }}
+      >
         <div
           className="absolute inset-0 bg-cover bg-center pointer-events-none"
           style={{ backgroundImage: 'url("./src/assets/pics/QUESTBOARD.png")' }}
@@ -116,6 +117,11 @@ export default function QuestBoardModal({ playerId, playerClassId, onClose }) {
             onClaimSuccess={() => {
               setSelectedQuest(null);
               loadQuests();
+            }}
+            // ✅ ide adjuk át
+            onStartQuestBattle={(payload) => {
+              onStartQuestBattle?.(payload);
+              onClose?.(); // bezárja a boardot, hogy látszódjon a combat
             }}
           />
         )}

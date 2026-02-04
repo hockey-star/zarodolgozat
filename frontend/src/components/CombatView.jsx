@@ -108,9 +108,9 @@ const CLASS_CONFIG = {
 const DEFAULT_CLASS_CONFIG = { key: "warrior", displayName: "Harcos", sprite: "/ui/player/player.png" };
 
 const CLASS_BOSS_MAP = {
-  warrior: "Mountain King",
-  mage: "Arcane Abomination",
-  archer: "Forest Spirit Beast",
+  6: "Mountain King",
+  7: "Arcane Abomination",
+  8: "Forest Spirit Beast",
 };
 
 // ===== WARRIOR HELPERS =====
@@ -535,6 +535,7 @@ function FadeOverlay({ isOpen, onMid, onDone, inMs = 220, holdMs = 120, outMs = 
 // and it will also sync it into sessionStorage. This prevents starting every combat
 // from an old stored low HP value after you full-heal in the Hub.
 export default function CombatView({
+  
   level = 1,
   boss = false,
   enemies = [],
@@ -545,6 +546,8 @@ export default function CombatView({
   maxWaves = 16,
   playerHP: playerHPProp,
    runEffect,
+   mode ="run",
+  battleId = 0,
 }) {
   const {
     player,
@@ -1128,8 +1131,10 @@ useEffect(() => {
       try {
         clearAllTimers();
 
+        const isQuest = mode === "quest";
         let isElite = !boss && pathType === "elite";
         let allowedNames = Array.isArray(enemies) ? enemies : [];
+
 
         if (boss && player.id) {
           try {
@@ -1150,8 +1155,21 @@ useEffect(() => {
           }
         }
 
+
         // ===== CHAIN BATTLE: több enemy egymás után ugyanabban a wave-ben (NEM boss, NEM elite) =====
 let enemyCount = 1;
+
+// ✅ CHAIN BATTLE csak run módban
+if (!isQuest && !boss && !isElite && pathType === "fight") {
+  const roll = Math.random();
+  if (roll > 0.80) enemyCount = 3;
+  else if (roll > 0.50) enemyCount = 2;
+}
+
+// ✅ questnél: ha küldesz több enemy-t, lehet queue (de random ne legyen)
+if (isQuest && Array.isArray(enemies) && enemies.length > 1) {
+  enemyCount = enemies.length;
+}
 
 // csak sima fight path-on, és csak ha nincs kívülről fix enemies lista
 if (!boss && !isElite && pathType === "fight") {
@@ -1402,7 +1420,7 @@ if (choice.manaCost === "ALL") {
 
   if (choice.kind === "big_damage") {
     const base = Math.max(1, Math.floor((enemy?.maxHp ?? 1) * 1.0));
-    const extra = Math.floor(playerIntellect * 1.7);
+    const extra = Math.floor(playerIntellect * 1.5);
     const dmg = base + extra;
 
     spawnAbilityEffect({
@@ -2074,39 +2092,48 @@ async function questEnemyDefeatedEvent() {
   }
 }
 
+function emitEnd({ victory, hpAfter, rewards, enemyRole }) {
+  onEnd?.({
+    victory,
+    hpAfter,
+    rewards: rewards ?? { xp: 0, gold: 0 },
+    enemyRole: enemyRole ?? enemy?.role ?? null,
+    mode, // <- "quest" vagy "run" amit propként kapsz
+  });
+}
+
 async function handleContinue() {
+  const isQuest = mode === "quest";
   const victory = enemyHPRef.current <= 0 && playerHPRef.current > 0;
-  const hasMoreEnemies = pendingEnemies.length > 0;
+  const hasMoreEnemies = (pendingEnemies?.length ?? 0) > 0;
   const isLastWave = wave >= maxWaves;
 
   const fullMax = derivedStats?.max_hp ?? maxHPFromPlayer ?? player?.max_hp ?? 0;
 
-  async function awardReward({ hpAfterBattle } = {}) {
-    if (!victory || !player?.id) return;
+ async function awardReward({ hpAfterBattle } = {}) {
+  if (!victory || !player?.id) return { xpGain: 0, goldGain: 0 };
 
-    const { xpGain, goldGain } = rollRewards();
+  const { xpGain, goldGain } = rollRewards();
 
-    try {
-      await fetch("http://localhost:3000/api/combat/reward", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          playerId: player.id,
-          xpGain,
-          goldGain,
-          ...(hpAfterBattle != null ? { hpAfterBattle } : {}),
-        }),
-      });
+  try {
+    await fetch("http://localhost:3000/api/combat/reward", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        playerId: player.id,
+        xpGain,
+        goldGain,
+        ...(hpAfterBattle != null ? { hpAfterBattle } : {}),
+      }),
+    });
 
-      // player/derived frissítés, hogy a következő stage-ben is jó legyen az XP/gold/szint
-      try {
-        await refreshFullStats?.(player.id);
-      } catch {}
-    } catch (err) {
-      console.error("Reward save failed", err);
-    }
+    try { await refreshFullStats?.(player.id); } catch {}
+  } catch (err) {
+    console.error("Reward save failed", err);
   }
 
+  return { xpGain, goldGain };
+}
   
 
 
@@ -2124,7 +2151,13 @@ async function handleContinue() {
       setPlayer((prev) => ({ ...(prev || {}), hp: fullMax }));
     }
 
-    onEnd?.(fullMax, false);
+   onEnd?.({
+  victory: false,
+  hpAfter: fullMax,
+  rewards: null,
+  enemyRole: enemy?.role ?? null,
+  mode,
+});
     return;
   }
 
@@ -2196,13 +2229,18 @@ async function handleContinue() {
   // =========================================================
   // ✅ WAVE COMPLETE (nem run vége): reward + vissza Path-ra, HP marad, storage marad
   // =========================================================
-  if (!isLastWave) {
-    await questBattleWonEvent();
-    await awardReward();
-    clearAllVfx();
-    onEnd?.(playerHPRef.current, true);
-    return;
-  }
+if (!isLastWave) {
+  await questBattleWonEvent();
+  const reward = await awardReward({ hpAfterBattle: playerHPRef.current });
+  clearAllVfx();
+
+  emitEnd({
+    victory: true,
+    hpAfter: playerHPRef.current,
+    rewards: { xp: reward.xpGain, gold: reward.goldGain },
+  });
+  return;
+}
 
   // =========================================================
   // ✅ RUN END (utolsó wave victory): reward + quest + HUB + FULL HEAL
@@ -2248,7 +2286,11 @@ async function handleContinue() {
   setPlayerHP(fullMax);
   playerHPRef.current = fullMax;
 
-  onEnd?.(fullMax, true);
+emitEnd({
+  victory: true,
+  hpAfter: fullMax,
+  rewards: { xp: xpGain, gold: goldGain },
+});
 }
 
 

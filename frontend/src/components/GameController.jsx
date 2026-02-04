@@ -14,6 +14,32 @@ export default function GameController() {
   const [pendingCombatProps, setPendingCombatProps] = useState(null); // { level, boss }
   const [message, setMessage] = useState(null);
   const [inventory, setInventory] = useState([]);
+  const [combatProps, setCombatProps] = useState(null);
+
+  // Quest battle indítása:
+function startQuestBattle(quest) {
+  // itt eldöntöd melyik enemy legyen
+  // class quest esetén:
+  const bossNameByClass = {
+    6: "Mountain King",
+    7: "Arcane Abomination",
+    8: "Forest Spirit Beast",
+  };
+
+  const enemyName =
+    quest.class_required ? bossNameByClass[Number(quest.class_required)] : "Bandit"; // példa
+
+  setCombatProps({
+    level: quest.recommended_level ?? 1,   // vagy player.level
+    boss: true,
+    enemies: [enemyName],
+    pathType: "quest",
+    wave: 1,
+    maxWaves: 1,
+  });
+
+  setView("combat");
+}
 
   function goHubWithFullHeal() {
     setPlayerHP(MAX_HP);
@@ -132,6 +158,23 @@ export default function GameController() {
           onGoHub={goHubWithFullHeal}          // ✅ hub + full heal
         />
       )}
+      {view === "hub" && <Hub onStartQuestBattle={startQuestBattle} />}
+
+      {view === "combat" && combatProps && (
+      <CombatView
+        level={combatProps.level}
+        boss={combatProps.boss}
+        enemies={combatProps.enemies}
+        pathType={combatProps.pathType}
+        wave={combatProps.wave}
+        maxWaves={combatProps.maxWaves}
+        onEnd={() => {
+          // quest battle után vissza hubba
+          setView("hub");
+          setCombatProps(null);
+        }}
+      />
+    )}
 
       {view === "combat" && pendingCombatProps && (
         <CombatView

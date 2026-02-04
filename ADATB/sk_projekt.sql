@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Gép: 127.0.0.1
--- Létrehozás ideje: 2026. Feb 03. 13:17
+-- Létrehozás ideje: 2026. Feb 04. 09:45
 -- Kiszolgáló verziója: 10.4.28-MariaDB
 -- PHP verzió: 8.2.4
 
@@ -322,7 +322,7 @@ INSERT INTO `players` (`id`, `username`, `email`, `password_hash`, `class_id`, `
 (34, 'tesztelgetnek123', '123123@gmail.com', '$2b$10$dZD9./1P2xq/5T.LSzqx.eZ1nfjeu2yXfC1Kq3FrMkcyN7k52Fgmm', 6, 9, 99, 1228, 50, 50, 5, 0, 3, '2026-02-02 09:42:17', 24),
 (35, 'tesztelgetnek321', '123214@gmail.com', '$2b$10$ZXhg4ZqcvvpemEwY7N4HMeJhxS1qMgQmAr9gsi/KYFa4FBDZYd3AG', 6, 7, 120, 871, 50, 50, 5, 0, 3, '2026-02-02 10:23:53', 18),
 (36, 'tesztelgethetek123', '123125512@gmail.com', '$2b$10$fqByP.992ytXzswdrfRBK.BxJa7QMLv336OlQXlYetDzYVQmCEDbi', 6, 6, 59, 533, 70, 70, 10, 0, 3, '2026-02-02 11:59:49', 6),
-(37, 'magus', 'asdsadsa@gmail.com', '$2b$10$zZJ/KPUp59RNyYwsEhPwCeNKRib9vVOAzBhGI8ZypnPTyse2fobC6', 7, 22, 25, 866, 60, 60, 0, 8, 1, '2026-02-03 07:59:30', 51),
+(37, 'magus', 'asdsadsa@gmail.com', '$2b$10$zZJ/KPUp59RNyYwsEhPwCeNKRib9vVOAzBhGI8ZypnPTyse2fobC6', 7, 85, 852, 11143, 60, 60, 0, 8, 1, '2026-02-03 07:59:30', 240),
 (38, 'ijaszalex', 'asdas@gmail.com', '$2b$10$hhXWLddhE7slg89meMjBEO3Y2.qPX5DYNJYs30HizHfQZSk0P4Jla', 8, 1, 0, 100, 40, 40, 3, 2, 2, '2026-02-03 13:16:38', 0);
 
 -- --------------------------------------------------------
@@ -467,10 +467,10 @@ INSERT INTO `player_quests` (`id`, `player_id`, `quest_id`, `progress`, `status`
 (249, 37, 1, 3, 'claimed'),
 (250, 37, 2, 7, 'claimed'),
 (251, 37, 3, 3, 'claimed'),
-(252, 37, 4, 1, 'completed'),
-(253, 37, 5, 0, 'locked'),
+(252, 37, 4, 1, 'claimed'),
+(253, 37, 5, 25, 'claimed'),
 (254, 37, 9, 0, 'locked'),
-(255, 37, 10, 0, 'locked'),
+(255, 37, 10, 1, 'completed'),
 (256, 37, 11, 0, 'locked'),
 (264, 38, 1, 0, 'in_progress'),
 (265, 38, 2, 0, 'locked'),
@@ -503,14 +503,14 @@ CREATE TABLE `quests_master` (
 --
 
 INSERT INTO `quests_master` (`id`, `title`, `description`, `task_type`, `target_amount`, `reward_xp`, `reward_gold`, `class_required`) VALUES
-(1, 'Első vér', 'Ölj meg 3 ellenséget.', 'kill', 3, 15, 30, NULL),
-(2, 'Kezdő vadász', 'Ölj meg 7 ellenséget.', 'kill', 7, 30, 50, NULL),
-(3, 'Apró győzelmek', 'Nyerj meg 3 csatát.', 'custom', 3, 40, 60, NULL),
-(4, 'Első találkozás a boss-szal', 'Győzz le egy bosst.', 'boss', 1, 80, 120, NULL),
-(5, 'Tapasztalt harcos', 'Nyerj meg 5 csatát.', 'custom', 5, 100, 150, NULL),
-(9, 'Trial of the Mountain King', 'Végezd el a Harcosok próbáját és győzd le a Mountain King-et.', 'boss', 1, 300, 400, NULL),
-(10, 'Rite of the Arcane Lord', 'A mágusok végső tesztje: győzd le az Arcane Abomination-t.', 'boss', 1, 300, 400, NULL),
-(11, 'Hunt of the Forest Spirit', 'Az íjászok nagyvadja: öld meg a Forest Spirit Beast-et.', 'boss', 1, 300, 400, NULL);
+(1, 'Első vér', 'Ölj meg 5 ellenséget.', 'kill', 5, 150, 120, NULL),
+(2, 'Kezdő vadász', 'Ölj meg 7 ellenséget.', 'kill', 10, 300, 250, NULL),
+(3, 'Apró győzelmek', 'Nyerj meg 3 csatát.', 'custom', 15, 400, 350, NULL),
+(4, 'Első találkozás a boss-szal', 'Győzz le egy bosst.', 'boss', 1, 600, 500, NULL),
+(5, 'Tapasztalt harcos', 'Nyerj meg 5 csatát.', 'custom', 25, 1200, 1500, NULL),
+(9, 'Trial of the Mountain King', 'Végezd el a Harcosok próbáját és győzd le a Mountain King-et.', 'boss', 1, 3000, 2000, 6),
+(10, 'Rite of the Arcane Lord', 'A mágusok végső tesztje: győzd le az Arcane Abomination-t.', 'boss', 1, 3000, 2000, 7),
+(11, 'Hunt of the Forest Spirit', 'Az íjászok nagyvadja: öld meg a Forest Spirit Beast-et.', 'boss', 1, 3000, 2000, 8);
 
 -- --------------------------------------------------------
 
@@ -692,7 +692,7 @@ ALTER TABLE `players`
 -- AUTO_INCREMENT a táblához `player_quests`
 --
 ALTER TABLE `player_quests`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=279;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=272;
 
 --
 -- AUTO_INCREMENT a táblához `quests_master`

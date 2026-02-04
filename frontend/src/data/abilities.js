@@ -159,7 +159,7 @@ export const ALL_ABILITIES = [
   classKey: "mage",
   name: "Frost Nova",
   type: "attack",
-  dmg: [3, 5],
+  dmg: [2, 4],
   heal: null,
   rarity: "rare",
   image: "/cards/rare/mage_frost_nova.png",

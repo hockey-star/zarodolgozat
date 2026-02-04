@@ -7,7 +7,7 @@ import QuestBoardModal from "./QuestBoardModal.jsx";
 import { usePlayer } from "../context/PlayerContext.jsx";
 import "./Hub.css";
 
-export default function Hub({ onGoAdventure }) {
+export default function Hub({ onGoAdventure, onStartQuestBattle }) {
   const { player } = usePlayer();
   const timeoutRef = useRef(null);
 
@@ -140,7 +140,7 @@ export default function Hub({ onGoAdventure }) {
 </div>
 
 <div className="hotzone keret" style={{ right: "20%", bottom: "12%", width: "330px", height: "270px" }} onClick={() => moveTo(65, 80, "quest")}>
-  <span className="zone-label">Jutalmak</span>
+  <span className="zone-label">Küldetések</span>
 </div>
 
 <div className="hotzone keret" style={{ right: "5%", bottom: "12%", width: "280px", height: "250px" }} onClick={() => moveTo(85, 85, "shop")}>
@@ -160,17 +160,58 @@ export default function Hub({ onGoAdventure }) {
         </div>
       </div>
 
+      
+
       {/* MODALOK */}
       {showShop && <ShopModal onClose={() => handleClose(setShowShop)} />}
       {showBlacksmith && <BlacksmithModal onClose={() => handleClose(setShowBlacksmith)} />}
       {showInv && <InvModal onClose={() => handleClose(setShowInv)} />}
-      {showQuestBoard && player && (
-        <QuestBoardModal
-          playerId={player.id}
-          playerClassId={CLASS_STRING[player.class_id]}
-          onClose={() => handleClose(setShowQuestBoard)}
-        />
-      )}
+{showQuestBoard && player && (
+  <QuestBoardModal
+    playerId={player.id}
+    playerClassId={Number(player.class_id)}
+    onClose={() => handleClose(setShowQuestBoard)}
+    onStartQuestBattle={(payload) => {
+      handleClose(setShowQuestBoard);
+      onStartQuestBattle?.(payload); // ✅ App felé
+    }}
+  />
+)}
+{showQuestBoard && player && (
+  <button
+    style={{
+      position: "fixed",
+      bottom: "20px",
+      left: "50%",
+      transform: "translateX(-50%)",
+      zIndex: 9999,
+      padding: "12px 20px",
+      background: "#5e0a0a",
+      color: "white",
+      border: "2px solid #a00",
+      fontFamily: "monospace",
+      letterSpacing: "2px",
+      cursor: "pointer",
+    }}
+    onClick={() => {
+      handleClose(setShowQuestBoard);
+
+      onStartQuestBattle?.({
+        boss: true,
+        enemies: [
+          player.class_id === 6
+            ? "Mountain King"
+            : player.class_id === 7
+            ? "Arcane Abomination"
+            : "Forest Spirit Beast",
+        ],
+        questId: 999, // 🧪 teszt ID (backendet nem bántja, ha le van védve)
+      });
+    }}
+  >
+    DEV: QUEST BOSS ⚔️
+  </button>
+)}
     </div>
   );
 }

@@ -118,7 +118,8 @@ function AppInner() {
   // screens:
   // login | class | trailer | hub | loading | event | pathChoice | combat | restCampfire | adventure
   const [screen, setScreen] = useState("login");
-
+  const [questCombat, setQuestCombat] = useState(null);
+  const [combatMode, setCombatMode] = useState("run"); // "run" | "quest"
   const [combatPath, setCombatPath] = useState(null);
   const [level, setLevel] = useState(1);
   const [combatFinished, setCombatFinished] = useState(false);
@@ -136,10 +137,31 @@ function AppInner() {
   const [deathScreenOpen, setDeathScreenOpen] = useState(false);
   const [pressed, setPressed] = useState(false);
 
-  const { setPlayer } = usePlayer();
+  const { player, setPlayer } = usePlayer();
 
 
   const introLoadingLockRef = React.useRef(false);
+
+  function startQuestBattle({ bossName, levelOverride } = {}) {
+  setQuestCombat({
+    level: levelOverride ?? level,
+    enemies: [bossName],
+    boss: true,
+  });
+
+  function handleQuestCombatEnd(playerHP, victory) {
+  setQuestCombat(null);
+  setCombatPath(null);
+
+  // ha akarod: vissza hubba (questboardot user megnyitja)
+  setScreen("hub");
+}
+
+  setCombatPath({ type: "quest" }); // csak hogy a screen==="combat" feltétel átmenjen
+  setCombatFinished(false);
+  setScreen("combat");
+  setShowTransition(true); // ha nem kell intro questnél, ezt vedd ki
+}
 
   // Preload only a few frequently used WEBMs (transition + top vfx)
   useEffect(() => {
@@ -322,7 +344,18 @@ useEffect(() => {
 
       {screen === "trailer" && <Trailer onEnd={() => goto("hub")} />}
 
-      {screen === "hub" && <Hub onGoAdventure={handleGoAdventure} />}
+{screen === "hub" && (
+  <Hub
+    onGoAdventure={handleGoAdventure}
+    onStartQuestBattle={(payload) => {
+      setQuestCombat(payload);
+      setCombatPath({ type: "quest" });     // hogy CombatView tudja: quest
+      setCombatFinished(false);
+      setShowTransition(true);
+      setScreen("combat");
+    }}
+  />
+)}
 
       {screen === "loading" && <LoadingScreen onDone={handleLoadingDone} />}
 
@@ -349,19 +382,53 @@ useEffect(() => {
           onGoHub={handleRestGoHub}
         />
       )}
+{screen === "combat" && (combatPath || questCombat) && (
+  <CombatView
+    level={level}
+    enemies={questCombat?.enemies ?? (isFinalBoss ? bossEnemies : defaultEnemies)}
+    boss={questCombat?.boss ?? isFinalBoss}
+    background={`/backgrounds/3.jpg`}
+    pathType={questCombat ? "quest" : combatPath.type}
+    mode={questCombat ? "quest" : "run"}   // 👈 EZ A MODE
+onEnd={async (result) => {
+  // 🩸 HP frissítés (maradhat)
+  if (result?.hpAfter != null) {
+    setPlayer((prev) => (prev ? { ...prev, hp: result.hpAfter } : prev));
+  }
 
-      {screen === "combat" && combatPath && (
-        <CombatView
-          level={level}
-          enemies={isFinalBoss ? bossEnemies : defaultEnemies}
-          boss={isFinalBoss}
-          background={`/backgrounds/3.jpg`}
-          pathType={combatPath.type}
-          // runEffect={runEffect} // ha a CombatView támogatja
-          onEnd={handleCombatEnd}
-        />
-      )}
+  // 🧭 QUEST BATTLE ÁG
+  if (result?.mode === "quest") {
+    if (result.victory) {
+      // csak akkor complete, ha van questId
+      if (questCombat?.questId && player?.id) {
+        await fetch("http://localhost:3000/api/quests/complete", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            playerId: player.id,
+            questId: questCombat.questId,
+          }),
+        });
+      }
 
+      setQuestCombat(null);
+      setScreen("hub");
+      return;
+    }
+
+    // ❌ QUEST DEFEAT → DEATH SCREEN
+    setQuestCombat(null);
+    setCombatPath(null);
+    setDeathScreenOpen(true);   // ✅ EZ A LÉNYEG
+    return;                     // ✅ ne menjen tovább
+  }
+
+  // ⚔️ NORMAL RUN COMBAT
+  handleCombatEnd(result.hpAfter, result.victory);
+}}
+
+  />
+)}
 {/* DEATH SCREEN */}
 {/* A lampasBroken állapot vezérli a sötétséget és a szöveg átalakulását is */}
 {deathScreenOpen && (

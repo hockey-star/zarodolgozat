@@ -7,7 +7,9 @@ export default function QuestDetailsModal({
   onClose,
   onClaimSuccess,
   playerId,
+  onStartQuestBattle
 }) {
+  const canStartQuestBattle = quest.status === "in_progress";
   const [msg, setMsg] = useState("");
   const { setPlayer } = usePlayer();   // ⬅⬅⬅ EZ HIÁNYZOTT
 
@@ -62,6 +64,18 @@ export default function QuestDetailsModal({
       setMsg("Hiba történt a claim során.");
     }
   }
+    function startBattle() {
+    const bossName =
+      Number(quest.class_required) === 6 ? "Mountain King"
+      : Number(quest.class_required) === 7 ? "Arcane Abomination"
+      : "Forest Spirit Beast";
+
+    onStartQuestBattle?.({
+      enemies: [bossName],
+      boss: true,
+      mode: "quest",
+    });
+  }
 
   const canClaim = quest.status === "completed";
 
@@ -78,6 +92,14 @@ export default function QuestDetailsModal({
         <h2 className="text-2xl text-center mb-3 text-amber-300">
           {quest.title}
         </h2>
+        {canStartQuestBattle && (
+            <button
+              onClick={startBattle}
+              className="px-4 py-2 bg-red-600 hover:bg-red-500 rounded text-xs text-black"
+            >
+              Quest battle ⚔️
+            </button>
+          )}
 
         <div className="text-xs text-yellow-300/80 mb-1">Leírás:</div>
         <p className="text-sm mb-3 text-yellow-100">
@@ -96,6 +118,8 @@ export default function QuestDetailsModal({
           Haladás: {quest.progress}/{quest.target_amount}
         </div>
 
+
+            
         <div className="mb-4 text-sm">
           <div className="text-xs text-yellow-300/80 mb-1">
             Jutalom:
@@ -147,6 +171,7 @@ export default function QuestDetailsModal({
             {msg}
           </div>
         )}
+        
       </div>
     </div>
   );
