@@ -24,9 +24,7 @@ function getDmg(item) {
   };
 }
 
-// 🔧 Upgrade scaling (ezt állítsd ha máshogy akarod):
-// - Weapon: dmg nő
-// - Armor/Helmet/Accessory: def/hp/int/str nő
+// 🔧 Upgrade preview (ez CSAK UI preview, a backend intézi a valódi stat mentést)
 function previewUpgraded(item) {
   if (!item) return null;
 
@@ -38,43 +36,57 @@ function previewUpgraded(item) {
   const bonusStr = getBonus(item, "strength");
   const bonusInt = getBonus(item, "intellect");
   const bonusDef = getBonus(item, "defense");
-  const bonusHp  = getBonus(item, "hp");
+  const bonusHp = getBonus(item, "hp");
 
-  // Példa scaling:
-  // dmg: +2 per level
-  // def: +2 per level
-  // hp : +10 per level
-  // int/str: +1 per level
-  const dmgAdd = 2 * nextLvl;
-  const defAdd = 0.5 * nextLvl;
-  const hpAdd  = 5 * nextLvl;
-  const statAdd = 1 * nextLvl;
+  // ==========================================
+  //                 SCALING 
+  // ==========================================
+  // Megjegyzés: nextLvl-t használunk, hogy a +1 upgrade "látszódjon".
+  const dmgAdd = 2 * nextLvl;        // weapon dmg növekedés
+  const defAdd = 0.3 * nextLvl;      // armor def növekedés
+  const hpAdd  = 5 * nextLvl;        // armor hp növekedés
 
-  // Típus alapján kicsit más:
+  // ✅ ÚJ: STR/INT is nő MINDEN itemen
+  const strAdd = 0.5* nextLvl;
+  const intAdd = 0.5 * nextLvl;
+
   const type = (item.type || "").toLowerCase();
 
   const out = {
     name: item.name,
     upgrade_level: nextLvl,
+
+    // dmg
     min_dmg: min,
     max_dmg: max,
+
+    // statok
     bonus_strength: bonusStr,
     bonus_intellect: bonusInt,
     bonus_defense: bonusDef,
     bonus_hp: bonusHp,
   };
 
+  // Weapon: dmg + STR/INT is
   if (type === "weapon") {
     out.min_dmg = min + dmgAdd;
     out.max_dmg = max + dmgAdd;
-  } else {
-    out.bonus_defense = bonusDef + defAdd;
-    out.bonus_hp = bonusHp + hpAdd;
 
-    // ha van STR/INT bónusz tárgyon:
-    if (bonusStr > 0) out.bonus_strength = bonusStr + statAdd;
-    if (bonusInt > 0) out.bonus_intellect = bonusInt + statAdd;
+    out.bonus_strength = bonusStr + strAdd;
+    out.bonus_intellect = bonusInt + intAdd;
+
+   
+    // out.bonus_defense = bonusDef + defAdd * 0.25;
+    // out.bonus_hp = bonusHp + hpAdd * 0.25;
+    return out;
   }
+
+  // Armor/Helmet/Accessory/egyéb: DEF/HP + STR/INT is
+  out.bonus_defense = bonusDef + defAdd;
+  out.bonus_hp = bonusHp + hpAdd;
+
+  out.bonus_strength = bonusStr + strAdd;
+  out.bonus_intellect = bonusInt + intAdd;
 
   return out;
 }
@@ -102,25 +114,28 @@ export default function BlacksmithModal({ onClose }) {
     return r.json();
   }
 
-const refreshSeq = React.useRef(0);
+  const refreshSeq = React.useRef(0);
 
-const refreshAll = async () => {
-  if (!userId) return;
-  const seq = ++refreshSeq.current;
+  const refreshAll = async () => {
+    if (!userId) return;
+    const seq = ++refreshSeq.current;
 
-  const [p, items] = await Promise.all([fetchPlayer(), fetchItems()]);
-  if (seq !== refreshSeq.current) return; // elavult válasz
+    const [p, items] = await Promise.all([fetchPlayer(), fetchItems()]);
+    if (seq !== refreshSeq.current) return; // elavult válasz
 
-  setPlayerData(p);
-  setPlayerItems(items || []);
-  setSelectedItem(prev => {
-    if (items?.length) {
-      return items.find(i => prev && Number(i.owned_id) === Number(prev.owned_id)) || items[0];
-    }
-    return null;
-  });
-};
-
+    setPlayerData(p);
+    setPlayerItems(items || []);
+    setSelectedItem((prev) => {
+      if (items?.length) {
+        return (
+          items.find(
+            (i) => prev && Number(i.owned_id) === Number(prev.owned_id)
+          ) || items[0]
+        );
+      }
+      return null;
+    });
+  };
 
   useEffect(() => {
     if (!userId) {
@@ -138,10 +153,16 @@ const refreshAll = async () => {
   }, [userId]);
 
   const currentGold = num(playerData?.gold, 0);
-  const upgradeCost = selectedItem ? (num(selectedItem.upgrade_level, 0) + 1) * 50 : null;
-  const notEnoughGold = selectedItem && upgradeCost != null && currentGold < upgradeCost;
+  const upgradeCost = selectedItem
+    ? (num(selectedItem.upgrade_level, 0) + 1) * 50
+    : null;
+  const notEnoughGold =
+    selectedItem && upgradeCost != null && currentGold < upgradeCost;
 
-  const upgradedPreview = useMemo(() => previewUpgraded(selectedItem), [selectedItem]);
+  const upgradedPreview = useMemo(
+    () => previewUpgraded(selectedItem),
+    [selectedItem]
+  );
 
   const upgradeItem = async () => {
     if (!selectedItem || busy) return;
@@ -154,8 +175,8 @@ const refreshAll = async () => {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-        playerId: Number(userId),
-        ownedId: selectedItem.owned_id,
+          playerId: Number(userId),
+          ownedId: selectedItem.owned_id,
         }),
       });
 
@@ -164,7 +185,6 @@ const refreshAll = async () => {
       if (!res.ok || data?.success === false) {
         setError(data?.error || data?.message || "A fejlesztés nem sikerült.");
       } else {
-        // ✅ siker: frissítünk mindent
         await refreshAll();
       }
     } catch (e) {
@@ -191,7 +211,10 @@ const refreshAll = async () => {
     ? {
         name: upgradedPreview.name,
         lvl: num(upgradedPreview.upgrade_level, 0),
-        dmg: { min: num(upgradedPreview.min_dmg, 0), max: num(upgradedPreview.max_dmg, 0) },
+        dmg: {
+          min: num(upgradedPreview.min_dmg, 0),
+          max: num(upgradedPreview.max_dmg, 0),
+        },
         str: num(upgradedPreview.bonus_strength, 0),
         int: num(upgradedPreview.bonus_intellect, 0),
         def: num(upgradedPreview.bonus_defense, 0),
@@ -210,10 +233,7 @@ const refreshAll = async () => {
           backgroundRepeat: "no-repeat",
         }}
       >
-        <button
-          onClick={onClose}
-          className="kilepes absolute top-3 right-3 text-center"
-        >
+        <button onClick={onClose} className="kilepes absolute top-3 right-3 text-center">
           X
         </button>
 
@@ -226,6 +246,10 @@ const refreshAll = async () => {
               <span className="arany text-yellow-300">{currentGold}</span>
             </div>
 
+            {error && (
+              <div className="text-center mt-2 text-red-300 text-sm">{error}</div>
+            )}
+
             <div className="mb-4 text-center">
               {playerItems.length === 0 ? (
                 <div className="nincstargy mt-1">Nincs tovább fejleszthető tárgyad.</div>
@@ -235,7 +259,9 @@ const refreshAll = async () => {
                   value={selectedItem?.owned_id ?? ""}
                   onChange={(e) => {
                     const id = Number(e.target.value);
-                    setSelectedItem(playerItems.find((i) => Number(i.owned_id) === id));
+                    setSelectedItem(
+                      playerItems.find((i) => Number(i.owned_id) === id)
+                    );
                   }}
                 >
                   {playerItems.map((item) => (
@@ -257,10 +283,16 @@ const refreshAll = async () => {
                       <p>
                         {cur.name} +{cur.lvl}
                       </p>
-                      {cur.str ? <p>STR: +{cur.str}</p> : null}
-                      {cur.int ? <p>INT: +{cur.int}</p> : null}
-                      {cur.def ? <p>DEF: +{cur.def}</p> : null}
-                      {cur.hp ? <p>HP: +{cur.hp}</p> : null}
+
+                      {/* dmg kiírás csak ha van */}
+                      {(cur.dmg.min || cur.dmg.max) ? (
+                        <p>DMG: {cur.dmg.min}–{cur.dmg.max}</p>
+                      ) : null}
+
+                      <p>STR: +{cur.str}</p>
+                      <p>INT: +{cur.int}</p>
+                      <p>DEF: +{cur.def}</p>
+                      <p>HP: +{cur.hp}</p>
                     </>
                   ) : (
                     <p>—</p>
@@ -273,7 +305,7 @@ const refreshAll = async () => {
                 <p className="fejlesztesiKoltseg">
                   Fejlesztés költsége:{" "}
                   {selectedItem ? (
-                    <span className={notEnoughGold ? "" : ""}>
+                    <span>
                       <b className="arany text-yellow-300">{upgradeCost}</b> arany
                     </span>
                   ) : (
@@ -282,9 +314,7 @@ const refreshAll = async () => {
                 </p>
 
                 {notEnoughGold && (
-                  <p className="nincseleg mt-1">
-                    Nincs elég aranyod a fejlesztéshez.
-                  </p>
+                  <p className="nincseleg mt-1">Nincs elég aranyod a fejlesztéshez.</p>
                 )}
 
                 <button
@@ -302,13 +332,18 @@ const refreshAll = async () => {
                 <div className="fejlesztettStat text-center space-y-1">
                   {nxt ? (
                     <>
-                      <p className="">
+                      <p>
                         {nxt.name} +{nxt.lvl}
                       </p>
-                      {nxt.str ? <p>STR: +{nxt.str}</p> : null}
-                      {nxt.int ? <p>INT: +{nxt.int}</p> : null}
-                      {nxt.def ? <p>DEF: +{nxt.def}</p> : null}
-                      {nxt.hp ? <p>HP: +{nxt.hp}</p> : null}
+
+                      {(nxt.dmg.min || nxt.dmg.max) ? (
+                        <p>DMG: {nxt.dmg.min}–{nxt.dmg.max}</p>
+                      ) : null}
+
+                      <p>STR: +{nxt.str}</p>
+                      <p>INT: +{nxt.int}</p>
+                      <p>DEF: +{nxt.def}</p>
+                      <p>HP: +{nxt.hp}</p>
                     </>
                   ) : (
                     <p>—</p>

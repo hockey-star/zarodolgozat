@@ -9,7 +9,11 @@ export default function QuestDetailsModal({
   playerId,
   onStartQuestBattle
 }) {
-  const canStartQuestBattle = quest.status === "in_progress";
+  const isClassBossQuest =
+  quest.task_type === "boss" && Number(quest.class_required) > 0;
+
+const canStartQuestBattle =
+  quest.status === "in_progress" && isClassBossQuest;
   const [msg, setMsg] = useState("");
   const { setPlayer } = usePlayer();   // ⬅⬅⬅ EZ HIÁNYZOTT
 
@@ -71,6 +75,7 @@ export default function QuestDetailsModal({
       : "Forest Spirit Beast";
 
     onStartQuestBattle?.({
+      questId: quest.quest_id,
       enemies: [bossName],
       boss: true,
       mode: "quest",

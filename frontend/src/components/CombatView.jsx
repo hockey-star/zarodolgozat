@@ -272,7 +272,7 @@ const ENEMY_BASIC_WINDUP_MS = 420;
 const SMART_BIAS = {
   warrior: { HEAL_THRESHOLD: 0.65, PANIC_HP: 0.35, DEFEND_AFTER_TURNS: 3, PANIC_DEFENSIVE_CHANCE: 0.7, PANIC_STUN_CHANCE: 0.3, MAX_HEAL_IN_HAND: 1, MAX_HEAL_IN_HAND_LOWHP: 2, LOWHP_FOR_2HEAL: 0.3 },
   mage: { HEAL_THRESHOLD: 0.72, PANIC_HP: 0.45, DEFEND_AFTER_TURNS: 3, PANIC_DEFENSIVE_CHANCE: 0.55, PANIC_STUN_CHANCE: 0.25, MAX_HEAL_IN_HAND: 1, MAX_HEAL_IN_HAND_LOWHP: 2, LOWHP_FOR_2HEAL: 0.3 },
-  archer: { HEAL_THRESHOLD: 0.7, PANIC_HP: 0.4, DEFEND_AFTER_TURNS: 3, PANIC_DEFENSIVE_CHANCE: 0.6, PANIC_STUN_CHANCE: 0.4, MAX_HEAL_IN_HAND: 1, MAX_HEAL_IN_HAND_LOWHP: 2, LOWHP_FOR_2HEAL: 0.3 },
+  archer: { HEAL_THRESHOLD: 0.7, PANIC_HP: 0.5, DEFEND_AFTER_TURNS: 3, PANIC_DEFENSIVE_CHANCE: 0.6, PANIC_STUN_CHANCE: 0.4, MAX_HEAL_IN_HAND: 1, MAX_HEAL_IN_HAND_LOWHP: 2, LOWHP_FOR_2HEAL: 0.3 },
 };
 function getBias(classKey) {
   return SMART_BIAS[classKey] || SMART_BIAS.warrior;
@@ -1419,8 +1419,8 @@ if (choice.manaCost === "ALL") {
   }
 
   if (choice.kind === "big_damage") {
-    const base = Math.max(1, Math.floor((enemy?.maxHp ?? 1) * 1.0));
-    const extra = Math.floor(playerIntellect * 1.5);
+    const base = Math.max(1, Math.floor((enemy?.maxHp ?? 0.5) * 0.5));
+    const extra = Math.floor(playerIntellect * 1);
     const dmg = base + extra;
 
     spawnAbilityEffect({
@@ -1565,13 +1565,13 @@ if (choice.manaCost === "ALL") {
 
         // scaling
         if (classKey === "warrior") {
-          const bonus = Math.floor(playerStrength * 0.35) + Math.floor(playerLevel * 0.3);
+          const bonus = Math.floor(playerStrength * 0.2) + Math.floor(playerLevel * 0.1);
           baseMin += bonus; baseMax += bonus;
         } else if (classKey === "mage") {
-          const bonus = Math.floor(playerIntellect * 0.25) + Math.floor(playerLevel * 0.25);
+          const bonus = Math.floor(playerIntellect * 0.4) + Math.floor(playerLevel * 0.15);
           baseMin += bonus; baseMax += bonus;
         } else if (classKey === "archer") {
-          const bonus = Math.floor(playerAgi * 0.3) + Math.floor(playerLevel * 0.35);
+          const bonus = Math.floor(playerAgi * 0.65) + Math.floor(playerLevel * 0.25);
           baseMin += bonus; baseMax += bonus;
         }
 
@@ -1582,7 +1582,7 @@ if (choice.manaCost === "ALL") {
         let critChance = 0;
         let critMultiplier = 1;
 
-        if (classKey === "warrior") { critChance = Math.min(60, 15 + playerStrength * 0.8 + playerLevel * 1.0); critMultiplier = 2.25; }
+        if (classKey === "warrior") { critChance = Math.min(60, 15 + playerStrength * 0.95 + playerLevel * 1.0); critMultiplier = 1.5; }
         else if (classKey === "mage") { critChance = Math.min(65, 12 + playerIntellect * 0.7 + playerLevel * 0.8); critMultiplier = 1.5; }
         else if (classKey === "archer") { critChance = Math.min(70, 18 + playerAgi * 0.9 + playerLevel * 1.2); critMultiplier = 1.75; }
 
@@ -1769,8 +1769,8 @@ if (choice.manaCost === "ALL") {
       }
 
       let healAmount = card.heal || 20;
-      if (classKey === "mage") healAmount += Math.floor(playerIntellect * 0.25);
-      else if (classKey === "warrior") healAmount += Math.floor(playerStrength * 0.3);
+      if (classKey === "mage") healAmount += Math.floor(playerIntellect * 0.7);
+      else if (classKey === "warrior") healAmount += Math.floor(playerStrength * 0.6);
       else if (classKey === "archer") healAmount += Math.floor(playerAgi * 0.5);
 
       setPlayerHP((prev) => {

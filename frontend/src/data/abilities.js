@@ -164,7 +164,7 @@ export const ALL_ABILITIES = [
   rarity: "rare",
   image: "/cards/rare/mage_frost_nova.png",
   // ❄️ stun – 1 enemy kört kihagy
-  stunTurns: 1,
+  stunTurns: 2,
   },
   {
     id: "mage_mana_shield",
@@ -175,6 +175,7 @@ export const ALL_ABILITIES = [
     heal: null,
     rarity: "rare",
     image: "/cards/rare/mage_mana_shield.png",
+      defenseTurns: 2, // ✅ ÚJ
   },
 
   // =====================
@@ -210,7 +211,7 @@ export const ALL_ABILITIES = [
   classKey: "archer",
   name: "Pet Command",
   type: "attack",
-  dmg: [1,2], // hunter “kicsi hit”
+  dmg: [1, 2], // hunter “kicsi hit”
   heal: null,
   rarity: "epic",
   image: "/cards/epic/warrior_battle_cry.png", // ✅ TEMP KÉP
@@ -327,8 +328,8 @@ export const ALL_ABILITIES = [
   classKey: "mage",
   name: "Drain Life",
   type: "attack",
-  dmg: [1, 3],      // kisebb hit, mert 3x tickel
-  heal: 5,         // heal is tickel
+  dmg: [1, 1],      // kisebb hit, mert 3x tickel
+  heal: 8,         // heal is tickel
   rarity: "epic",
   image: "/cards/epic/mage_drain_life.png",
   hits: 3,         // 🔥 3 tick
@@ -367,7 +368,7 @@ export const ALL_ABILITIES = [
     heal: null,
     rarity: "epic",
     image: "/cards/epic/mage_lightning_bolt.png",
-    stunTurns: 1,
+    stunTurns: 2,
   },
 
   // =====================
@@ -411,7 +412,7 @@ export const ALL_ABILITIES = [
   classKey: "archer",
   name: "Piercing Volley",
   type: "attack",
-  dmg: [9, 15],
+  dmg: [5, 8],
   heal: null,
   rarity: "epic",
   image: "/cards/epic/archer_piercing_volley.png",
@@ -457,7 +458,7 @@ export const ALL_ABILITIES = [
   classKey: "archer",
   name: "Rapid Fire",
   type: "attack",
-  dmg: [1, 3],    // ✅ kicsi
+  dmg: [4, 7],    // ✅ kicsi
   heal: null,
   rarity: "legendary",
   image: "/cards/legendary/archer_rapid_fire.png",

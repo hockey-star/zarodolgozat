@@ -133,10 +133,10 @@ const ENEMY_TEMPLATES = [
   {
     name: "Mountain King",
     role: "boss",
-    baseHp: 1500,
+    baseHp: 2000,
     hpPerLevel: 10,
-    baseMinDmg: 30,
-    baseMaxDmg: 50,
+    baseMinDmg: 55,
+    baseMaxDmg: 70,
     dmgPerLevel: 2,
     goldRewardMin: 120,
     goldRewardMax: 180,
@@ -146,7 +146,7 @@ const ENEMY_TEMPLATES = [
   {
     name: "Arcane Abomination",
     role: "boss",
-    baseHp: 1200,
+    baseHp: 1700,
     hpPerLevel: 12,
     baseMinDmg: 40,
     baseMaxDmg: 50,
@@ -159,7 +159,7 @@ const ENEMY_TEMPLATES = [
   {
     name: "Forest Spirit Beast",
     role: "boss",
-    baseHp: 1150,
+    baseHp: 1550,
     hpPerLevel: 11,
     baseMinDmg: 30,
     baseMaxDmg: 35,
@@ -229,6 +229,15 @@ export function getRandomEnemy({
     minDmg = Math.round(minDmg * 1.3);
     maxDmg = Math.round(maxDmg * 1.3);
   }
+
+  const steps = Math.max(level - 1, 0);
+
+const hpRate = boss ? 0.04 : elite ? 0.04 : 0.04;   // 4/6/8% HP per level
+const dmgRate = boss ? 0.02 : elite ? 0.04 : 0.04;  // 6/7/8% DMG per level
+
+maxHp = Math.round(maxHp * Math.pow(1 + hpRate, steps));
+minDmg = Math.round(minDmg * Math.pow(1 + dmgRate, steps));
+maxDmg = Math.round(maxDmg * Math.pow(1 + dmgRate, steps));
 
   return {
     name: base.name,
