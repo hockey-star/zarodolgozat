@@ -239,3 +239,73 @@
 .rarity-legendary {
   color: #facc15; /* yellow-400 */
 }
+
+/* --- ÚJ ANIMÁCIÓK --- */
+
+/* Overlay sötétedése */
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background-color: rgba(0, 0, 0, 0.85);
+    z-index: 50;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: opacity 0.3s ease;
+}
+
+.fade-in {
+    animation: fadeInOverlay 0.3s forwards;
+}
+
+.fade-out {
+    animation: fadeOutOverlay 0.3s forwards;
+}
+
+/* Modal ablak mozgása */
+.modal-content {
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.scale-up {
+    animation: scaleUp 0.3s forwards;
+}
+
+.scale-down {
+    animation: scaleDown 0.3s forwards;
+}
+
+@keyframes fadeInOverlay {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes fadeOutOverlay {
+    from { opacity: 1; }
+    to { opacity: 0; }
+}
+
+@keyframes scaleUp {
+    from { 
+        opacity: 0;
+        transform: scale(0.8) translateY(20px); 
+    }
+    to { 
+        opacity: 1;
+        transform: scale(1) translateY(0); 
+    }
+}
+
+@keyframes scaleDown {
+    from { 
+        opacity: 1;
+        transform: scale(1) translateY(0); 
+    }
+    to { 
+        opacity: 0;
+        transform: scale(0.8) translateY(20px); 
+    }
+}
+
+/* Az eredeti shopBorder-t hagyd meg, de a Tailwind 'fixed inset-0' részeit a JSX-ben töröltem, 
+   mert a .modal-overlay kezeli */

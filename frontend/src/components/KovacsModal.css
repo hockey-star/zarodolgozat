@@ -12,6 +12,15 @@
     -5px 5px #00000038;
 
   overflow: hidden; /* fontos a vignette-hez */
+  animation: fadeInScale 0.3s ease-out forwards;
+}
+
+.kovacs-overlay {
+  transition: opacity 0.3s ease;
+}
+
+.kovacs.closing {
+  animation: fadeOutScale 0.3s ease-in forwards;
 }
 
 /* ===== PULZÁLÓ SÁRGA VIGNETTE ===== */
@@ -155,4 +164,27 @@
     box-shadow: 0px 5px black, 0px -5px black, 5px 0px black, -5px 0px black, 0px 10px #00000038, 5px 5px #00000038, -5px 5px #00000038, inset 0px 5px #0c040436;
     width: 300px;
     margin: auto;
+}
+
+/* Animációk definíciója */
+@keyframes fadeInScale {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes fadeOutScale {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.9);
+  }
 }

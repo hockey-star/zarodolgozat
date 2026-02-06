@@ -95,7 +95,7 @@ export default function BlacksmithModal({ onClose }) {
   const [playerData, setPlayerData] = useState(null);
   const [playerItems, setPlayerItems] = useState([]);
   const [selectedItem, setSelectedItem] = useState(null);
-
+  const [isClosing, setIsClosing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
@@ -115,6 +115,14 @@ export default function BlacksmithModal({ onClose }) {
   }
 
   const refreshSeq = React.useRef(0);
+
+  const handleClose = () => {
+    setIsClosing(true);
+    // Megvárjuk, amíg a CSS animáció lefut (300ms)
+    setTimeout(() => {
+      onClose();
+    }, 300);
+  };
 
   const refreshAll = async () => {
     if (!userId) return;
@@ -223,9 +231,9 @@ export default function BlacksmithModal({ onClose }) {
     : null;
 
   return (
-    <div className="fixed inset-0 bg-black/70 flex justify-center z-50">
+    <div className={`fixed inset-0 bg-black/70 flex justify-center z-50 kovacs-overlay ${isClosing ? 'opacity-0' : 'opacity-100'}`}>
       <div
-        className="kovacs relative w-[85%] h-[85%] flex-col p-6"
+        className={`kovacs relative w-[85%] h-[85%] flex-col p-6 ${isClosing ? "closing" : ""}`}
         style={{
           backgroundImage: "url('./src/assets/pics/KOVACS.png')",
           backgroundSize: "cover",
@@ -233,7 +241,7 @@ export default function BlacksmithModal({ onClose }) {
           backgroundRepeat: "no-repeat",
         }}
       >
-        <button onClick={onClose} className="kilepes absolute top-3 right-3 text-center">
+        <button onClick={handleClose} className="kilepes absolute top-3 right-3 text-center">
           X
         </button>
 

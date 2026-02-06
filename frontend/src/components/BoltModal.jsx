@@ -2,46 +2,52 @@ import React, { useEffect, useState } from "react";
 import "./BoltModal.css";
 
 export default function ShopModal({ onClose }) {
+  const [isClosing, setIsClosing] = useState(false); // Új állapot a záráshoz
   const [playerData, setPlayerData] = useState(null);
   const [shopItems, setShopItems] = useState([]);
   const [inventoryItems, setInventoryItems] = useState([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
   const [showError, setShowError] = useState(false);
-  const [mode, setMode] = useState("buy"); // buy | sell
+  const [mode, setMode] = useState("buy");
   const [activeCategory, setActiveCategory] = useState("weapon");
   const [fullStats, setFullStats] = useState(null);
 
-  
   const userId = localStorage.getItem("sk_current_user_id");
 
+  // Animált bezárás kezelő
+  const handleClose = () => {
+    setIsClosing(true);
+    setTimeout(() => {
+      onClose(); // Csak az animáció (300ms) után hívjuk meg a szülő bezáró függvényét
+    }, 300); 
+  };
+
 // --- RUN HP (sessionStorage) + FULL STATS (final hp) összevetés ---
-const HEAL_COST = 100;
+const itemsToShow =
+    mode === "buy"
+      ? shopItems.filter(i => i.type === activeCategory)
+      : inventoryItems.filter(i => i.type === activeCategory);
 
-const hpKey = userId ? `adventure_hp_${userId}` : null;
-
-const readRunHp = () => {
-  if (!hpKey) return null;
-  const raw = sessionStorage.getItem(hpKey);
-  const n = raw == null ? null : Number(raw);
-  return Number.isFinite(n) ? n : null;
-};
-
-// ezekhez kell majd a fullStats-ból:
-const finalHp = fullStats?.final?.hp ?? null;
-const finalMaxHp = fullStats?.final?.max_hp ?? null;
-
-const runHp = readRunHp();
-const currentHp = runHp ?? finalHp;      // ha van run hp, az dominál
-const maxHp = finalMaxHp;               // valós max HP itemekkel
-const isFull = currentHp != null && maxHp != null && currentHp >= maxHp;
+  const finalHp = fullStats?.final?.hp ?? null;
+  const finalMaxHp = fullStats?.final?.max_hp ?? null;
+  const hpKey = userId ? `adventure_hp_${userId}` : null;
+  const readRunHp = () => {
+    if (!hpKey) return null;
+    const raw = sessionStorage.getItem(hpKey);
+    return raw == null ? null : Number(raw);
+  };
+  const runHp = readRunHp();
+  const currentHp = runHp ?? finalHp;
+  const maxHp = finalMaxHp;
+  const isFull = currentHp != null && maxHp != null && currentHp >= maxHp;
+  const HEAL_COST = 100;
 
   const CATEGORIES = [
     { type: "weapon", icon: "⚔️" },
     { type: "helmet", icon: "👑" },
     { type: "armor", icon: "🛡️" },
     { type: "accessory", icon: "💍" },
-    
   ];
 
   useEffect(() => {
@@ -212,40 +218,38 @@ const heal = async () => {
   }
 };
 
-  const itemsToShow =
-    mode === "buy"
-      ? shopItems.filter(i => i.type === activeCategory)
-      : inventoryItems.filter(i => i.type === activeCategory);
-
+ 
   return (
-    <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center">
+    <div className={`modal-overlay ${isClosing ? "fade-out" : "fade-in"}`}>
       <div
-        className="shopBorder relative w-[90%] h-[90%] overflow-hidden"
+        className={`shopBorder relative w-[90%] h-[90%] overflow-hidden modal-content ${
+          isClosing ? "scale-down" : "scale-up"
+        }`}
         style={{
           backgroundImage: `url("./src/assets/pics/BOLT.gif")`,
           backgroundSize: "cover",
           backgroundPosition: "center"
         }}
       >
-        {/* Kilépés */}
+        {/* Kilépés - handleClose hívása az onClose helyett */}
         <button
-          onClick={onClose}
+          onClick={handleClose}
           className="kilepes absolute top-4 right-4 text-white z-30"
         >
           X
         </button>
 
-        {/* STATS */}
+       {/* STATS */}
         <div className="Stats space-y-2 absolute/60 p-4 w-64 z-20">
           <div className="StatsStatsName flex justify-between">
-          SZINT: <span className="StatsStats">{fullStats?.player?.level ?? "-"}</span>
-        </div>
-        <div className="StatsStatsName flex justify-between">
-          XP: <span className="StatsStats">{fullStats?.player?.xp ?? "-"}</span>
-        </div>
-        <div className="StatsStatsName flex justify-between">
-          ARANY: <span className="StatsStats">{fullStats?.player?.gold ?? "-"}</span>
-        </div>
+            SZINT: <span className="StatsStats">{fullStats?.player?.level ?? "-"}</span>
+          </div>
+          <div className="StatsStatsName flex justify-between">
+            XP: <span className="StatsStats">{fullStats?.player?.xp ?? "-"}</span>
+          </div>
+          <div className="StatsStatsName flex justify-between">
+            ARANY: <span className="StatsStats">{fullStats?.player?.gold ?? "-"}</span>
+          </div>
         </div>
 
         {/* KATEGÓRIA GOMBOK – BAL */}
@@ -345,14 +349,9 @@ const heal = async () => {
         </div>
 
 
-        <div
-          className={`shopAlert ${showError ? "shopAlert-show" : "shopAlert-hide"}`}
-        >
+       <div className={`shopAlert ${showError ? "shopAlert-show" : "shopAlert-hide"}`}>
           {error}
         </div>
-
-
-
       </div>
     </div>
   );
