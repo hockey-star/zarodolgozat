@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useEffect } from "react";
 import { usePlayer } from "../context/PlayerContext.jsx";
 import {
@@ -78,13 +79,14 @@ export default function Inv({ onClose }) {
   const [showDeckEditor, setShowDeckEditor] = useState(false);
   const [showStats, setShowStats] = useState(false);
   const anyModalOpen = showInventory || showDeckEditor || showStats;
+  const [closing, setClosing] = useState(false);
+  const [hoveredLocation, setHoveredLocation] = useState("");
+
   /* ==============================
      INVENTORY
      ============================== */
   const [inventoryItems, setInventoryItems] = useState([]);
   const [selectedItem, setSelectedItem] = useState(null);
-  const [inventoryClosing, setInventoryClosing] = useState(false);
-
   /* ==============================
      DECK / CLASS
      ============================== */
@@ -141,17 +143,6 @@ export default function Inv({ onClose }) {
         alert("Nem sikerült betölteni az inventoryt");
       });
   }, [showInventory, player?.id]);
-
-  function closeInventoryModal() {
-  setInventoryClosing(true);
-
-  setTimeout(() => {
-    setShowInventory(false);
-    setInventoryClosing(false);
-    setSelectedItem(null);
-  }, 300); // CSS animáció idő
-}
-
   /* ==============================
      EQUIP / UNEQUIP  (owned_id alapú!)
      ============================== */
@@ -219,6 +210,15 @@ function equipItem(ownedId, slotKey) {
       alert("Hiba az equip során");
     });
 }
+
+function handleClose() {
+  setClosing(true);
+
+  setTimeout(() => {
+    onClose?.();
+  }, 300);
+}
+
 function unequipItem(ownedId) {
   if (!player?.id || !ownedId) return;
   fetch("http://localhost:3000/api/inventory/unequip", {
@@ -360,9 +360,17 @@ function unequipItem(ownedId) {
   /* ==============================
      RENDER
      ============================== */
+
+     
   return (
-    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
-      <div
+  <>
+    {hoveredLocation && !anyModalOpen && (
+      <div className="location-tooltip">
+        {hoveredLocation}
+      </div>
+    )}
+    <div className="house-modal-overlay fixed inset-0 bg-black/70 flex items-center justify-center z-50">
+      <div className={`house-modal-container ${closing ? "closing" : ""}`}
         style={{
           width: "1920px",
           height: "1088px",
@@ -377,14 +385,11 @@ function unequipItem(ownedId) {
         {showStats && <StatModal onClose={() => setShowStats(false)} />}
         {/* INVENTORY */}
         {showInventory && (
-          <div className="house-modal-overlay absolute inset-0 bg-black/85 flex items-center justify-center p-10 z-40">
+          <div className="absolute inset-0 bg-black/85 flex items-center justify-center p-10 z-40">
             <div className="invMinden w-4/5 h-4/5 p-6">
               <button
-                className={`house-modal-container invMinden w-4/5 h-4/5 p-6 ${
-        inventoryClosing ? "closing" : ""
-      }`}
+                className="invBezaras text-center"
                 onClick={() => {
-                  closeInventoryModal;
                   setShowInventory(false);
                   setSelectedItem(null);
                 }}
@@ -734,16 +739,21 @@ function unequipItem(ownedId) {
         <div className="flex justify-between flex-1">
           <div style={{ width: "80%", height: "80%" }}>
             <div
-              className={`absolute cursor-pointer group ${anyModalOpen ? "pointer-events-none" : ""}`}
-              style={{ left: "5%", bottom: "5%", width: "325px", height: "600px" }}
-              onClick={onClose}
-            >
+  className={`absolute cursor-pointer group ${anyModalOpen ? "pointer-events-none" : ""}`}
+  style={{ left: "5%", bottom: "5%", width: "325px", height: "600px" }}
+  onClick={handleClose}
+  onMouseEnter={() => setHoveredLocation("Kilépés a házból")}
+  onMouseLeave={() => setHoveredLocation("")}
+>
               <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition" />
             </div>
             <div
               className={`absolute cursor-pointer group ${anyModalOpen ? "pointer-events-none" : ""}`}
               style={{ left: "45%", bottom: "30%", width: "180px", height: "250px" }}
               onClick={() => setShowDeckEditor(true)}
+              onMouseEnter={() => setHoveredLocation("Varázskönyv")}
+              onMouseLeave={() => setHoveredLocation("")}
+
             >
               <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition" />
             </div>
@@ -751,6 +761,9 @@ function unequipItem(ownedId) {
               className={`absolute cursor-pointer group ${anyModalOpen ? "pointer-events-none" : ""}`}
               style={{ left: "25%", bottom: "18%", width: "400px", height: "300px" }}
               onClick={() => setShowInventory(true)}
+              onMouseEnter={() => setHoveredLocation("Leltár")}
+              onMouseLeave={() => setHoveredLocation("")}
+
             >
               <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition" />
             </div>
@@ -758,6 +771,9 @@ function unequipItem(ownedId) {
               className={`absolute cursor-pointer group ${anyModalOpen ? "pointer-events-none" : ""}`}
               style={{ right: "10%", bottom: "5%", width: "650px", height: "350px" }}
               onClick={() => setShowStats(true)}
+              onMouseEnter={() => setHoveredLocation("Statisztikák")}
+              onMouseLeave={() => setHoveredLocation("")}
+
             >
               <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition" />
             </div>
@@ -765,5 +781,6 @@ function unequipItem(ownedId) {
         </div>
       </div>
     </div>
+    </>
   );
 }

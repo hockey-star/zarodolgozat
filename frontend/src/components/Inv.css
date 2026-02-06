@@ -274,3 +274,20 @@
 .rarity-legendary {
   color: #facc15; /* yellow-400 */
 }
+
+.location-tooltip {
+  position: fixed;
+  top: 10%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(48, 0, 0, 0.7);
+  color: #ffffff;
+  padding: 10px 30px;
+  border-radius: 5px;
+  border: 2px solid #960000;
+  font-size: 24px;
+  font-family: "Jersey 10", sans-serif;
+  z-index: 9999;
+  pointer-events: none;
+  animation: fadeIn 0.25s ease-in-out;
+}

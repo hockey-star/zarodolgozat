@@ -1,0 +1,36 @@
+@keyframes boardDropIn {
+  0% {
+    transform: rotateX(-90deg);
+    opacity: 0;
+  }
+  60% {
+    transform: rotateX(15deg);
+    opacity: 1;
+  }
+  80% {
+    transform: rotateX(-8deg);
+  }
+  100% {
+    transform: rotateX(0deg);
+  }
+}
+
+@keyframes boardDropOut {
+  0% {
+    transform: rotateX(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: rotateX(-90deg);
+    opacity: 0;
+  }
+}
+
+.quest-board-container {
+  transform-origin: top center;
+  animation: boardDropIn 0.6s ease-out forwards;
+}
+
+.quest-board-container.closing {
+  animation: boardDropOut 0.35s ease-in forwards;
+}

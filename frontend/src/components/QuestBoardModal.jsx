@@ -1,6 +1,7 @@
 // frontend/src/components/QuestBoardModal.jsx
 import React, { useEffect, useState, useCallback } from "react";
 import QuestDetailsModal from "./QuestDetailsModal.jsx";
+import "./QuestBoardModal.css";
 
 export default function QuestBoardModal({
   playerId,
@@ -13,6 +14,8 @@ export default function QuestBoardModal({
   const [selectedQuest, setSelectedQuest] = useState(null);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState("");
+  const [closing, setClosing] = useState(false);
+
 
   const NORMAL_POS = [
     { top: "25%", left: "20%" },
@@ -53,7 +56,7 @@ export default function QuestBoardModal({
   useEffect(() => { loadQuests(); }, [loadQuests]);
 
   useEffect(() => {
-    function onKey(e) { if (e.key === "Escape") onClose?.(); }
+    function onKey(e) { if (e.key === "Escape") handleClose?.(); }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
@@ -66,10 +69,20 @@ export default function QuestBoardModal({
     return "text-white";
   }
 
+  function handleClose() {
+  setClosing(true);
+
+  setTimeout(() => {
+    onClose?.();
+  }, 350);
+}
+
+
   return (
     <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
       <div
-        className="relative rounded-xl shadow-2xl overflow-hidden"
+  className={`quest-board-container relative rounded-xl shadow-2xl overflow-hidden ${closing ? "closing" : ""}`}
+
         style={{ width: "90vw", height: "90vh", maxWidth: 1400, maxHeight: 900 }}
       >
         <div
@@ -78,7 +91,7 @@ export default function QuestBoardModal({
         />
 
         <button
-          onClick={onClose}
+          onClick={handleClose}
           className="absolute top-3 right-5 z-30 text-white text-2xl font-bold drop-shadow-lg hover:text-red-400"
         >
           ✕
