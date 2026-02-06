@@ -77,3 +77,61 @@
   font-size: 30px;
   z-index: 30;
 }
+.enemy-frame {
+  position: relative;
+}
+
+/* ✅ Affix keret/glow: csak akkor, ha van affix */
+.enemy-frame.affixed::before {
+  content: "";
+  position: absolute;
+
+  top: 65px;
+  bottom: 65px;
+
+  left: 210px;    /* ← kisebb X */
+  right: 210px;   /* ← kisebb X */
+
+  border-radius: 18px;
+  pointer-events: none;
+
+  border: 2px solid var(--affixColor);
+  box-shadow:
+    0 0 0 2px rgba(0,0,0,0.55),
+    0 0 22px 6px color-mix(in srgb, var(--affixColor) 65%, transparent),
+    0 0 48px 10px color-mix(in srgb, var(--affixColor) 35%, transparent);
+}
+
+/* ✅ Affix strip a név fölött */
+.affix-strip {
+  position: absolute;
+  top: 20px;            /* a frame fölé */
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 30;
+
+  display: flex;
+  gap: 8px;
+  padding: 6px 10px;
+
+  background: rgba(0,0,0,0.65);
+  border: 1px solid var(--affixColor);
+  border-radius: 999px;
+
+  box-shadow: 0 0 18px color-mix(in srgb, var(--affixColor) 45%, transparent);
+  backdrop-filter: blur(4px);
+}
+
+.affix-tag {
+  font-family: monospace;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #fff;
+
+  padding: 2px 8px;
+  border-radius: 999px;
+
+  background: color-mix(in srgb, var(--affixColor) 25%, rgba(0,0,0,0.35));
+  border: 1px solid color-mix(in srgb, var(--affixColor) 60%, transparent);
+}

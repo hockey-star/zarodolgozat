@@ -21,6 +21,52 @@ export const CLASS_BOSS_MAP = {
   8: "Forest Spirit Beast",    // archer
 };
 
+const AFFIX_POOL = [
+  { id: "vampiric", name: "Vampiric", healBase: 0.30, healPerLevel: 0.015, healCap: 0.65 },
+  { id: "frenzied", name: "Frenzied", dmgMult: 1.30 },
+  { id: "shielded", name: "Shielded", guardHits: 5 },
+  { id: "plague_aura", name: "Plague Aura", poison: { damagePerTurn: 5, turns: 5 } },
+];
+
+
+function materializeAffix(a, level) {
+  if (a.id !== "vampiric") return { ...a };
+
+  const base = a.healBase ?? 0.3;
+  const per = a.healPerLevel ?? 0.01;
+  const cap = a.healCap ?? 0.6;
+
+  const pct = Math.min(cap, base + Math.max(0, level - 1) * per);
+
+  return {
+    ...a,
+    healPct: Number(pct.toFixed(3)), // szép + stabil
+  };
+}
+
+
+function pickRandom(list) {
+  return list[Math.floor(Math.random() * list.length)];
+}
+
+export function rollAffixes({ level, boss, elite }) {
+  if (boss) return [];
+  if (!elite) return [];
+
+  const count = level >= 12 ? 2 : 1;
+
+  const chosen = [];
+  const used = new Set();
+
+  while (chosen.length < count) {
+    const a = pickRandom(AFFIX_POOL);
+    if (used.has(a.id)) continue;
+    used.add(a.id);
+    chosen.push(materializeAffix(a, level));
+  }
+  return chosen;
+}
+
 // Lokális enemy sablonok – NEM DB-sek, csak frontendhez.
 const ENEMY_TEMPLATES = [
   // ---- Normál ellenfelek ----
@@ -170,7 +216,6 @@ const ENEMY_TEMPLATES = [
     xpRewardMax: 1500,
   },
 ];
-
 // helper: sablon keresése név alapján (most nem nagyon kell, de marad)
 function findTemplate(name) {
   if (!name) return null;
@@ -195,6 +240,7 @@ export function getRandomEnemy({
   boss = false,
   elite = false,
   allowedNames = [],
+  
 }) {
   let pool = ENEMY_TEMPLATES.slice();
 
@@ -239,16 +285,32 @@ maxHp = Math.round(maxHp * Math.pow(1 + hpRate, steps));
 minDmg = Math.round(minDmg * Math.pow(1 + dmgRate, steps));
 maxDmg = Math.round(maxDmg * Math.pow(1 + dmgRate, steps));
 
+    // ✅ AFFIX roll (és stat-affix alkalmazás)
+  const affixes = rollAffixes({ level, boss, elite });
+
+  // Frenzied -> dmg szorzó
+  let finalMin = minDmg;
+  let finalMax = maxDmg;
+
+  const frenzy = affixes.find(a => a.id === "frenzied");
+  if (frenzy?.dmgMult) {
+    finalMin = Math.max(1, Math.round(finalMin * frenzy.dmgMult));
+    finalMax = Math.max(finalMin, Math.round(finalMax * frenzy.dmgMult));
+  }
+
   return {
     name: base.name,
     role: boss ? "boss" : elite ? "elite" : "normal",
     level,
     maxHp,
-    minDmg,
-    maxDmg,
+    minDmg: finalMin,
+    maxDmg: finalMax,
     goldRewardMin: base.goldRewardMin,
     goldRewardMax: base.goldRewardMax,
     xpRewardMin: base.xpRewardMin,
     xpRewardMax: base.xpRewardMax,
+
+
+    affixes,
   };
 }

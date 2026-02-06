@@ -5,6 +5,97 @@
   overflow: hidden;
 }
 
+/* ✅ Topbar / Hamburger */
+.hub-topbar {
+  position: fixed;
+  top: 18px;
+  right: 18px;
+  z-index: 12000; /* minden fölött legyen */
+}
+
+.hub-hamburger {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  border: 2px solid #960000;
+  background: rgba(48, 0, 0, 0.75);
+  box-shadow: 0px 5px black, 0px -5px black, 5px 0px black, -5px 0px black,
+    0px 10px #00000038, 5px 5px #00000038, -5px 5px #00000038,
+    inset 0px 5px #ffffff36;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px;
+  cursor: pointer;
+}
+
+.hub-hamburger:hover {
+  filter: brightness(1.08);
+}
+
+.hub-hamburger-line {
+  height: 3px;
+  border-radius: 999px;
+  background: #fef9c2;
+  display: block;
+}
+
+/* Menü panel */
+.hub-menu-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 11990;
+  background: transparent; /* csak kattintható zárásra */
+}
+
+.hub-menu-panel {
+  position: absolute;
+  top: 54px;
+  right: 0;
+  width: 240px;
+  padding: 12px;
+  border-radius: 12px;
+  border: 2px solid #960000;
+  background: rgba(12, 0, 0, 0.92);
+  box-shadow: 0px 8px 30px rgba(0, 0, 0, 0.6);
+  z-index: 12010;
+}
+
+.hub-menu-title {
+  font-family: "Jersey 10", sans-serif;
+  font-size: 24px;
+  letter-spacing: 2px;
+  color: #fef9c2;
+  margin-bottom: 10px;
+  border-bottom: 1px solid rgba(150, 0, 0, 0.6);
+  padding-bottom: 8px;
+}
+
+.hub-menu-item {
+  width: 100%;
+  padding: 10px 12px;
+  margin: 6px 0;
+  border-radius: 10px;
+  border: 2px solid #960000;
+  background: rgba(48, 0, 0, 0.65);
+  color: #fef9c2;
+  font-family: "Jersey 10", sans-serif;
+  font-size: 20px;
+  letter-spacing: 1px;
+  cursor: pointer;
+  box-shadow: inset 0px 3px #ffffff1f;
+}
+
+.hub-menu-item:hover {
+  filter: brightness(1.08);
+}
+
+.hub-menu-item.danger {
+  border-color: #b30000;
+  background: rgba(110, 0, 0, 0.65);
+}
+
 /* Hub.css */
 
 .hub-overlay {
@@ -76,7 +167,6 @@
   cursor: pointer;
 }
 
-
 .player {
   position: absolute;
   width: 5%;
@@ -110,9 +200,6 @@
   to { opacity: 1; transform: translate(-50%, 0); }
 }
 
-/* A hotzone-ra érdemes egy hover effektet is tenni, ha akarod látni a keretet */
-
-
 /* Ha ráviszed az egeret a keretre, megjelenik a felirat */
 .hotzone:hover .zone-label {
   opacity: 1;
@@ -123,19 +210,21 @@
 .zone-label {
   position: absolute;
   top: -40px; /* A keret teteje fölé tolja (állítsd be, ahogy tetszik) */
- 
+
   padding: 4px 12px;
   border-radius: 4px;
   white-space: nowrap; /* Ne törje tördelt sorba a szöveget */
   pointer-events: none; /* Ne zavarjon be a kattintásba */
   color: #fef9c2;
-     background-color: #460809;
-     font-size: 20px;
-     font-family: "Jersey 10", sans-serif;
-     border: 0;
-     box-shadow: 0px 5px black, 0px -5px black, 5px 0px black, -5px 0px black, 0px 10px #00000038, 5px 5px #00000038, -5px 5px #00000038, inset 0px 5px #ffffff36;
-     cursor: pointer;
-  
+  background-color: #460809;
+  font-size: 20px;
+  font-family: "Jersey 10", sans-serif;
+  border: 0;
+  box-shadow: 0px 5px black, 0px -5px black, 5px 0px black, -5px 0px black,
+    0px 10px #00000038, 5px 5px #00000038, -5px 5px #00000038,
+    inset 0px 5px #ffffff36;
+  cursor: pointer;
+
   /* Animáció */
   opacity: 0;
   transform: translateY(10px);

@@ -90,3 +90,58 @@
   scrollbar-width: thin;
   scrollbar-color: #3d0a0a #050505;
 }
+
+/* ===== PET UI (inv palette) ===== */
+.petBadgeInv {
+  color: #fef9c2;
+  background-color: #460809;
+  font-family: "Jersey 10", sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 3px;
+
+  /* pixel keret/shadow (ugyanaz a feeling mint inv) */
+  box-shadow:
+    0px 5px black, 0px -5px black, 5px 0px black, -5px 0px black,
+    0px 10px #00000038, 5px 5px #00000038, -5px 5px #00000038,
+    inset 0px 5px #ffffff36;
+}
+
+.petTauntBtnInv {
+  color: #fef9c2;
+  background-color: #460809;
+  font-size: 20px;
+  font-family: "Jersey 10", sans-serif;
+  border: 0;
+  text-transform: uppercase;
+  letter-spacing: 3px;
+  cursor: pointer;
+
+  box-shadow:
+    0px 5px black, 0px -5px black, 5px 0px black, -5px 0px black,
+    0px 10px #00000038, 5px 5px #00000038, -5px 5px #00000038,
+    inset 0px 5px #ffffff36;
+}
+
+.petTauntBtnInv:active {
+  transform: translateY(5px);
+  box-shadow:
+    0px 5px black, 0px -5px black, 5px 0px black, -5px 0px black,
+    inset 0px 5px #00000038;
+}
+
+.petTauntBtnInvDisabled {
+  background-color: #242424;
+  color: #9b9b9b;
+  cursor: not-allowed;
+  opacity: 0.9;
+
+  box-shadow:
+    0px 5px black, 0px -5px black, 5px 0px black, -5px 0px black,
+    inset 0px 5px #00000038;
+}
+
+/* opcionális: CD szám pirosabb */
+.petCdRed {
+  color: #b61a1a;
+  text-shadow: 2px 2px 0px #290f0f;
+}

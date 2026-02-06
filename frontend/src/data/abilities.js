@@ -184,6 +184,8 @@ export const ALL_ABILITIES = [
   // =====================
 // ARCHER – PET (TEMP IMG)
 // =====================
+
+/*
 {
   id: "archer_pet_taunt",
   classKey: "archer",
@@ -195,6 +197,7 @@ export const ALL_ABILITIES = [
   image: "/cards/rare/warrior_shield_wall.png", // ✅ TEMP KÉP
   petTauntTurns: 2, // ✅ 2 körig a petet üti
 },
+*/
 {
   id: "archer_mend_pet",
   classKey: "archer",
