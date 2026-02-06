@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Gép: 127.0.0.1
--- Létrehozás ideje: 2026. Feb 04. 09:45
+-- Létrehozás ideje: 2026. Feb 04. 13:32
 -- Kiszolgáló verziója: 10.4.28-MariaDB
 -- PHP verzió: 8.2.4
 
@@ -133,7 +133,29 @@ INSERT INTO `birtokol` (`id`, `player_id`, `item_id`, `quantity`, `upgrade_level
 (102, 37, 22, 1, 5, 1, 1),
 (103, 37, 25, 1, 3, 1, 1),
 (104, 37, 27, 1, 2, 1, 1),
-(105, 37, 29, 1, 5, 1, 2);
+(105, 37, 29, 1, 5, 1, 2),
+(109, 39, 26, 1, 6, 1, 2),
+(111, 39, 9, 1, 10, 0, 1),
+(112, 39, 16, 1, 5, 1, 1),
+(114, 39, 29, 1, 2, 1, 1),
+(116, 39, 58, 1, 4, 1, 1),
+(117, 39, 55, 1, 0, 1, 1),
+(121, 40, 28, 1, 1, 1, 1),
+(122, 40, 26, 1, 0, 0, 2),
+(123, 40, 58, 1, 6, 1, 1),
+(124, 40, 16, 1, 6, 1, 1),
+(126, 40, 29, 1, 0, 1, 2),
+(127, 40, 55, 1, 5, 1, 1),
+(131, 41, 29, 1, 3, 1, 2),
+(132, 41, 27, 1, 0, 1, 1),
+(133, 41, 25, 1, 6, 1, 1),
+(134, 41, 56, 1, 4, 1, 1),
+(135, 41, 23, 1, 3, 1, 1),
+(139, 42, 29, 1, 2, 1, 2),
+(140, 42, 40, 1, 2, 1, 1),
+(142, 42, 35, 1, 1, 1, 1),
+(143, 42, 57, 1, 0, 1, 1),
+(144, 42, 26, 1, 0, 1, 1);
 
 -- --------------------------------------------------------
 
@@ -203,7 +225,7 @@ INSERT INTO `items` (`id`, `name`, `type`, `min_dmg`, `max_dmg`, `intellect_bonu
 (13, 'Láncing', 'armor', 0, 0, 0, 4, 0, 'uncommon', 6, 0, 0, 4, 0, 250),
 (14, 'Acél Páncél', 'armor', 0, 0, 0, 6, 0, 'rare', 6, 0, 0, 6, 0, 350),
 (15, 'Mágikus Köpeny', 'armor', 0, 0, 3, 2, 0, 'rare', 7, 0, 3, 2, 0, 350),
-(16, 'Ősi Páncél', 'armor', 0, 0, 1, 8, 20, 'epic', 6, 0, 1, 8, 20, 750),
+(16, 'Ősi Páncél', 'armor', 0, 0, 1, 8, 20, 'epic', 6, 6, 1, 8, 20, 750),
 (17, 'Kis Gyógyital', 'potion', 0, 0, 0, 0, 20, 'common', NULL, 0, 0, 0, 20, 10),
 (18, 'Közepes Gyógyital', 'potion', 0, 0, 0, 0, 50, 'uncommon', NULL, 0, 0, 0, 50, 25),
 (19, 'Nagy Gyógyital', 'potion', 0, 0, 0, 0, 100, 'rare', NULL, 0, 0, 0, 100, 50),
@@ -244,7 +266,8 @@ INSERT INTO `items` (`id`, `name`, `type`, `min_dmg`, `max_dmg`, `intellect_bonu
 (54, 'Sólyomsisak', 'helmet', 0, 0, 0, 0, 0, 'rare', 8, 3, 0, 3, 10, 400),
 (55, 'Ősi Hadúr Sisakja', 'helmet', 0, 0, 0, 0, 0, 'epic', 6, 7, 0, 4, 30, 800),
 (56, 'Ősi Mágus Csuklya', 'helmet', 0, 0, 0, 0, 0, 'epic', 7, 0, 7, 2, 30, 800),
-(57, 'Árnyerdő Sisak', 'helmet', 0, 0, 0, 0, 0, 'epic', 8, 8, 0, 1, 35, 800);
+(57, 'Árnyerdő Sisak', 'helmet', 0, 0, 0, 0, 0, 'epic', 8, 8, 0, 1, 35, 800),
+(58, 'Ősi Hadúr Fejszéje', 'weapon', 0, 0, 0, 0, 0, 'epic', 6, 6, 0, 1, 0, 800);
 
 -- --------------------------------------------------------
 
@@ -323,7 +346,11 @@ INSERT INTO `players` (`id`, `username`, `email`, `password_hash`, `class_id`, `
 (35, 'tesztelgetnek321', '123214@gmail.com', '$2b$10$ZXhg4ZqcvvpemEwY7N4HMeJhxS1qMgQmAr9gsi/KYFa4FBDZYd3AG', 6, 7, 120, 871, 50, 50, 5, 0, 3, '2026-02-02 10:23:53', 18),
 (36, 'tesztelgethetek123', '123125512@gmail.com', '$2b$10$fqByP.992ytXzswdrfRBK.BxJa7QMLv336OlQXlYetDzYVQmCEDbi', 6, 6, 59, 533, 70, 70, 10, 0, 3, '2026-02-02 11:59:49', 6),
 (37, 'magus', 'asdsadsa@gmail.com', '$2b$10$zZJ/KPUp59RNyYwsEhPwCeNKRib9vVOAzBhGI8ZypnPTyse2fobC6', 7, 85, 852, 11143, 60, 60, 0, 8, 1, '2026-02-03 07:59:30', 240),
-(38, 'ijaszalex', 'asdas@gmail.com', '$2b$10$hhXWLddhE7slg89meMjBEO3Y2.qPX5DYNJYs30HizHfQZSk0P4Jla', 8, 1, 0, 100, 40, 40, 3, 2, 2, '2026-02-03 13:16:38', 0);
+(38, 'ijaszalex', 'asdas@gmail.com', '$2b$10$hhXWLddhE7slg89meMjBEO3Y2.qPX5DYNJYs30HizHfQZSk0P4Jla', 8, 1, 0, 100, 40, 40, 3, 2, 2, '2026-02-03 13:16:38', 0),
+(39, 'progresstest', 'progtest@gmail.com', '$2b$10$Kr3Sv/LgNIPM0l9rsGduGOrxL4M7AHDDiXp34pGZJf3zIm2as6XWi', 6, 27, 25, 2920, 105, 105, 36, 0, 3, '2026-02-04 09:46:06', 27),
+(40, 'progresstest1', 'asdasavaf@gmail.com', '$2b$10$ZAyoSgXy/am2d1KfjIDKj.cdjQEuPvfvsHn0pOUem7e9rFzVmZJIa', 6, 32, 446, 589, 37, 135, 48, 0, 3, '2026-02-04 11:12:30', 33),
+(41, 'progresstestmagus', 'asdasdad@gmail.com', '$2b$10$FWkB5.U0K1KiOB8r/5Qi8uYMYrjDu2nM1/JQ1HrIVezJYC/tBn/pi', 7, 33, 404, 1672, 30, 30, 0, 5, 1, '2026-02-04 12:17:05', 96),
+(42, 'progresstestijasz', 'asdweq@gmail.com', '$2b$10$ZRFBF6dw3pAH6hEYh1pJWe7eIgIOgYcZ.yteB9p8tk/Q5TCFawHGu', 8, 23, 62, 923, 56, 115, 9, 2, 2, '2026-02-04 12:59:04', 39);
 
 -- --------------------------------------------------------
 
@@ -479,7 +506,31 @@ INSERT INTO `player_quests` (`id`, `player_id`, `quest_id`, `progress`, `status`
 (268, 38, 5, 0, 'locked'),
 (269, 38, 9, 0, 'locked'),
 (270, 38, 10, 0, 'locked'),
-(271, 38, 11, 0, 'locked');
+(271, 38, 11, 0, 'locked'),
+(272, 39, 1, 5, 'claimed'),
+(273, 39, 2, 10, 'claimed'),
+(274, 39, 3, 15, 'claimed'),
+(275, 39, 4, 1, 'claimed'),
+(276, 39, 5, 0, 'in_progress'),
+(279, 39, 9, 0, 'locked'),
+(280, 40, 1, 5, 'claimed'),
+(281, 40, 2, 10, 'claimed'),
+(282, 40, 3, 15, 'claimed'),
+(283, 40, 4, 1, 'claimed'),
+(284, 40, 5, 5, 'in_progress'),
+(287, 40, 9, 0, 'locked'),
+(288, 41, 1, 5, 'claimed'),
+(289, 41, 2, 10, 'claimed'),
+(290, 41, 3, 15, 'claimed'),
+(291, 41, 4, 1, 'claimed'),
+(292, 41, 5, 1, 'in_progress'),
+(295, 41, 10, 0, 'locked'),
+(296, 42, 1, 5, 'claimed'),
+(297, 42, 2, 10, 'claimed'),
+(298, 42, 3, 15, 'claimed'),
+(299, 42, 4, 1, 'claimed'),
+(300, 42, 5, 16, 'in_progress'),
+(303, 42, 11, 0, 'locked');
 
 -- --------------------------------------------------------
 
@@ -662,7 +713,7 @@ ALTER TABLE `achievements`
 -- AUTO_INCREMENT a táblához `birtokol`
 --
 ALTER TABLE `birtokol`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=106;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=145;
 
 --
 -- AUTO_INCREMENT a táblához `classes`
@@ -674,7 +725,7 @@ ALTER TABLE `classes`
 -- AUTO_INCREMENT a táblához `items`
 --
 ALTER TABLE `items`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=58;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=59;
 
 --
 -- AUTO_INCREMENT a táblához `paths`
@@ -686,13 +737,13 @@ ALTER TABLE `paths`
 -- AUTO_INCREMENT a táblához `players`
 --
 ALTER TABLE `players`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=39;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=43;
 
 --
 -- AUTO_INCREMENT a táblához `player_quests`
 --
 ALTER TABLE `player_quests`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=272;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=304;
 
 --
 -- AUTO_INCREMENT a táblához `quests_master`
