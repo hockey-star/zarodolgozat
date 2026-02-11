@@ -80,7 +80,7 @@ export default function Inv({ onClose }) {
   const [showStats, setShowStats] = useState(false);
   const anyModalOpen = showInventory || showDeckEditor || showStats;
   const [closing, setClosing] = useState(false);
-  const [hoveredLocation, setHoveredLocation] = useState("");
+  
 
   /* ==============================
      INVENTORY
@@ -364,11 +364,6 @@ function unequipItem(ownedId) {
      
   return (
   <>
-    {hoveredLocation && !anyModalOpen && (
-      <div className="location-tooltip">
-        {hoveredLocation}
-      </div>
-    )}
     <div className="house-modal-overlay fixed inset-0 bg-black/70 flex items-center justify-center z-50">
       <div className={`house-modal-container ${closing ? "closing" : ""}`}
         style={{
@@ -739,44 +734,44 @@ function unequipItem(ownedId) {
         <div className="flex justify-between flex-1">
           <div style={{ width: "80%", height: "80%" }}>
             <div
-  className={`absolute cursor-pointer group ${anyModalOpen ? "pointer-events-none" : ""}`}
+  className={`hotzone absolute cursor-pointer group ${anyModalOpen ? "pointer-events-none" : ""}`}
   style={{ left: "5%", bottom: "5%", width: "325px", height: "600px" }}
   onClick={handleClose}
-  onMouseEnter={() => setHoveredLocation("Kilépés a házból")}
-  onMouseLeave={() => setHoveredLocation("")}
 >
-              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition" />
-            </div>
-            <div
-              className={`absolute cursor-pointer group ${anyModalOpen ? "pointer-events-none" : ""}`}
-              style={{ left: "45%", bottom: "30%", width: "180px", height: "250px" }}
-              onClick={() => setShowDeckEditor(true)}
-              onMouseEnter={() => setHoveredLocation("Varázskönyv")}
-              onMouseLeave={() => setHoveredLocation("")}
+  <span className="zone-label">Kilépés a házból</span>
 
-            >
-              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition" />
-            </div>
+  
+</div>
             <div
-              className={`absolute cursor-pointer group ${anyModalOpen ? "pointer-events-none" : ""}`}
-              style={{ left: "25%", bottom: "18%", width: "400px", height: "300px" }}
-              onClick={() => setShowInventory(true)}
-              onMouseEnter={() => setHoveredLocation("Leltár")}
-              onMouseLeave={() => setHoveredLocation("")}
+  className={`hotzone absolute cursor-pointer group ${anyModalOpen ? "pointer-events-none" : ""}`}
+  style={{ left: "43%", bottom: "30%", width: "195px", height: "250px" }}
+  onClick={() => setShowDeckEditor(true)}
+>
+  <span className="zone-label">Varázskönyv</span>
 
-            >
-              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition" />
-            </div>
+  
+</div>
+
             <div
-              className={`absolute cursor-pointer group ${anyModalOpen ? "pointer-events-none" : ""}`}
-              style={{ right: "10%", bottom: "5%", width: "650px", height: "350px" }}
-              onClick={() => setShowStats(true)}
-              onMouseEnter={() => setHoveredLocation("Statisztikák")}
-              onMouseLeave={() => setHoveredLocation("")}
+  className={`hotzone absolute cursor-pointer group ${anyModalOpen ? "pointer-events-none" : ""}`}
+  style={{ left: "25%", bottom: "18%", width: "400px", height: "300px" }}
+  onClick={() => setShowInventory(true)}
+>
+  <span className="zone-label">Leltár</span>
 
-            >
-              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition" />
-            </div>
+ 
+</div>
+
+            <div
+  className={`hotzone absolute cursor-pointer group ${anyModalOpen ? "pointer-events-none" : ""}`}
+  style={{ right: "10%", bottom: "5%", width: "650px", height: "350px" }}
+  onClick={() => setShowStats(true)}
+>
+  <span className="zone-label">Statisztikák</span>
+
+  
+</div>
+
           </div>
         </div>
       </div>

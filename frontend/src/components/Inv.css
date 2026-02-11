@@ -277,17 +277,51 @@
 
 .location-tooltip {
   position: fixed;
-  top: 10%;
+  top: 10%; /* Fent középen jelenjen meg */
   left: 50%;
   transform: translateX(-50%);
   background: rgba(48, 0, 0, 0.7);
-  color: #ffffff;
+  color: #ffffff; /* Arany szín a fantasy hangulathoz */
   padding: 10px 30px;
   border-radius: 5px;
   border: 2px solid #960000;
   font-size: 24px;
-  font-family: "Jersey 10", sans-serif;
-  z-index: 9999;
-  pointer-events: none;
-  animation: fadeIn 0.25s ease-in-out;
+  font-family: "Jersey 10", sans-serif; /* Ha van fantasy fontod */
+  z-index: 100;
+  pointer-events: none; /* Ne zavarjon bele a kattintásba */
+  animation: fadeIn 0.3s ease-in-out;
 }
+
+.zone-label {
+  position: absolute;
+  top: -40px; /* A keret teteje fölé tolja (állítsd be, ahogy tetszik) */
+
+  padding: 4px 12px;
+  border-radius: 4px;
+  white-space: nowrap; /* Ne törje tördelt sorba a szöveget */
+  pointer-events: none; /* Ne zavarjon be a kattintásba */
+  color: #fef9c2;
+  background-color: #460809;
+  font-size: 20px;
+  font-family: "Jersey 10", sans-serif;
+  border: 0;
+  box-shadow: 0px 5px black, 0px -5px black, 5px 0px black, -5px 0px black,
+    0px 10px #00000038, 5px 5px #00000038, -5px 5px #00000038,
+    inset 0px 5px #ffffff36;
+  cursor: pointer;
+
+  /* Animáció */
+  opacity: 0;
+  transform: translateY(10px);
+  transition: all 0.2s ease-in-out;
+}
+
+.hotzone:hover .zone-label {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.hotzone {
+  position: absolute;
+}
+
