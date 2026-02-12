@@ -18,7 +18,7 @@ import "./Inv.css";
 const CLASS_CONFIG = {
   6: { key: "warrior", displayName: "Harcos", sprite: "/ui/player/warriorsquare.png" },
   7: { key: "mage", displayName: "Varázsló", sprite: "/ui/player/magesquare.png" },
-  8: { key: "archer", displayName: "Íjász", sprite: "/ui/player/ijasz.png" },
+  8: { key: "archer", displayName: "Íjász", sprite: "/ui/player/archersquare.png" },
 };
 const RARITY_UI = {
   common:    { border: "border-gray-500",    ring: "ring-gray-400",    text: "text-gray-300" },
