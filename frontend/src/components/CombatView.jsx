@@ -7,6 +7,8 @@ import EnemyFrame from "./EnemyFrame";
 import HPPopup from "./HPPopup";
 import AbilityEffectLayer from "./AbilityEffectLayer";
 
+//tutorial
+import CombatTutorialSpotlight from "./CombatTutorialSpotlight.jsx";
 
 // ===== MAGE FX =====
 import healFx from "../assets/effects/heal_generic.webm";
@@ -536,6 +538,37 @@ function FadeOverlay({ isOpen, onMid, onDone, inMs = 220, holdMs = 120, outMs = 
   );
 
 }
+function TutorialOverlay({ open, step, steps, onNext, onSkip }) {
+  if (!open || step <= 0) return null;
+  const s = steps?.[step];
+  if (!s) return null;
+
+  return (
+    <div className="fixed inset-0 z-[9999]">
+      <div className="absolute inset-0 bg-black/70" />
+
+      <div className="absolute bottom-10 left-1/2 -translate-x-1/2 w-[min(900px,95vw)] bg-[#0b0b0b] border-4 border-black shadow-[0_0_0_2px_#3d0a0a,0_20px_50px_rgba(0,0,0,0.9)] p-6 text-white">
+        <div className="text-3xl font-black tracking-widest pixel-text-sharp">{s.title}</div>
+        <div className="mt-2 text-xl opacity-90 pixel-text-sharp">{s.text}</div>
+
+        <div className="mt-5 flex gap-3 justify-end">
+          <button
+            onClick={onSkip}
+            className="px-6 py-2 bg-black/40 border-2 border-[#5e0a0a] hover:bg-[#2a0505] pixel-text-sharp text-xl"
+          >
+            Skip
+          </button>
+          <button
+            onClick={onNext}
+            className="px-6 py-2 bg-[#2a0505] border-2 border-[#5e0a0a] hover:bg-[#3d0a0a] pixel-text-sharp text-xl"
+          >
+            Next
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 
 // Optional prop: `playerHP` can be passed from the parent (e.g. GameController).
@@ -624,6 +657,48 @@ export default function CombatView({
   const initialHPFromPlayer = derivedStats?.hp ?? player?.hp ?? 100;
   const maxHPFromPlayer = derivedStats?.max_hp ?? player?.max_hp ?? initialHPFromPlayer;
   const [playerHP, setPlayerHP] = useState(initialHPFromPlayer);
+
+  // =========================
+// CLEAN COMBAT TUTORIAL (RESET VERSION)
+// =========================
+const [tutStep, setTutStep] = useState(0);
+const [tutOpen, setTutOpen] = useState(false);
+
+const tutEnemyRef = useRef(null);
+const tutLogRef = useRef(null);
+const tutHandRef = useRef(null);
+const tutExtraRef = useRef(null); // mana vagy pet
+const tutPlayerRef = useRef(null);
+
+useEffect(() => {
+  if (!player?.id) return;
+  const key = `combat_tutorial_done_${player.id}`;
+  const done = localStorage.getItem(key) === "1";
+
+  // csak akkor nyit, ha még nem volt meg
+  if (!done) {
+    setTutOpen(true);
+    setTutStep(1);
+  } else {
+    setTutOpen(false);
+    setTutStep(0);
+  }
+}, [player?.id]);
+
+function finishTutorial() {
+  if (player?.id)
+    localStorage.setItem(`combat_tutorial_done_${player.id}`, "1");
+
+  // overlay fade-out
+
+
+  setTutOpen(false);
+  setTutStep(0);
+}
+
+function skipTutorial() {
+  finishTutorial();
+}
 
   // ✅ RUN HP PERSIST (sessionStorage) — B-E megoldás
   const hpStoreKey = player?.id ? `adventure_hp_${player.id}` : null;
@@ -2456,8 +2531,31 @@ emitEnd({
   plague_aura: "Plague Aura",
 };
 
+const tutSteps = useMemo(() => {
+  const steps = [
+    null,
+    { title: "ELLENSÉG", text: "Itt látod az enemy HP-t és az affixeket.", ref: tutEnemyRef },
+    { title: "COMBAT LOG", text: "Itt látod mi történt (crit/poison/burn/stun).", ref: tutLogRef },
+    { title: "KÁRTYÁK", text: "Kattints egy lapra. 1 lap = 1 kör, utána az enemy jön.", ref: tutHandRef },
+  ];
+
+  if (classKey === "mage") {
+    steps.push({ title: "MANA", text: "Minden kártya után +1 mana. 5-től nyithatod a Mana Képességeket.", ref: tutExtraRef });
+  } else if (classKey === "archer") {
+    steps.push({ title: "PET TAUNT", text: "A Taunt-tal a pet kapja a hiteket pár körig. Utána cooldown.", ref: tutExtraRef });
+  } else {
+steps.push({
+  title: "PASSZÍV",
+  text: "Warrior: minél kevesebb HP-d van, annál nagyobbat ütsz (és többet is kapsz).",
+  ref: tutPlayerRef, // ✅
+});
+  }
+
+  return steps;
+}, [classKey]);
+
 return (
-    <div className="fixed inset-0 text-white overflow-hidden">
+   <div className="combat-root fixed inset-0 text-white overflow-hidden">
       {/* 1. GLOBÁLIS PIXEL STÍLUSOK (Hogy ne legyen elmosódva) */}
       <style>
         {`
@@ -2490,6 +2588,7 @@ return (
       <div className="absolute inset-0 -z-10">
         <img src={bg} alt="bg" className="w-full h-full object-cover" />
       </div>
+      
 
       {/* ÚJ ELLENSÉG OVERLAY (V2 STÍLUS) */}
       {battleOver && pendingEnemies.length > 0 && playerHP > 0 && (
@@ -2530,7 +2629,8 @@ return (
         >
 {/* MAGE MANA UI - Ez marad a jól működő verzió */}
 {classKey === "mage" && enemy && !battleOver && (
-  <div className="absolute bottom-44 left-24 z-40 flex flex-col items-start scale-110 origin-bottom-left pointer-events-none">
+  <div ref={tutExtraRef}
+ className="absolute bottom-44 left-24 z-40 flex flex-col items-start scale-110 origin-bottom-left pointer-events-none">
     <div className="flex justify-between items-end mb-2 px-1 w-72">
       <div className="flex flex-col">
         <span className="text-[10px] uppercase font-black text-cyan-400 tracking-[0.2em] drop-shadow-md">
@@ -2665,6 +2765,7 @@ return (
 
       {/* ===== PET TAUNT BUTTON (lent, állítható offsettel) ===== */}
       <button
+       ref={tutExtraRef}
         onClick={(e) => {
           e.preventDefault();
           castPetTaunt();
@@ -2831,7 +2932,10 @@ return (
           )}
 
           {/* PLAYER FRAME */}
-          <div ref={playerAnchorRef} className="absolute top-24 left-[20%] -translate-x-1/2 z-10 transition-all duration-500 ease-in-out">
+          <div   ref={(el) => {
+            playerAnchorRef.current = el;
+            tutPlayerRef.current = el; // ✅ tutorial ide tud spotlightolni
+          }} className="absolute top-24 left-[20%] -translate-x-1/2 z-10 transition-all duration-500 ease-in-out">
             <div className="relative inline-block rounded-xl overflow-hidden" style={typeof warriorFrameStyle !== 'undefined' ? warriorFrameStyle : {}}>
               {activeAuraId && (
                 <div className="absolute z-[60] whitespace-nowrap pointer-events-none" style={{ top: "-30px", left: "0" }}>
@@ -2864,7 +2968,14 @@ return (
 
                 
           {/* ENEMY FRAME */}
-          <div ref={enemyAnchorRef} className="absolute top-24 left-[80%] -translate-x-1/2 z-10">
+          <div ref={tutEnemyRef}>
+          <div
+            ref={(el) => {
+              enemyAnchorRef.current = el;
+              tutEnemyRef.current = el;
+            }}
+            className="absolute top-24 left-[80%] -translate-x-1/2 z-10"
+          >
             <div className="relative">
               <EnemyFrame name={enemy?.name} hp={enemyHP} maxHP={enemy?.maxHp} image={enemyImage(enemy?.name)} damaged={enemyDamaged}   affixes={enemy?.affixes || []} />
 
@@ -2874,11 +2985,14 @@ return (
               ))}
             </div>
           </div>
+          </div>
 
           {/* ============================================================ */}
           {/* ✅ DARK FANTASY PIXEL COMBAT LOG (A TELJES ÚJ RÉSZ) */}
           {/* ============================================================ */}
+          
           <div
+            ref={tutLogRef}
             className="absolute top-[62%] left-1/2 -translate-x-1/2
               w-3/4 max-w-2xl h-52
               bg-[#080808] 
@@ -2911,7 +3025,7 @@ return (
 
           {/* KÁRTYÁK (HAND) */}
           {!battleOver && (
-            <div className="absolute left-1/2 -translate-x-1/2 flex gap-4 z-50" style={{ bottom: "-80px" }}>
+            <div ref={tutHandRef} className="absolute left-1/2 -translate-x-1/2 flex gap-4 z-50" style={{ bottom: "-80px" }}>
               {hand.map((card, slotIndex) => {
                 if (!card) return <div key={`empty-${slotIndex}`} className="w-40 h-60 rounded-xl border-4 border-gray-700 bg-black/30" />;
                 const rs = rarityStyle[card.rarity] ?? rarityStyle.common;
@@ -2967,6 +3081,21 @@ return (
           />
         </div>
       </div>
+      
+{tutOpen && tutSteps?.[tutStep]?.ref && (
+  <CombatTutorialSpotlight
+    targetRef={tutSteps[tutStep].ref}
+    text={`${tutSteps[tutStep].title}: ${tutSteps[tutStep].text}`}
+    onSkip={skipTutorial}
+    onNext={() => {
+      const last = tutSteps.length - 1;
+      if (tutStep >= last) finishTutorial();
+      else setTutStep((s) => s + 1);
+    }}
+    showNext={true}
+  />
+)}
+
 
       <FadeOverlay
         isOpen={fadeOpen}

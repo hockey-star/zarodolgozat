@@ -1,5 +1,6 @@
 
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
+import TutorialOverlay from "./TutorialOverlay.jsx";
 import { usePlayer } from "../context/PlayerContext.jsx";
 import {
   getClassKeyFromId,
@@ -80,6 +81,42 @@ export default function Inv({ onClose }) {
   const [showStats, setShowStats] = useState(false);
   const anyModalOpen = showInventory || showDeckEditor || showStats;
   const [closing, setClosing] = useState(false);
+
+   // =========================
+  // TUTORIAL (House / Otthon)
+  // =========================
+  const [houseStep, setHouseStep] = useState(0);
+
+  const hzExitRef = useRef(null);
+  const hzDeckRef = useRef(null);
+  const hzInvRef = useRef(null);
+  const hzStatsRef = useRef(null);
+
+  useEffect(() => {
+    if (!player?.id) return;
+    const done = localStorage.getItem(`house_tutorial_done_${player.id}`) === "1";
+    setHouseStep(done ? 0 : 1);
+  }, [player?.id]);
+
+  const houseSteps = {
+    1: { ref: hzInvRef, text: "Kattints a Leltárra (equip / itemek)." },
+    2: { ref: hzDeckRef, text: "Kattints a Varázskönyvre (deck szerkesztés)." },
+    3: { ref: hzStatsRef, text: "Kattints a Statisztikákra (stat pontok)." },
+    4: { ref: hzExitRef, text: "Kattints a Kilépésre (vissza a Hubba)." },
+  };
+
+  const houseTutActive = houseStep > 0 && !anyModalOpen;
+
+  const peHouse = (step) => (houseTutActive && houseStep !== step ? "none" : "auto");
+
+  function finishHouseTutorial() {
+    if (player?.id) localStorage.setItem(`house_tutorial_done_${player.id}`, "1");
+    setHouseStep(0);
+  }
+
+  function skipHouseTutorial() {
+    finishHouseTutorial();
+  }
   
 
   /* ==============================
@@ -738,39 +775,79 @@ function unequipItem(ownedId) {
         {/* HOTSPOTOK A HÁZBAN */}
         <div className="flex justify-between flex-1">
           <div style={{ width: "80%", height: "80%" }}>
-            <div
+<div
+  ref={hzExitRef}
   className={`hotzone absolute cursor-pointer group ${anyModalOpen ? "pointer-events-none" : ""}`}
-  style={{ left: "5%", bottom: "5%", width: "325px", height: "600px" }}
-  onClick={handleClose}
+  style={{
+    left: "5%",
+    bottom: "5%",
+    width: "325px",
+    height: "600px",
+    pointerEvents: peHouse(4),
+  }}
+  onClick={() => {
+    if (houseTutActive && houseStep === 4) finishHouseTutorial();
+    handleClose();
+  }}
 >
   <span className="zone-label">Kilépés a házból</span>
 
   
 </div>
-            <div
+<div
+  ref={hzDeckRef}
   className={`hotzone absolute cursor-pointer group ${anyModalOpen ? "pointer-events-none" : ""}`}
-  style={{ left: "43%", bottom: "30%", width: "195px", height: "250px" }}
-  onClick={() => setShowDeckEditor(true)}
+  style={{
+    left: "43%",
+    bottom: "30%",
+    width: "195px",
+    height: "250px",
+    pointerEvents: peHouse(2),
+  }}
+  onClick={() => {
+    if (houseTutActive && houseStep === 2) setHouseStep(3);
+    setShowDeckEditor(true);
+  }}
 >
   <span className="zone-label">Varázskönyv</span>
 
   
 </div>
 
-            <div
+           <div
+  ref={hzInvRef}
   className={`hotzone absolute cursor-pointer group ${anyModalOpen ? "pointer-events-none" : ""}`}
-  style={{ left: "25%", bottom: "18%", width: "400px", height: "300px" }}
-  onClick={() => setShowInventory(true)}
+  style={{
+    left: "25%",
+    bottom: "18%",
+    width: "400px",
+    height: "300px",
+    pointerEvents: peHouse(1),
+  }}
+  onClick={() => {
+    if (houseTutActive && houseStep === 1) setHouseStep(2);
+    setShowInventory(true);
+  }}
 >
   <span className="zone-label">Leltár</span>
 
  
 </div>
 
-            <div
+<div
+  ref={hzStatsRef}
   className={`hotzone absolute cursor-pointer group ${anyModalOpen ? "pointer-events-none" : ""}`}
-  style={{ right: "10%", bottom: "5%", width: "650px", height: "350px" }}
-  onClick={() => setShowStats(true)}
+  style={{
+    right: "10%",
+    bottom: "5%",
+    width: "650px",
+    height: "350px",
+    pointerEvents: peHouse(3),
+  }}
+  onClick={() => {
+    if (houseTutActive && houseStep === 3) setHouseStep(4);
+    setShowStats(true);
+  }}
 >
   <span className="zone-label">Statisztikák</span>
 
@@ -781,6 +858,13 @@ function unequipItem(ownedId) {
         </div>
       </div>
     </div>
+    {houseTutActive && houseSteps[houseStep] && (
+  <TutorialOverlay
+    targetRef={houseSteps[houseStep].ref}
+    text={houseSteps[houseStep].text}
+    onSkip={skipHouseTutorial}
+  />
+)}
     </>
   );
 }

@@ -145,3 +145,58 @@
   color: #b61a1a;
   text-shadow: 2px 2px 0px #290f0f;
 }
+
+/* =========================
+   TUTORIAL DESATURATION
+   ========================= */
+
+.tutorial-mode {
+  filter: grayscale(1) brightness(0.65) contrast(0.9);
+  transition: filter 600ms ease;
+}
+
+/* ===== Tutorial desaturate layer (csak a világra) ===== */
+.tutorial-desat-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 200;              /* legyen a játék fölött */
+  pointer-events: none;
+
+  /* a trükk: egy overlay, ami a "világot" tompítja */
+  backdrop-filter: grayscale(1) brightness(0.65) contrast(0.9);
+  -webkit-backdrop-filter: grayscale(1) brightness(0.65) contrast(0.9);
+
+  /* plusz sötétítés/vignette */
+  background: radial-gradient(
+    circle at center,
+    rgba(0, 0, 0, 0.05) 30%,
+    rgba(0, 0, 0, 0.55) 100%
+  );
+
+  opacity: 1;
+  transition: opacity 600ms ease;
+}
+
+/* Smooth vissza színek */
+.tutorial-desat-layer.tutorial-desat-out {
+  opacity: 0;
+}
+
+
+/* színek visszajövetele */
+.fade-back {
+  animation: colorReturn 0.6s ease;
+}
+
+@keyframes colorReturn {
+  0% {
+    filter: grayscale(1) brightness(0.6);
+  }
+  40% {
+    filter: grayscale(0.4) brightness(1.2);
+  }
+  100% {
+    filter: grayscale(0) brightness(1);
+  }
+}
+

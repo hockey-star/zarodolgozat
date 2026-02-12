@@ -7,15 +7,18 @@ import QuestBoardModal from "./QuestBoardModal.jsx";
 import BeallitasokModal from "./Beallitasok.jsx";
 import { usePlayer } from "../context/PlayerContext.jsx";
 import "./Hub.css";
+import TutorialOverlay from "./TutorialOverlay.jsx";
 
 export default function Hub({ onGoAdventure, onStartQuestBattle }) {
   const { player } = usePlayer();
   const timeoutRef = useRef(null);
+  const unlockRef = useRef(null);
 
   const [isFadingOut, setIsFadingOut] = useState(false);
   const [playerPos, setPlayerPos] = useState({ x: 40, y: 75 });
   const [isMoving, setIsMoving] = useState(false);
   const [hoveredLocation, setHoveredLocation] = useState("");
+
   const [showShop, setShowShop] = useState(false);
   const [showBlacksmith, setShowBlacksmith] = useState(false);
   const [showInv, setShowInv] = useState(false);
@@ -32,9 +35,7 @@ export default function Hub({ onGoAdventure, onStartQuestBattle }) {
 
   useEffect(() => {
     const onKeyDown = (e) => {
-      if (e.key === "Escape") {
-        setIsMenuOpen(false);
-      }
+      if (e.key === "Escape") setIsMenuOpen(false);
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
@@ -45,11 +46,26 @@ export default function Hub({ onGoAdventure, onStartQuestBattle }) {
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const [isZooming, setIsZooming] = useState(false);
 
+  /** ✅ UI LOCK: animáció közben nem engedünk kattot */
+  const [uiLock, setUiLock] = useState(false);
+  const lock = (ms = 750) => {
+    setUiLock(true);
+    clearTimeout(unlockRef.current);
+    unlockRef.current = setTimeout(() => setUiLock(false), ms);
+  };
+
+  useEffect(() => {
+    return () => {
+      clearTimeout(timeoutRef.current);
+      clearTimeout(unlockRef.current);
+    };
+  }, []);
+
   const SPEED = 20;
 
-  /** 🎯 KAMERA BELEZOOM - Most már használja a koordinátákat! */
+  /** 🎯 KAMERA BELEZOOM */
   const zoomTo = (xPercent, yPercent, zoomLevel = 2) => {
-    setIsFadingOut(true); // Elindul a 0.6s-os transition
+    setIsFadingOut(true);
 
     setTimeout(() => {
       const windowWidth = window.innerWidth;
@@ -63,27 +79,29 @@ export default function Hub({ onGoAdventure, onStartQuestBattle }) {
       setZoom(zoomLevel);
       setOffset({ x: newOffsetX, y: newOffsetY });
       setIsZooming(true);
-    }, 400); // Sötétedés közben váltunk kamerát
+    }, 400);
   };
 
   /** 🔄 RESET ZOOM */
   const resetZoom = () => {
-    // Amikor ideérünk, az isFadingOut már true (a handleClose-ból)
     setTimeout(() => {
       setZoom(1);
       setOffset({ x: 0, y: 0 });
       setIsZooming(false);
 
-      // Várunk egy kicsit a sötétben, majd kivilágosítunk
       setTimeout(() => {
-        setIsFadingOut(false); // Elindul a 0.6s-os kivilágosodás
-      }, 100);
-    }, 400);
+        setIsFadingOut(false);
+      }, 120);
+    }, 420);
   };
 
   /** 🚶 MOZGÁS ÉS ESEMÉNY INDÍTÁS */
   const moveTo = (x, y, type) => {
-    // 1. Kamera elindítása a cél felé
+    if (uiLock) return;
+    lock(900); // ✅ biztosan végig lockoljuk a zoom+modal nyitást
+
+    clearTimeout(timeoutRef.current);
+
     zoomTo(x, y);
 
     const dx = x - playerPos.x;
@@ -94,12 +112,10 @@ export default function Hub({ onGoAdventure, onStartQuestBattle }) {
     setIsMoving(true);
     setPlayerPos({ x, y });
 
-    clearTimeout(timeoutRef.current);
-
-    // 2. Megvárjuk, amíg a sötétítés teljes lesz (0.6s), és csak akkor nyitjuk a modalt
     timeoutRef.current = setTimeout(() => {
       openModal(type);
-    }, 600);
+      // itt már modal nyit, a lockot majd feloldja a lock timeout
+    }, 650);
 
     setTimeout(() => {
       setIsMoving(false);
@@ -114,21 +130,60 @@ export default function Hub({ onGoAdventure, onStartQuestBattle }) {
 
     if (type === "adventure") {
       resetZoom();
-      if (onGoAdventure) onGoAdventure();
+      onGoAdventure?.();
     }
   };
 
   /** ❌ MODAL BEZÁRÁS */
   const handleClose = (setter) => {
-    // 1. Megtartjuk/beállítjuk a sötétséget
+    if (uiLock) return;
+    lock(900); // ✅ bezárás+reset idejére is lock
+
     setIsFadingOut(true);
-    // 2. Bezárjuk a modalt
     setter(false);
-    // 3. Zoom reset
     resetZoom();
   };
 
-  const CLASS_STRING = { 6: "warrior", 7: "mage", 8: "archer" };
+  // =========================
+  // TUTORIAL (Hub)
+  // =========================
+  const [tutorialStep, setTutorialStep] = useState(0);
+
+  // refek a hotzoneokra
+  const hzAdventureRef = useRef(null);
+  const hzBlacksmithRef = useRef(null);
+  const hzQuestRef = useRef(null);
+  const hzShopRef = useRef(null);
+  const hzHomeRef = useRef(null);
+
+  useEffect(() => {
+    if (!player?.id) return;
+    const done = localStorage.getItem(`hub_tutorial_done_${player.id}`) === "1";
+    setTutorialStep(done ? 0 : 1);
+  }, [player?.id]);
+
+  const tutorialSteps = {
+    1: { ref: hzHomeRef, text: "Kattints az OTTHON-ra (Inventory / Deck / Stats)." },
+    2: { ref: hzBlacksmithRef, text: "Kattints a KOVÁCS-ra (fejlesztések)." },
+    3: { ref: hzShopRef, text: "Kattints a BOLT-ra (vásárlás)." },
+    4: { ref: hzQuestRef, text: "Kattints a KÜLDETÉSEK-re (quest felvétel / harc)." },
+    5: { ref: hzAdventureRef, text: "Kattints az UTAZÁS-ra (kaland indítása)." },
+  };
+
+  function finishTutorial() {
+    if (player?.id) localStorage.setItem(`hub_tutorial_done_${player.id}`, "1");
+    setTutorialStep(0);
+  }
+
+  function skipTutorial() {
+    finishTutorial();
+  }
+
+  const tutActive = tutorialStep > 0 && !isAnyModalOpen && !isMenuOpen;
+  const pe = (step) => (tutActive && tutorialStep !== step ? "none" : "auto");
+
+  // ✅ végső pointerEvents: tutorial + lock összevonva
+  const peFinal = (step) => (uiLock ? "none" : pe(step));
 
   return (
     <div className="hub-root">
@@ -147,10 +202,7 @@ export default function Hub({ onGoAdventure, onStartQuestBattle }) {
 
         {isMenuOpen && (
           <>
-            <div
-              className="hub-menu-backdrop"
-              onClick={() => setIsMenuOpen(false)}
-            />
+            <div className="hub-menu-backdrop" onClick={() => setIsMenuOpen(false)} />
             <div className="hub-menu-panel">
               <div className="hub-menu-title">Menü</div>
 
@@ -178,67 +230,118 @@ export default function Hub({ onGoAdventure, onStartQuestBattle }) {
         )}
       </div>
 
-      {/* Felirat, ami csak akkor látszik, ha valami fölé visszük az egeret */}
       {hoveredLocation && !isAnyModalOpen && (
         <div className="location-tooltip">{hoveredLocation}</div>
       )}
 
-      <div
-        className={`hub-overlay ${isFadingOut || isAnyModalOpen ? "is-dark" : ""}`}
-      />
+      <div className={`hub-overlay ${isFadingOut || isAnyModalOpen ? "is-dark" : ""}`} />
 
       <div className="camera">
         <div
           className={`world ${isZooming ? "hub-zooming" : ""}`}
           style={{
             transform: `translate(${offset.x}px, ${offset.y}px) scale(${zoom})`,
-            transition: isFadingOut ? "transform 0.5s ease-in-out" : "none",
+            // ✅ mindig legyen transition, ne ugráljon
+            transition: "transform 650ms ease-in-out",
           }}
         >
           <img src="./src/assets/pics/HUB.png" alt="hub" className="hub-image" />
 
-          {/* HOTZONE-OK - Kibővítve hover funkcióval */}
+          {/* UTAZÁS */}
           <div
+            ref={hzAdventureRef}
             className="hotzone keret"
-            style={{ left: "38%", bottom: "17%", width: "440px", height: "500px" }}
-            onClick={() => moveTo(50, 80, "adventure")}
+            style={{
+              left: "38%",
+              bottom: "17%",
+              width: "440px",
+              height: "500px",
+              pointerEvents: peFinal(5),
+            }}
+            onClick={() => {
+              if (tutActive && tutorialStep === 5) finishTutorial();
+              moveTo(50, 80, "adventure");
+            }}
           >
             <span className="zone-label">Utazás</span>
           </div>
 
+          {/* KOVÁCS (kicsit feljebb + szélesebb, hogy az alja ne lógjon le) */}
           <div
+            ref={hzBlacksmithRef}
             className="hotzone keret"
-            style={{ left: "5%", bottom: "12%", width: "600px", height: "350px" }}
-            onClick={() => moveTo(30, 85, "blacksmith")}
+            style={{
+              left: "5%",
+              bottom: "13%",   // ✅ 12 -> 13 (picit feljebb)
+              width: "620px",  // ✅ 600 -> 620
+              height: "360px", // ✅ 350 -> 360 (hogy biztos elkapd)
+              pointerEvents: peFinal(2),
+            }}
+            onClick={() => {
+              if (tutActive && tutorialStep === 2) setTutorialStep(3);
+              moveTo(30, 85, "blacksmith");
+            }}
           >
             <span className="zone-label">Kovács</span>
           </div>
 
+          {/* KÜLDETÉSEK */}
           <div
+            ref={hzQuestRef}
             className="hotzone keret"
-            style={{ right: "20%", bottom: "12%", width: "330px", height: "270px" }}
-            onClick={() => moveTo(65, 80, "quest")}
+            style={{
+              right: "20%",
+              bottom: "12%",
+              width: "330px",
+              height: "270px",
+              pointerEvents: peFinal(4),
+            }}
+            onClick={() => {
+              if (tutActive && tutorialStep === 4) setTutorialStep(5);
+              moveTo(65, 80, "quest");
+            }}
           >
             <span className="zone-label">Küldetések</span>
           </div>
 
+          {/* BOLT */}
           <div
+            ref={hzShopRef}
             className="hotzone keret"
-            style={{ right: "5%", bottom: "12%", width: "280px", height: "250px" }}
-            onClick={() => moveTo(85, 85, "shop")}
+            style={{
+              right: "5%",
+              bottom: "12%",
+              width: "280px",
+              height: "250px",
+              pointerEvents: peFinal(3),
+            }}
+            onClick={() => {
+              if (tutActive && tutorialStep === 3) setTutorialStep(4);
+              moveTo(85, 85, "shop");
+            }}
           >
             <span className="zone-label">Bolt</span>
           </div>
 
+          {/* OTTHON (kicsit kisebb, hogy ne legyen “túl nagy kocka”) */}
           <div
+            ref={hzHomeRef}
             className="hotzone keret"
-            style={{ right: "20%", bottom: "37%", width: "330px", height: "270px" }}
-            onClick={() => moveTo(60, 80, "inv")}
+            style={{
+              right: "20%",
+              bottom: "38%",   // ✅ 37 -> 38 (kicsit feljebb)
+              width: "300px",  // ✅ 330 -> 300 (kisebb)
+              height: "240px", // ✅ 270 -> 240 (kisebb)
+              pointerEvents: peFinal(1),
+            }}
+            onClick={() => {
+              moveTo(60, 80, "inv");
+            }}
           >
             <span className="zone-label">Otthon</span>
           </div>
 
-          {/* 🧍 PLAYER */}
+          {/* PLAYER */}
           <img
             src="./src/assets/pics/TESZT.PNG"
             alt="player"
@@ -250,10 +353,23 @@ export default function Hub({ onGoAdventure, onStartQuestBattle }) {
 
       {/* MODALOK */}
       {showShop && <ShopModal onClose={() => handleClose(setShowShop)} />}
-      {showBlacksmith && (
-        <BlacksmithModal onClose={() => handleClose(setShowBlacksmith)} />
+      {showBlacksmith && <BlacksmithModal onClose={() => handleClose(setShowBlacksmith)} />}
+
+      {/* ✅ Otthon modal: bezáráskor léptetjük tovább a Hub tutorialt (ha step1 volt) */}
+      {showInv && (
+        <InvModal
+          onClose={() => {
+            handleClose(setShowInv);
+
+            // ✅ várjuk meg, míg a hub "resetZoom + kivilágosodás" lefut
+            if (tutorialStep === 1) {
+              setTimeout(() => {
+                setTutorialStep(2);
+              }, 700);
+            }
+          }}
+        />
       )}
-      {showInv && <InvModal onClose={() => handleClose(setShowInv)} />}
 
       {showQuestBoard && player && (
         <QuestBoardModal
@@ -262,49 +378,100 @@ export default function Hub({ onGoAdventure, onStartQuestBattle }) {
           onClose={() => handleClose(setShowQuestBoard)}
           onStartQuestBattle={(payload) => {
             handleClose(setShowQuestBoard);
-            onStartQuestBattle?.(payload); // ✅ App felé
+            onStartQuestBattle?.(payload);
           }}
         />
       )}
 
-      {showQuestBoard && player && (
-        <button
-          style={{
-            position: "fixed",
-            bottom: "20px",
-            left: "50%",
-            transform: "translateX(-50%)",
-            zIndex: 9999,
-            padding: "12px 20px",
-            background: "#5e0a0a",
-            color: "white",
-            border: "2px solid #a00",
-            fontFamily: "monospace",
-            letterSpacing: "2px",
-            cursor: "pointer",
-          }}
-          onClick={() => {
-            handleClose(setShowQuestBoard);
-
-            onStartQuestBattle?.({
-              boss: true,
-              enemies: [
-                player.class_id === 6
-                  ? "Mountain King"
-                  : player.class_id === 7
-                  ? "Arcane Abomination"
-                  : "Forest Spirit Beast",
-              ],
-              questId: 999, // 🧪 teszt ID (backendet nem bántja, ha le van védve)
-            });
-          }}
-        >
-          DEV: QUEST BOSS ⚔️
-        </button>
+      {/* TUTORIAL OVERLAY */}
+      {tutActive && tutorialSteps[tutorialStep] && (
+        <TutorialOverlay
+          targetRef={tutorialSteps[tutorialStep].ref}
+          text={tutorialSteps[tutorialStep].text}
+          onSkip={skipTutorial}
+        />
       )}
 
-      {/* ✅ Beállítások modal (külön fájlból) */}
+      {/* ✅ Beállítások modal */}
       {showSettings && <BeallitasokModal onClose={() => setShowSettings(false)} />}
+
+      {/* =========================
+          DEBUG BUTTONS (MINDENKINEK LÁTSZIK) — EZT KÉSŐBB SZEDD KI!
+          -> jobb alsó sarok
+         ========================= */}
+      {player?.id && (
+        <div
+          style={{
+            position: "fixed",
+            bottom: 16,
+            right: 16,
+            zIndex: 20000,
+            display: "flex",
+            gap: 8,
+          }}
+        >
+          <button
+            style={{
+              padding: "10px 14px",
+              background: "#111",
+              color: "white",
+              border: "1px solid #444",
+              borderRadius: 10,
+              cursor: "pointer",
+              fontFamily: "monospace",
+            }}
+            onClick={() => {
+              const key = `hub_tutorial_done_${player.id}`;
+              localStorage.removeItem(key);
+              setTutorialStep(1);
+              console.log("RESET HUB TUTORIAL:", key);
+            }}
+            title="Teszt: újraindítja a Hub tutorialt"
+          >
+            RESET HUB TUTORIAL
+          </button>
+
+          <button
+            style={{
+              padding: "10px 14px",
+              background: "#111",
+              color: "white",
+              border: "1px solid #444",
+              borderRadius: 10,
+              cursor: "pointer",
+              fontFamily: "monospace",
+            }}
+            onClick={() => {
+              const key = `house_tutorial_done_${player.id}`;
+              localStorage.removeItem(key);
+              console.log("RESET HOUSE TUTORIAL:", key);
+            }}
+            title="Teszt: újraindítja az Otthon tutorialt"
+          >
+            RESET HOUSE TUTORIAL
+            </button>
+                      <button
+              style={{
+                padding: "10px 14px",
+                background: "#111",
+                color: "white",
+                border: "1px solid #444",
+                borderRadius: 10,
+                cursor: "pointer",
+                fontFamily: "monospace",
+              }}
+              onClick={() => {
+                const key = `combat_tutorial_done_${player.id}`;
+                localStorage.removeItem(key);
+                console.log("RESET COMBAT TUTORIAL:", key);
+              }}
+              title="Teszt: újraindítja a Combat tutorialt"
+            >
+              RESET COMBAT TUTORIAL
+            </button>
+
+        </div>
+      )}
     </div>
   );
 }

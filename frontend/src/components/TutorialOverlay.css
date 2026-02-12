@@ -1,0 +1,81 @@
+.tut-root {
+  position: fixed;
+  inset: 0;
+  z-index: 99999; /* legyen minden felett */
+  pointer-events: none;
+}
+
+/* Kívül sötét + (ha támogatja) fekete-fehér */
+.tut-panel {
+  position: fixed;
+  z-index: 1;
+  pointer-events: none;
+
+  background: rgba(0, 0, 0, 0.62);
+
+  /* ✅ fekete-fehérítés a háttérre (Chrome/Edge/Safari jó) */
+  backdrop-filter: grayscale(1) brightness(0.75) contrast(1.05);
+  -webkit-backdrop-filter: grayscale(1) brightness(0.75) contrast(1.05);
+}
+
+/* A lyuk köré keret/glow */
+.tut-outline {
+  position: fixed;
+  z-index: 2;
+  pointer-events: none;
+
+  outline: 2px solid rgba(255, 230, 170, 0.95);
+  box-shadow:
+    0 0 0 2px rgba(0,0,0,0.7),
+    0 0 26px rgba(255,255,255,0.25);
+}
+
+/* Tooltip */
+.tut-tooltip {
+  position: fixed;
+  z-index: 3;
+  pointer-events: auto;
+
+  min-width: 320px;
+  max-width: 520px;
+  background: rgba(10,0,0,0.92);
+  border: 2px solid #960000;
+  border-radius: 12px;
+  padding: 12px 14px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.55);
+  font-family: "Jersey 10", sans-serif;
+  color: #fef9c2;
+}
+
+.tut-text {
+  font-size: 22px;
+  letter-spacing: 1px;
+}
+
+.tut-skip {
+  padding: 8px 14px;
+  border-radius: 10px;
+  border: 2px solid #960000;
+  background: rgba(48, 0, 0, 0.65);
+  color: #fef9c2;
+  font-family: "Jersey 10", sans-serif;
+  font-size: 18px;
+  cursor: pointer;
+  opacity: 0.9;
+}
+.tut-skip:hover { opacity: 1; }
+
+.tut-next {
+  padding: 10px 18px;
+  border-radius: 10px;
+  border: 2px solid #facc15;
+  background: linear-gradient(180deg, #3d0a0a, #1a0404);
+  color: #fef9c2;
+  font-family: "Jersey 10", sans-serif;
+  font-size: 20px;
+  cursor: pointer;
+  box-shadow: 0 0 12px rgba(250, 204, 21, 0.25);
+}
+.tut-next:hover {
+  box-shadow: 0 0 18px rgba(250, 204, 21, 0.45);
+}
