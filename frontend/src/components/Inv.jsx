@@ -174,18 +174,23 @@ function equipItem(ownedId, slotKey) {
           const itType = (it.type || "").toLowerCase();
           if (itType === "potion") return it;
           // ✅ ACCESSORY: csak az adott slotot cseréljük
-          if (itType === "accessory") {
-            const itSlotNum = Number(it.equip_slot) || 1;
-            // ha nem ebbe a slotba tartozik, hagyjuk békén
-            if (itSlotNum !== slotNum && it.owned_id !== ownedId) return it;
-            // ha ez a kiválasztott item, beállítjuk a slotot is
-            if (it.owned_id === ownedId) {
-              return { ...it, is_equipped: 1, equip_slot: slotNum };
-            }
-            // ugyanazon slotban minden más accessory le
-            if (itSlotNum === slotNum) {
-              return { ...it, is_equipped: 0 };
-            }
+        if (itType === "accessory") {
+        // ✅ Ha NEM accessoryt equipelsz, NE nyúlj az accessorykhoz
+        if (chosenType !== "accessory") return it;
+
+        const itSlotNum = Number(it.equip_slot) || 1;
+
+        // csak a cél slotot kezeljük
+        if (itSlotNum !== slotNum && it.owned_id !== ownedId) return it;
+
+        if (it.owned_id === ownedId) {
+          return { ...it, is_equipped: 1, equip_slot: slotNum };
+        }
+
+        if (itSlotNum === slotNum) {
+          return { ...it, is_equipped: 0 };
+        }
+
             return it;
           }
           // ✅ WEAPON / ARMOR / HELMET: típuson belül 1 lehet

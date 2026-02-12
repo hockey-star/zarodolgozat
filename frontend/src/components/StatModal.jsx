@@ -20,7 +20,14 @@ export default function StatModal({ onClose }) {
 
   if (!player) return null;
 
-  const unspent = player.unspentStatPoints ?? 0;
+  const unspent = Number(
+  player.unspentStatPoints ??
+  player.unspent_stat_points ??
+  player.unspent_points ??
+  player.stat_points ?? // ha esetleg így van
+  0
+) || 0;
+
 
   // ✅ itt is a final statokat mutatjuk (és zárójelben a bónuszt)
   const view = useMemo(() => {
