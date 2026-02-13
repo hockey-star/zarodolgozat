@@ -99,8 +99,8 @@ export default function Inv({ onClose }) {
   }, [player?.id]);
 
   const houseSteps = {
-    1: { ref: hzInvRef, text: "Kattints a Leltárra (equip / itemek)." },
-    2: { ref: hzDeckRef, text: "Kattints a Varázskönyvre (deck szerkesztés)." },
+    1: { ref: hzInvRef, text: "Kattints a Leltárra (felszerelés kezelése)." },
+    2: { ref: hzDeckRef, text: "Kattints a Szekrényre (deck szerkesztés)." },
     3: { ref: hzStatsRef, text: "Kattints a Statisztikákra (stat pontok)." },
     4: { ref: hzExitRef, text: "Kattints a Kilépésre (vissza a Hubba)." },
   };
@@ -863,6 +863,7 @@ function unequipItem(ownedId) {
     targetRef={houseSteps[houseStep].ref}
     text={houseSteps[houseStep].text}
     onSkip={skipHouseTutorial}
+    showNext={false} 
   />
 )}
     </>

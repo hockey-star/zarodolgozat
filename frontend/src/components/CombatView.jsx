@@ -670,6 +670,12 @@ const tutHandRef = useRef(null);
 const tutExtraRef = useRef(null); // mana vagy pet
 const tutPlayerRef = useRef(null);
 
+const tutBlocking = tutOpen && tutStep > 0;
+
+
+const allowHand = !tutBlocking || tutStep === 3;
+const allowExtra = !tutBlocking || tutStep === 4; // mana/pet step
+
 useEffect(() => {
   if (!player?.id) return;
   const key = `combat_tutorial_done_${player.id}`;
@@ -1626,6 +1632,7 @@ function castPetTaunt() {
 
   // ===== PLAY CARD =====
   function playCardAt(slotIndex) {
+    if (tutBlocking && tutStep !== 4) return; 
     const card = handRef.current?.[slotIndex];
     if (!card) return;
     if (card._played) return;
@@ -2535,7 +2542,7 @@ const tutSteps = useMemo(() => {
   const steps = [
     null,
     { title: "ELLENSÉG", text: "Itt látod az enemy HP-t és az affixeket.", ref: tutEnemyRef },
-    { title: "COMBAT LOG", text: "Itt látod mi történt (crit/poison/burn/stun).", ref: tutLogRef },
+    { title: "COMBAT LOG", text: "Itt látod mi történt.", ref: tutLogRef },
     { title: "KÁRTYÁK", text: "Kattints egy lapra. 1 lap = 1 kör, utána az enemy jön.", ref: tutHandRef },
   ];
 
@@ -3025,7 +3032,7 @@ return (
 
           {/* KÁRTYÁK (HAND) */}
           {!battleOver && (
-            <div ref={tutHandRef} className="absolute left-1/2 -translate-x-1/2 flex gap-4 z-50" style={{ bottom: "-80px" }}>
+            <div ref={tutHandRef} className="absolute left-1/2 -translate-x-1/2 flex gap-4 z-50" style={{ bottom: "-80px", pointerEvents: allowHand ? "auto" : "none" }}>
               {hand.map((card, slotIndex) => {
                 if (!card) return <div key={`empty-${slotIndex}`} className="w-40 h-60 rounded-xl border-4 border-gray-700 bg-black/30" />;
                 const rs = rarityStyle[card.rarity] ?? rarityStyle.common;
@@ -3036,6 +3043,7 @@ return (
                     onClick={() => playCardAt(slotIndex)}
                     disabled={turn !== "player" || card._played}
                     className={`relative w-40 h-60 rounded-xl overflow-hidden border-4 ${rs.border} ${rs.glow} transform transition-transform duration-200 ${turn === "player" && !card._played ? "hover:scale-125" : ""} ${animClass}`}
+                    style={{ pointerEvents: allowHand ? "auto" : "none" }}
                   >
                     <img src={card.image} alt={card.name} className="absolute inset-0 w-full h-full object-cover" />
                     <div className="absolute bottom-0 w-full bg-black/70 text-center p-1 text-sm pixel-text-sharp">

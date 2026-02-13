@@ -166,7 +166,7 @@ export default function Hub({ onGoAdventure, onStartQuestBattle }) {
     1: { ref: hzHomeRef, text: "Kattints az OTTHON-ra (Inventory / Deck / Stats)." },
     2: { ref: hzBlacksmithRef, text: "Kattints a KOVÁCS-ra (fejlesztések)." },
     3: { ref: hzShopRef, text: "Kattints a BOLT-ra (vásárlás)." },
-    4: { ref: hzQuestRef, text: "Kattints a KÜLDETÉSEK-re (quest felvétel / harc)." },
+    4: { ref: hzQuestRef, text: "Kattints a KÜLDETÉSEK-re." },
     5: { ref: hzAdventureRef, text: "Kattints az UTAZÁS-ra (kaland indítása)." },
   };
 
@@ -389,6 +389,7 @@ export default function Hub({ onGoAdventure, onStartQuestBattle }) {
           targetRef={tutorialSteps[tutorialStep].ref}
           text={tutorialSteps[tutorialStep].text}
           onSkip={skipTutorial}
+          showNext={false} 
         />
       )}
 
