@@ -274,7 +274,7 @@ const heal = async () => {
   <button
     onClick={healForGold}
     disabled={busy || isFull}
-    className="px-4 py-2 bg-green-700 rounded disabled:opacity-50"
+    className="px-4 py-2 bg-green-700 rounded disabled:opacity-50 boltHealGomb"
   >
     Gyógyítás ({HEAL_COST} gold)
   </button>

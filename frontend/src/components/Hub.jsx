@@ -395,11 +395,11 @@ export default function Hub({ onGoAdventure, onStartQuestBattle }) {
 
       {/* ✅ Beállítások modal */}
       {showSettings && <BeallitasokModal onClose={() => setShowSettings(false)} />}
-
+    
       {/* =========================
           DEBUG BUTTONS (MINDENKINEK LÁTSZIK) — EZT KÉSŐBB SZEDD KI!
           -> jobb alsó sarok
-         ========================= */}
+         ========================= 
       {player?.id && (
         <div
           style={{
@@ -472,7 +472,9 @@ export default function Hub({ onGoAdventure, onStartQuestBattle }) {
             </button>
 
         </div>
+        
       )}
+      */}
     </div>
   );
 }
