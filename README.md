@@ -1,6 +1,6 @@
-# ⚔️ SK Project v3 – Prototype
+# SK Project v3 – Prototype
 
-## 🎮 A játék bemutatása
+## A játék bemutatása
 
 Ez a projekt egy **2D dark fantasy hangulatú, körökre osztott harcrendszerű játék**, amelyet a végső projektmunkánk részeként készítettünk.
 
