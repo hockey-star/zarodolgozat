@@ -59,9 +59,26 @@ export default function DeckEditorModal({ onClose }) {
   const MIN_DECK_SIZE = 15;
 
   function handleAddToDeck(abilityId) {
-    if (tempDeck.length >= MAX_DECK_SIZE) return;
-    setTempDeck((prev) => [...prev, abilityId]);
+  if (tempDeck.length >= MAX_DECK_SIZE) return;
+
+  const ab = ABILITIES_BY_ID[abilityId];
+  if (!ab) return;
+
+  const currentCopies = tempDeck.filter((id) => id === abilityId).length;
+
+  let maxCopies = 1;
+  if (ab.rarity === "common") maxCopies = 4;
+  else if (ab.rarity === "rare") maxCopies = 3;
+  else if (ab.rarity === "epic") maxCopies = 2;
+  else if (ab.rarity === "legendary") maxCopies = 1;
+
+  if (currentCopies >= maxCopies) {
+    alert(`Ebből a kártyából maximum ${maxCopies} példány lehet a pakliban.`);
+    return;
   }
+
+  setTempDeck((prev) => [...prev, abilityId]);
+}
 
   function handleRemoveOneFromDeck(abilityId) {
     setTempDeck((prev) => {
@@ -73,29 +90,34 @@ export default function DeckEditorModal({ onClose }) {
     });
   }
 
-  function handleSave() {
-    if (!setPlayer) {
-      onClose?.();
-      return;
-    }
+ function handleSave() {
+  console.log("tempDeck:", tempDeck);
+  console.log("tempDeck length:", tempDeck.length);
+  console.log("uniqueCount:", new Set(tempDeck).size);
 
-    if (tempDeck.length < MIN_DECK_SIZE) {
-      alert(`A paklinak legalább ${MIN_DECK_SIZE} kártyát kell tartalmaznia.`);
-      return;
-    }
-    const uniqueCount = new Set(tempDeck).size;
-  if (uniqueCount < 5) {
-  alert("A paklinak legalább 5 különböző kártyát kell tartalmaznia.");
-  return;
-  }
-
-    setPlayer((prev) => ({
-      ...prev,
-      deck: [...tempDeck],
-    }));
-
+  if (!setPlayer) {
     onClose?.();
+    return;
   }
+
+  if (tempDeck.length < MIN_DECK_SIZE) {
+    alert(`A paklinak legalább ${MIN_DECK_SIZE} kártyát kell tartalmaznia.`);
+    return;
+  }
+
+  const uniqueCount = new Set(tempDeck).size;
+  if (uniqueCount < 5) {
+    alert("A paklinak legalább 5 különböző kártyát kell tartalmaznia.");
+    return;
+  }
+
+  setPlayer((prev) => ({
+    ...prev,
+    deck: [...tempDeck],
+  }));
+
+  onClose?.();
+}
 
   const deckCounts = useMemo(() => {
     const counts = {};
@@ -228,9 +250,9 @@ export default function DeckEditorModal({ onClose }) {
 
         {/* LÁBLÉC GOMBOK */}
         <div className="mt-4 flex justify-between items-center">
-          <div className="text-xs text-gray-400">
-  Tipp: bal oldalt kattintva hozzáadsz, jobb oldalt kattintva eltávolítasz a pakliból (1 példányt). Minimum 10 lap és legalább 5 különböző kártya szükséges.
-</div>
+         <div className="text-xs text-gray-400">
+        Tipp: bal oldalt kattintva hozzáadsz, jobb oldalt kattintva eltávolítasz a pakliból (1 példányt). Minimum 15 lap és legalább 5 különböző kártya szükséges.
+      </div>
           <div className="space-x-2">
             <button
               className="px-4 py-2 bg-gray-700 rounded hover:bg-gray-600"

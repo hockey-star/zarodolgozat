@@ -925,23 +925,35 @@ useEffect(() => { petTauntCdRef.current = petTauntCd; }, [petTauntCd]);
   const [enemyPoison, setEnemyPoison] = useState(null);
   const [enemyBurn, setEnemyBurn] = useState(null);
   const [enemyStun, setEnemyStun] = useState(0);
+  
   const [enemyVulnerability, setEnemyVulnerability] = useState(null);
   const [enemyBleed, setEnemyBleed] = useState(null);
   const [playerEvasionTurns, setPlayerEvasionTurns] = useState(0);
   const [playerPoison, setPlayerPoison] = useState(null);
+  const [enemyStunImmuneTurns, setEnemyStunImmuneTurns] = useState(0);
+  const enemyStunImmuneTurnsRef = useRef(0);
 
+const setEnemyStunImmuneTurnsSync = (v) => {
+  enemyStunImmuneTurnsRef.current = v;
+  setEnemyStunImmuneTurns(v);
+};
+useEffect(() => {
+  enemyStunImmuneTurnsRef.current = enemyStunImmuneTurns;
+  debugStun("IMMUNITY STATE CHANGED");
+}, [enemyStunImmuneTurns]);
 
 const playerPoisonRef = useRef(null);
 useEffect(() => {
   playerPoisonRef.current = playerPoison;
 }, [playerPoison]);
 
-
   // ===== ENEMY ABILITY STATE =====
   const [enemyGuardHits, setEnemyGuardHits] = useState(0);
   const [enemyInvulnTurns, setEnemyInvulnTurns] = useState(0);
   const [enemyFrenzyTurns, setEnemyFrenzyTurns] = useState(0);
   const [playerWeakenTurns, setPlayerWeakenTurns] = useState(0);
+
+
 
   // ✅ AFFIX: Shielded (spawnkor guardot ad)
 
@@ -958,6 +970,7 @@ useEffect(() => {
   const playerWeakenTurnsRef = useRef(0);
   useEffect(() => { playerWeakenTurnsRef.current = playerWeakenTurns; }, [playerWeakenTurns]);
 
+
   const setEnemyGuardHitsSync = (v) => { enemyGuardHitsRef.current = v; setEnemyGuardHits(v); };
   const setEnemyInvulnTurnsSync = (v) => { enemyInvulnTurnsRef.current = v; setEnemyInvulnTurns(v); };
   const setEnemyFrenzyTurnsSync = (v) => { enemyFrenzyTurnsRef.current = v; setEnemyFrenzyTurns(v); };
@@ -967,6 +980,19 @@ useEffect(() => {
 
   const [log, setLog] = useState([]);
   const [lastRewards, setLastRewards] = useState(null);
+
+
+function debugStun(label, extra = {}) {
+  console.log("[STUN DEBUG]", label, {
+    enemyName: enemy?.name,
+    turn,
+    enemyStun,
+    enemyStunImmuneTurns,
+    enemyStunRef: enemyStunImmuneTurnsRef.current,
+    battleOver: battleOverRef.current,
+    ...extra,
+  });
+}
 
   const bg = useMemo(() => resolveBackground(background, pathType), [background, pathType]);
 
@@ -1242,26 +1268,40 @@ useEffect(() => {
     setPendingReplaces(empty);
     pendingRef.current = empty;
   }
+function finishEnemyTurnToPlayer({ staminaMode = "normal" } = {}) {
+  if (enemyFrenzyTurnsRef.current > 0) {
+    const next = Math.max(0, enemyFrenzyTurnsRef.current - 1);
+    enemyFrenzyTurnsRef.current = next;
+    setEnemyFrenzyTurns(next);
+    if (next <= 0) pushLog("[HIT] Frenzy elmúlt.");
+  }
 
-  function finishEnemyTurnToPlayer() {
-    if (enemyFrenzyTurnsRef.current > 0) {
-      const next = Math.max(0, enemyFrenzyTurnsRef.current - 1);
-      enemyFrenzyTurnsRef.current = next;
-      setEnemyFrenzyTurns(next);
-      if (next <= 0) pushLog("[HIT] Frenzy elmúlt.");
+  if (enemyStunImmuneTurnsRef.current > 0) {
+    const nextImmune = Math.max(0, enemyStunImmuneTurnsRef.current - 1);
+    setEnemyStunImmuneTurnsSync(nextImmune);
+  }
+
+  resolvePendingReplaces();
+  setDefending(false);
+
+  if (classKey === "archer") {
+    setPetTauntCd((prev) => Math.max(0, (prev || 0) - 1));
+  }
+
+  setPlayerStamina((prev) => {
+    if (staminaMode === "normal") {
+      return Math.min(PLAYER_MAX_STAMINA, prev + 1);
     }
 
-    resolvePendingReplaces();
-    setDefending(false);
+    if (staminaMode === "stun-skip") {
+      return Math.max(1, prev);
+    }
 
-    // ✅ Archer cooldown csökken player kör elején
-if (classKey === "archer") {
-  setPetTauntCd((prev) => Math.max(0, (prev || 0) - 1));
+    return prev;
+  });
+
+  setTurn("player");
 }
-
-    setPlayerStamina((prev) => Math.min(PLAYER_MAX_STAMINA, prev + 1));
-    setTurn("player");
-  }
 
   useEffect(() => {
     if (!player) return;
@@ -1403,6 +1443,8 @@ if (remainingEnemies.length > 0) {
         setEnemyInvulnTurnsSync(0);
         setEnemyFrenzyTurnsSync(0);
         setPlayerWeakenTurnsSync(0);
+        setEnemyStunImmuneTurnsSync(0);
+        debugStun("RESET IMMUNITY IN initBattle", { to: 0 });
         enemyUsesRef.current = {};
 
             if (classKey === "archer") {
@@ -1658,6 +1700,15 @@ function castPetTaunt() {
   pushLog(`Pet Taunt aktiválva (${turns} kör). Cooldown: ${PET_TAUNT_COOLDOWN_TURNS}.`);
 
   // ugyanúgy elfogyasztja a kört, mint egy lap
+  setTurn("enemy");
+}
+
+function passTurn() {
+  if (battleOverRef.current) return;
+  if (turn !== "player" || !enemy) return;
+
+  setPlayerStamina((prev) => Math.min(PLAYER_MAX_STAMINA, prev + 1));
+  pushLog("Passzoltál. +1 stamina.");
   setTurn("enemy");
 }
 
@@ -1927,12 +1978,34 @@ function castPetTaunt() {
           pushLog(`${enemy.name} égni kezd: ${burnPerTurn} sebzés ${card.burn.turns} körön át.`);
         }
 
-        if (card.stunTurns && card.stunTurns > 0) {
-          spawnAbilityEffect({ src: stunFx, target: "enemy_stun", width: "500px", height: "500px" });
-          setEnemyStun((prev) => prev + card.stunTurns);
-          pushLog(`${enemy.name} elkábult, kihagyja a következő körét!`);
-        }
+       if (card.stunTurns && card.stunTurns > 0) {
+      debugStun("ATTACK STUN TRY", {
+        cardName: card.name,
+        stunTurnsFromCard: card.stunTurns,
+      });
 
+      if (enemyStunImmuneTurnsRef.current > 0) {
+        debugStun("ATTACK STUN BLOCKED BY IMMUNITY", {
+          cardName: card.name,
+        });
+
+        pushLog(`${enemy.name} még ${enemyStunImmuneTurnsRef.current} körig nem stunolható!`);
+      } else {
+        debugStun("ATTACK STUN APPLIED", {
+          cardName: card.name,
+          stunTurnsFromCard: card.stunTurns,
+        });
+
+        spawnAbilityEffect({
+          src: stunFx,
+          target: "enemy_stun",
+          width: "500px",
+          height: "500px",
+        });
+        setEnemyStun(card.stunTurns);
+        pushLog(`${enemy.name} elkábult, kihagyja a következő körét!`);
+      }
+}
         if (card.vulnerabilityDebuff && card.vulnerabilityDebuff.multiplier) {
           const mult = card.vulnerabilityDebuff.multiplier ?? 1.15;
           const turns = card.vulnerabilityDebuff.turns ?? 3;
@@ -1968,11 +2041,34 @@ function castPetTaunt() {
         pushLog("Védekezés aktiválva – a következő ütés csökkentve.");
       }
 
-      if (card.stunTurns && card.stunTurns > 0) {
-        spawnAbilityEffect({ src: stunFx, target: "enemy_stun", width: "1000px", height: "1500px" });
-        setEnemyStun((prev) => prev + card.stunTurns);
-        pushLog(`Parry! ${enemy.name} elkábul, kihagyja a körét!`);
-      }
+   if (card.stunTurns && card.stunTurns > 0) {
+  debugStun("DEFEND STUN TRY", {
+    cardName: card.name,
+    stunTurnsFromCard: card.stunTurns,
+  });
+
+  if (enemyStunImmuneTurnsRef.current > 0) {
+    debugStun("DEFEND STUN BLOCKED BY IMMUNITY", {
+      cardName: card.name,
+    });
+
+    pushLog(`${enemy.name} még ${enemyStunImmuneTurnsRef.current} körig nem stunolható!`);
+  } else {
+    debugStun("DEFEND STUN APPLIED", {
+      cardName: card.name,
+      stunTurnsFromCard: card.stunTurns,
+    });
+
+    spawnAbilityEffect({
+      src: stunFx,
+      target: "enemy_stun",
+      width: "1000px",
+      height: "1500px",
+    });
+    setEnemyStun(card.stunTurns);
+    pushLog(`Parry! ${enemy.name} elkábul, kihagyja a körét!`);
+  }
+}
 
       if (classKey === "archer" && card.petTauntTurns && petHP > 0) {
         setPetTauntTurns((prev) => Math.max(prev, card.petTauntTurns));
@@ -2214,26 +2310,39 @@ if (poisonNow && playerHPRef.current > 0) {
       }
 
       // ===== Stun / evasion =====
-      if (enemyStun > 0 && enemyHP > 0) {
-        pushLog(`${enemy.name} elkábulva marad, kihagyja a körét!`);
-        setEnemyStun((prev) => Math.max(0, prev - 1));
+        if (enemyStun > 0 && enemyHP > 0) {
+      debugStun("ENEMY TURN SKIPPED BY STUN - BEFORE");
 
-        if (enemyVulnerability && enemyVulnerability.remainingTurns != null) {
-          const remaining = enemyVulnerability.remainingTurns - 1;
-          if (remaining <= 0) { setEnemyVulnerability(null); pushLog("Az Arcane Surge hatása elmúlt."); }
-          else setEnemyVulnerability((prev) => (prev ? { ...prev, remainingTurns: remaining } : null));
+      pushLog(`${enemy.name} elkábulva marad, kihagyja a körét!`);
+      setEnemyStun((prev) => Math.max(0, prev - 1));
+
+      if (enemyStunImmuneTurnsRef.current <= 0) {
+        debugStun("SETTING IMMUNITY TO 3 AFTER STUN SKIP");
+        setEnemyStunImmuneTurnsSync(3);
+      }
+
+      if (enemyVulnerability && enemyVulnerability.remainingTurns != null) {
+        const remaining = enemyVulnerability.remainingTurns - 1;
+        if (remaining <= 0) {
+          setEnemyVulnerability(null);
+          pushLog("Az Arcane Surge hatása elmúlt.");
+        } else {
+          setEnemyVulnerability((prev) =>
+            prev ? { ...prev, remainingTurns: remaining } : null
+          );
         }
-
-        finishEnemyTurnToPlayer();
-        return;
       }
 
+      debugStun("ENEMY TURN SKIPPED BY STUN - BEFORE FINISH");
+      finishEnemyTurnToPlayer({ staminaMode: "stun-skip" });
+      return;
+    }
       if (playerEvasionTurns > 0 && enemyHP > 0) {
-        pushLog(`Kitértél! ${enemy.name} mellé üt.`);
-        setPlayerEvasionTurns((prev) => Math.max(0, prev - 1));
-        finishEnemyTurnToPlayer();
-        return;
-      }
+      pushLog(`Kitértél! ${enemy.name} mellé üt.`);
+      setPlayerEvasionTurns((prev) => Math.max(0, prev - 1));
+      finishEnemyTurnToPlayer();
+      return;
+    }
 
       // ✅ UTILITY FIX: ha ability használt, de nem fogyaszt kört, akkor folytatódik és jön a basic attack
       const abRes = tryEnemyAbilityAction();
@@ -2300,10 +2409,16 @@ if (poisonNow && playerHPRef.current > 0) {
 
         if (enemyVulnerability && enemyVulnerability.remainingTurns != null) {
           const remaining = enemyVulnerability.remainingTurns - 1;
-          if (remaining <= 0) { setEnemyVulnerability(null); pushLog("Az Arcane Surge hatása elmúlt."); }
-          else setEnemyVulnerability((prev) => (prev ? { ...prev, remainingTurns: remaining } : null));
+          if (remaining <= 0) { 
+            setEnemyVulnerability(null); 
+            pushLog("Az Arcane Surge hatása elmúlt."); 
+          } else {
+            setEnemyVulnerability((prev) =>
+              prev ? { ...prev, remainingTurns: remaining } : null
+            );
+          }
         }
-
+        
         finishEnemyTurnToPlayer();
       }, ENEMY_BASIC_WINDUP_MS));
 
@@ -2472,6 +2587,8 @@ async function handleContinue() {
     setEnemyGuardHitsSync(0);
     setEnemyInvulnTurnsSync(0);
     setEnemyFrenzyTurnsSync(0);
+    setEnemyStunImmuneTurnsSync(0);
+    debugStun("RESET IMMUNITY IN initBattle", { to: 0 });
     enemyUsesRef.current = {};
 
     setHPPopups([]);
@@ -3098,6 +3215,16 @@ return (
           {/* KÁRTYÁK (HAND) */}
           {!battleOver && (
             <div ref={tutHandRef} className="absolute left-1/2 -translate-x-1/2 flex gap-4 z-50" style={{ bottom: "-80px", pointerEvents: allowHand ? "auto" : "none" }}>
+              {!battleOver && turn === "player" && (
+       
+                    <button
+            onClick={passTurn}
+            className="absolute left-1/2 -translate-x-1/2 z-[80] px-8 py-3 rounded-lg border-2 border-gray-700 bg-black/80 hover:bg-black text-white pixel-text-sharp"
+            style={{ bottom: "240px", marginLeft: "500px" }}
+          >
+            PASS TURN
+          </button>
+        )}
               {!battleOver && (
             <div
               className="absolute left-1/2 -translate-x-1/2 z-70 px-4 py-2 rounded-lg border-2 border-gray-700 bg-black/70 text-xl pixel-text-sharp"

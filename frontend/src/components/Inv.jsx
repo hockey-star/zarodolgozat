@@ -136,7 +136,7 @@ export default function Inv({ onClose }) {
      DECK LIMITS
      ============================== */
   const MAX_DECK_SIZE = 30;
-  const MIN_DECK_SIZE = 10;
+  const MIN_DECK_SIZE = 15;
   const MAX_PER_RARITY = {
     common: 4,
     rare: 3,
@@ -324,17 +324,25 @@ function unequipItem(ownedId) {
       return copy;
     });
   }
-  function handleSaveDeck() {
-    if (tempDeck.length < MIN_DECK_SIZE) {
-      alert(`A paklinak legalább ${MIN_DECK_SIZE} kártyát kell tartalmaznia.`);
-      return;
-    }
-    setPlayer?.((prev) => ({
-      ...prev,
-      deck: [...tempDeck],
-    }));
-    setShowDeckEditor(false);
+function handleSaveDeck() {
+  if (tempDeck.length < MIN_DECK_SIZE) {
+    alert(`A paklinak legalább ${MIN_DECK_SIZE} kártyát kell tartalmaznia.`);
+    return;
   }
+
+  const uniqueCount = new Set(tempDeck).size;
+  if (uniqueCount < 5) {
+    alert("A paklinak legalább 5 különböző kártyát kell tartalmaznia.");
+    return;
+  }
+
+  setPlayer?.((prev) => ({
+    ...prev,
+    deck: [...tempDeck],
+  }));
+
+  setShowDeckEditor(false);
+}
   const deckCounts = useMemo(() => {
     const counts = {};
     tempDeck.forEach((id) => {
