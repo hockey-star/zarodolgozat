@@ -156,7 +156,18 @@ A projekt futtatásához szükség van a frontend, a backend és az adatbázis m
 - npm
 - MySQL
 
-### A készítők
-Mártha József - Pásztor Alex - Kovács Hunor Krisztián
-![Adatbázis placeholder](images_for_readme/karikatura.png)
 
+
+<div align="center">
+
+<h3>
+  <span style="color:#d9a441;">Mártha József</span>
+  &nbsp;•&nbsp;
+  <span style="color:#b07cff;">Pásztor Alex</span>
+  &nbsp;•&nbsp;
+  <span style="color:#6ee7b7;">Kovács Hunor Krisztián</span>
+</h3>
+
+<p><i>A projekt készítőcsapata</i></p>
+
+<img src="images_for_readme/karikatura.png" alt="SK Project készítők karikatúrája" width="800"/>
