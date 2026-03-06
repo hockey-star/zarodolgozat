@@ -26,9 +26,9 @@ export default function ClassSelect({ onNext }) {
 
   // VIDEÓK forrásai
   const videoSources = [
-    "/src/assets/classok/classharcos.mp4",
-    "/src/assets/classok/classvarazslo.mp4",
-    "/src/assets/classok/classtavolsagi.mp4",
+    "/video/classharcos.mp4",
+    "/video/classvarazslo.mp4",
+    "/video/classtavolsagi.mp4",
   ];
 
   const videoRefs = useRef([]);
