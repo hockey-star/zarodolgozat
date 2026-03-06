@@ -1,14 +1,49 @@
-SK Project v3 - Prototype
-=========================
+SK Project v3 – Prototype
+A játék bemutatása
 
-Futtatás (Windows / Mac / Linux):
-1. Telepíts Node.js LTS (18+)
-2. Csomag kicsomagolása
-3. Terminálban a projekt gyökérben futtasd:
-   npm install
-   npm run dev
-4. Megnyílik: http://localhost:5173
+Ez a projekt egy 2D dark fantasy hangulatú, körökre osztott harcrendszerű játék, amelyet a végső projektmunkánk részeként készítettünk.
+A játékban a játékos különböző kalandokat választhat, ahol ellenségekkel találkozik, harcol velük, és fokozatosan egyre erősebbé válik.
 
-Megjegyzés:
-- Inventory itemek dummy-ek: equip/unequip működik, de jelenleg nem adnak stat bónuszt.
-- A utils/stats.js tartalmazza a logikát, ahol később könnyen aktiválhatjátok a bónuszokat.
+A játékmenet egy központi Hub köré épül, ahonnan a játékos elindulhat kalandozni, kezelheti a felszerelését, küldetéseket vehet fel, illetve felkészülhet a következő harcokra.
+A játék célja, hogy a játékos folyamatosan fejlődjön, új kihívásokkal találkozzon, és egyre erősebb ellenfeleket győzzön le.
+Az ötlet eredete
+
+A projekt alapötlete még tavaly született, amikor megkaptuk a beadandó feladatot. Már ekkor eldöntöttük, hogy egy játékot szeretnénk készíteni.
+Első lépésként egy egyszerű konzolos játékkal kezdtünk, ahol a játékos a nyílbillentyűk segítségével választhatott különböző ösvények közül. Az események előre meghatározottak voltak, és a játék lényegében egy történetvezérelt kalandként működött, ahol a játékos döntései befolyásolták a haladását.
+A játék ötletét főleg dark fantasy hangulatú, stratégiai harcrendszerű játékok inspirálták.
+
+Őszintén szólva kezdetben nem volt pontos elképzelésünk, mivel korábban még nem foglalkoztunk hasonló projekttel. Az előző, egyszerű konzolos játékunk azonban nagy inspirációt adott, ezért biztosak voltunk benne, hogy egy játékot szeretnénk készíteni.
+A célunk az volt, hogy létrehozzunk egy egyszerű, de bővíthető rendszert, amelyben a harcok gyorsak, ugyanakkor stratégiai döntéseket igényelnek.
+
+A projekt elkészítése
+A projektet háromfős csapatban készítettük.
+A fejlesztés során különböző technológiákat és eszközöket használtunk a frontend, backend és az adatkezelés megvalósításához.
+Nagy segítséget jelentett számunkra, hogy az egyik csapattársunk vizuális effektekkel foglalkozik, így a játék vizuálisan is látványosabb lett.
+
+A játék fő rendszerei
+
+harcrendszer
+
+játékos életerő számolása
+
+játékos pénz és XP kezelése
+
+véletlenszerű események kezelése
+
+ellenségek és encounterek kezelése
+
+felszerelés és inventory rendszer
+
+küldetés rendszer
+
+hub rendszer
+
+A fejlesztés során fontos cél volt, hogy a játék rendszerei később könnyen bővíthetők legyenek.
+
+Technológiák
+A projekt során az alábbi technológiákat használtuk:
+React – frontend
+Node.js – backend
+MySQL – adatbázis
+JavaScript / CSS
+JSX
