@@ -93,6 +93,16 @@ function xpToNextLevel(level) {
   return 30 + (level - 1) * 20;
 }
 
+function getMitigatedDamage(rawDamage, defense) {
+  const def = Math.max(0, Number(defense) || 0);
+
+
+  const reduction = Math.min(0.5, def / (def + 100));
+
+  const reduced = Math.round(rawDamage * (1 - reduction));
+  return Math.max(1, reduced);
+}
+
 function resolveBackground(background, pathType) {
   if (background) return background;
   if (pathType === "mystery") return "/backgrounds/2.jpg";
@@ -2187,7 +2197,7 @@ if (poisonNow && playerHPRef.current > 0) {
       trackTimeout(setTimeout(() => {
         if (battleOverRef.current) return;
 
-        const playerDefenseNow = derivedStats?.defense ?? player?.defense ?? 0; // ✅ itt kell
+        const playerDefenseNow = derivedStats?.defense ?? player?.defense ?? 0;
 
         const [minDmg, maxDmg] = enemy.dmg;
         let dmg = Math.floor(Math.random() * (maxDmg - minDmg + 1)) + minDmg;
@@ -2197,8 +2207,7 @@ if (poisonNow && playerHPRef.current > 0) {
           setDefending((prev) => Math.max(0, (prev || 1) - 1));
         }
 
-        const finalBase = Math.max(0, dmg - Math.floor(playerDefenseNow / 2));
-        let final = finalBase;
+        let final = getMitigatedDamage(dmg, playerDefenseNow);
 
 
         if (classKey === "warrior") {
@@ -2318,11 +2327,13 @@ async function handleContinue() {
   const isLastWave = wave >= maxWaves;
 
   const fullMax = derivedStats?.max_hp ?? maxHPFromPlayer ?? player?.max_hp ?? 0;
+  let finalReward = { xpGain: 0, goldGain: 0 };
 
  async function awardReward({ hpAfterBattle } = {}) {
   if (!victory || !player?.id) return { xpGain: 0, goldGain: 0 };
 
-  const { xpGain, goldGain } = rollRewards();
+  const { xpGain, goldGain  } = rollRewards();
+  
 
   try {
     await fetch("https://nodejs202.dszcbaross.edu.hu/api/combat/reward", {
@@ -2462,6 +2473,7 @@ if (!isLastWave) {
   // Backend reward (FULL HP mentés, mert hubba megyünk)
   if (player?.id) {
     const { xpGain, goldGain } = rollRewards();
+    finalReward = { xpGain, goldGain };
 
     try {
       const res = await fetch("https://nodejs202.dszcbaross.edu.hu/api/combat/reward", {
@@ -2494,11 +2506,11 @@ if (!isLastWave) {
   // HUB-ba megyünk full HP-val
   setPlayerHP(fullMax);
   playerHPRef.current = fullMax;
-
+  
 emitEnd({
   victory: true,
   hpAfter: fullMax,
-  rewards: { xp: xpGain, gold: goldGain },
+  rewards: { xp: finalReward.xpGain, gold: finalReward.goldGain },
 });
 }
 
