@@ -160,6 +160,9 @@ A projekt futtatásához szükség van a frontend, a backend és az adatbázis m
 - MySQL
 
 
+**A project saját szellemi termékünk.**
+
+
 
 <div align="center">
 
