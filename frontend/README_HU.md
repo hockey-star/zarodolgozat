@@ -63,6 +63,22 @@ inventory rendszer
 
 Technológiák
 
+
+Kovács Hunor Krisztián
+
+Játék kezdőképernyője, HUB
+
+Karakter mozgása, fókuszpontok kialakítása
+
+Kovácsműhely frontend, backend
+
+Bolt frontend, backend
+
+Játékos háza frontend, backend
+
+
+
+
 A projekt során az alábbi technológiákat használtuk:
 
 React – frontend
