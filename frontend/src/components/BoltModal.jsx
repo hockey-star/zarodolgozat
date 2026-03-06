@@ -226,7 +226,7 @@ const heal = async () => {
           isClosing ? "scale-down" : "scale-up"
         }`}
         style={{
-          backgroundImage: `url("public/images/BOLT.gif")`,
+          backgroundImage: `url("/images/BOLT.gif")`,
           backgroundSize: "cover",
           backgroundPosition: "center"
         }}

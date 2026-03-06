@@ -137,7 +137,7 @@ export default function LoginScreen({ onLogin }) {
         playsInline
         className="-z-10 absolute top-0 left-0 w-full h-full object-cover object-center"
       >
-        <source src="public/video/1.mp4" type="video/mp4" />
+        <source src="/video/1.mp4" type="video/mp4" />
       </video>
 
       <div className="loginBox relative z-10 w-11/12 sm:w-2/3 md:w-1/3 p-8 text-white shadow-2xl backdrop-blur-sm text-center">
@@ -225,7 +225,7 @@ export default function LoginScreen({ onLogin }) {
             >
               <img
                 className="logo"
-                src="public/images/YT.png"
+                src="/images/YT.png"
                 alt="youtube"
               />
               <p className="socialMediaNames">YouTube</p>
@@ -237,7 +237,7 @@ export default function LoginScreen({ onLogin }) {
               href="https://www.x.com"
               target="_blank"
             >
-              <img className="logo" src="public/images/X.png" alt="x" />
+              <img className="logo" src="/images/X.png" alt="x" />
               <p className="socialMediaNames">X</p>
             </a>
           </div>
@@ -249,7 +249,7 @@ export default function LoginScreen({ onLogin }) {
             >
               <img
                 className="logo"
-                src="public/images/DC.png"
+                src="/images/DC.png"
                 alt="discord"
               />
               <p className="socialMediaNames">Discord</p>

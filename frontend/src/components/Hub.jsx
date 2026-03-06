@@ -245,7 +245,7 @@ export default function Hub({ onGoAdventure, onStartQuestBattle }) {
             transition: "transform 650ms ease-in-out",
           }}
         >
-          <img src="public/images/HUB.png" alt="hub" className="hub-image" />
+          <img src="/images/HUB.png" alt="hub" className="hub-image" />
 
           {/* UTAZÁS */}
           <div
@@ -343,7 +343,7 @@ export default function Hub({ onGoAdventure, onStartQuestBattle }) {
 
           {/* PLAYER */}
           <img
-            src="public/images/TESZT.PNG"
+            src="/images/TESZT.PNG"
             alt="player"
             className={`player ${isMoving ? "moving" : ""}`}
             style={{ left: `${playerPos.x}%`, top: `${playerPos.y}%` }}
