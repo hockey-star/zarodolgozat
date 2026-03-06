@@ -231,6 +231,7 @@ export const ALL_ABILITIES = [
     rarity: "rare",
     image: "/cards/rare/archer_aimed_shot.png",
   },
+  /*
   {
   id: "archer_evasion",
   classKey: "archer",
@@ -243,6 +244,7 @@ export const ALL_ABILITIES = [
 
   evasionTurns: 1, // ✅ ÚJ: 1 enemy attack elől kitérsz
 },
+*/
   {
     id: "archer_poison_arrow",
     classKey: "archer",
