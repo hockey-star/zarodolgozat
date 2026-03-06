@@ -84,7 +84,7 @@ A fejlesztés során fontos cél volt, hogy a játék rendszerei később **kön
 
 - harcrendszer
 - játékos életerő számolása
-- játékos pénz és XP kezelése
+- játékos pénz és XP - tapasztalati pont kezelése
 - véletlenszerű események kezelése
 - védekező és gyógyító kártyák rendszerének kialakítása a játékos életerőszintjéhez igazítva
 - ellenségek és encounterek kezelése
@@ -101,7 +101,8 @@ A fejlesztés során fontos cél volt, hogy a játék rendszerei később **kön
 - vizuális effektek megvalósítása a játék különböző részein
 - a küldetések menüjének és megjelenítésének elkészítése
 - loading screen létrehozása a kalandok indulása előtt
-- inventory rendszer
+- inventory - felszerelés rendszer
+- felszerelés vásárlás, és eladás
 
 ### Kovács Hunor Krisztián
 
@@ -114,15 +115,15 @@ A fejlesztés során fontos cél volt, hogy a játék rendszerei később **kön
 
 ---
 
-## A játék fő rendszerei
+## A játék fő funkciói
 
 - körökre osztott harcrendszer
 - játékos életerő kezelése
-- pénz és XP rendszer
+- pénz és XP - tapasztalati pont rendszer
 - véletlenszerű események
 - ellenség- és encounterkezelés
 - felszerelésrendszer
-- inventory rendszer
+- inventory - felszerelés rendszer
 - küldetésrendszer
 - tutorial rendszer
 - Hub rendszer
@@ -138,8 +139,10 @@ A fejlesztés során fontos cél volt, hogy a játék rendszerei később **kön
 A projekt során az alábbi technológiákat használtuk:
 
 - **React** – frontend
-- **Node.js** – backend
+- **Node.js** 
 - **MySQL** – adatbázis
+- **Express** - backend
+- **After effects**
 - **JavaScript**
 - **CSS**
 - **JSX**
